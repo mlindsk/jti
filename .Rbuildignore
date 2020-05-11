@@ -1,0 +1,6 @@
+Makefile
+.yaml$
+^README\.Rmd$
+^README.html$
+^appveyor\.yml$
+^data-raw$
