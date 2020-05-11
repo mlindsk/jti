@@ -4,6 +4,8 @@
 find_cond_configs <- function(x, pos) {
   # x  : sptable
   # pos: the position of the conditional variables
+
+  # Should we test for variablenames containing "@"?
   skeleton <- paste(rep("@", nchar(names(x)[1])))
   .map_chr(names(x), function(s) {
     sk <- skeleton

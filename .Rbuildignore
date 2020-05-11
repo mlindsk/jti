@@ -4,3 +4,4 @@ Makefile
 ^README.html$
 ^appveyor\.yml$
 ^data-raw$
+TODO\.org
