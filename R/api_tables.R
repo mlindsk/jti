@@ -1,7 +1,7 @@
 ## ---------------------------------------------------------
 ##                NON-EXPORTED HELPERS
 ## ---------------------------------------------------------
-find_cond_configs <- function(x, pos) {
+.find_cond_configs <- function(x, pos) {
   # x  : sptable
   # pos: the position of the conditional variables
 
@@ -15,7 +15,7 @@ find_cond_configs <- function(x, pos) {
   })
 }
 
-reposition_names <- function(x, pos) {
+.reposition_names <- function(x, pos) {
   # x : named list
   structure(x, names =.map_chr(names(x), function(y) {
     paste(.split_chars(y)[pos], collapse = "")
@@ -40,7 +40,7 @@ reposition_names <- function(x, pos) {
 #' sptable(as.matrix(asia[, 1:2]))
 #' @export
 sptable <- function(x) {
-  stopifnot(is.matrix(x))
+  stopifnot(is.matrix(x), !is.null(colnames(x)))
   sptab <- sptab_(x)
   class(sptab) <- c("sptable", class(sptab))
   return(sptab)
@@ -68,7 +68,7 @@ parray <- function(x, y = NULL) {
     return(xs)
   }
   pos  <- match(y, attr(x, "vars"))
-  conf <- find_cond_configs(x, pos)
+  conf <- .find_cond_configs(x, pos)
   conditional_list <- split(names(conf), conf)
   parr <- unlist(unname(lapply(conditional_list, function(e) {
     x[e] / sum(x[e])
@@ -77,6 +77,7 @@ parray <- function(x, y = NULL) {
   class(parr) <- class(x)
   return(parr)
 }
+
 
 #' Merge sparse tables
 #'
@@ -87,77 +88,83 @@ parray <- function(x, y = NULL) {
 #' @param op Either "*" (multiplication) or "/" (division)
 #' @param ... Not used. For S3 compatability
 #' @examples
-#' x <- sptable(as.matrix(asia[, 3:5]))
-#' y <- sptable(as.matrix(asia[, 4:6]))
-#' x
-#' y
-#' merge(x, y, "/")
+#'
+#' # Variables in common
+#' # -------------------
+#' x1 <- sptable(as.matrix(asia[, 2:5]))
+#' y1 <- sptable(as.matrix(asia[, c(5, 8, 4)]))
+#' merge(x1, y1, "/")
+#'
+#' # No variables in common
+#' x2 <- sptable(as.matrix(asia[, 1:2]))
+#' y2 <- sptable(as.matrix(asia[, 3, drop = FALSE]))
+#' merge(x2, y2, "/")
 #' @export
 merge.sptable <- function(x, y, op = "*", ...) {
   
   stopifnot(op %in% c("*", "/"))
   
-  vx     <- attr(x, "vars")
-  vy     <- attr(y, "vars")
-  sep    <- intersect(vx, vy)
-  
+  vx  <- attr(x, "vars")
+  vy  <- attr(y, "vars")
+  sep <- intersect(vx, vy)
+
   # If no variables in common it is easy
   if (!neq_empt_chr(sep)) {
-    spt <- lapply(seq_along(x), function(i) {
-      xi <- x[i]
-      structure(do.call(op, list(y, xi)),
-        names = paste(names(y), names(x[i]), sep = "")
+    spt <- lapply(seq_along(y), function(i) {
+      yi <- y[i]
+      structure(do.call(op, list(x, yi)),
+        names = paste(names(x), names(y[i]), sep = "")
       )
     })
     spt <- unlist(spt)
-    attr(spt, "vars") <- c(vy, vx)
+    attr(spt, "vars") <- c(vx, vy)
     class(spt) <- c("sptable", class(spt))
     return(spt)
   }
 
-  posx   <- match(sep, vx)
-  posy   <- match(sep, vy)
+  posx <- match(sep, vx)
+  posy <- match(sep, vy)
+  
+  cfx  <- .find_cond_configs(x, posx)
+  cfy  <- .find_cond_configs(y, posy)
+  
+  scfx <- split(names(cfx), cfx)
+  scfy <- split(names(cfy), cfy)
 
-  cfx    <- find_cond_configs(x, posx)
-  cfy    <- find_cond_configs(y, posy)
-
-  scfx   <- split(names(cfx), cfx)
-  scfy   <- split(names(cfy), cfy)
-
-  # No need for repositioning if leng(sep) > 1 (they must agree then).
-  if (length(sep) > 1L) {
-    posx_sep <- structure(seq_along(posx), names = vx[posx])
-    sposy    <- sort(posy)
-    posy_sep <- structure(seq_along(sposy), names = vy[sort(sposy)])
-    posy_new <- posy_sep[names(posx_sep)]
-    scfy     <- reposition_names(scfx, posy_new)
+  # We need to align the tables to have identical names in order to merge correctly
+  # - (if !(length(sep) > 1) names in scfx and scfy must agree!
+  if (length(sep) > 1L && !identical(names(scfx), names(scfy))) { 
+    posx_sep    <- structure(seq_along(posx), names = vx[posx])
+    posy_sorted <- sort(posy)
+    posy_sep    <- structure(seq_along(posy_sorted), names = vy[posy_sorted])
+    posy_new    <- posy_sep[names(posx_sep)]
+    scfy        <- .reposition_names(scfy, posy_new)
   }
   
   # Those not in sc_sep are structural zeroes!
-  sc_sep  <- intersect(names(scfx), names(scfy))
-  scfx    <- scfx[sc_sep]
-  scfy    <- scfy[sc_sep]
+  sc_sep <- intersect(names(scfx), names(scfy))
+  scfx   <- scfx[sc_sep]
+  scfy   <- scfy[sc_sep]
    
   spt <- lapply(sc_sep, function(z) {
 
     scfx_z <- scfx[[z]]
     scfy_z <- scfy[[z]]
 
-    xz    <- x[scfx_z]
-    yz    <- y[scfy_z]
+    xz <- x[scfx_z]
+    yz <- y[scfy_z]
 
-    res    <- vector("double", length = length(xz) * length(yz))
+    res <- vector("double", length = length(xz) * length(yz))
     res_names <- vector("character", length = length(xz) * length(yz))
 
     iter <- 1L
     for (i in seq_along(xz)) {
-
       for (j in seq_along(yz)) {
         xzi <- xz[i]
-        yzj <- xz[j]
+        yzj <- yz[j]
 
-        yzj_name  <- names(yzj)
-        new_name  <- paste0(names(xzi), str_rem(yzj_name, posy), collapse = "")
+        yzj_name <- names(yzj)
+        new_name <- paste0(names(xzi), str_rem(yzj_name, posy), collapse = "")
 
         res[iter] <- if (isTRUE(all.equal(yzj, 0))) 0 else do.call(op, list(xzi, yzj))
         res_names[iter] <- new_name
@@ -167,7 +174,6 @@ merge.sptable <- function(x, y, op = "*", ...) {
     structure(res, names = res_names)
   })
 
-  
   spt <- unlist(spt)
   
   attr(spt, "vars") <- c(vx, setdiff(vy, vx))
@@ -200,7 +206,7 @@ marginalize.sptable <- function(p, s, flow = "sum") {
   marg_vars <- setdiff(v, s)
   pos <- match(marg_vars, v)
 
-  cf  <- find_cond_configs(p, pos)
+  cf  <- .find_cond_configs(p, pos)
   scf <- split(names(cf), cf)
 
   spt <- lapply(scf, function(e) {
@@ -326,7 +332,7 @@ print.sptable <- function(x, ...) {
 ##   if (!all(y %in% attr(x, "vars"))) stop("Some names in 'y' are not in 'x'")
   
 ##   pos     <- match(y, attr(x, "vars"))
-##   configs <- find_cond_configs(x, pos)
+##   configs <- .find_cond_configs(x, pos)
 ##   cspt <- lapply(configs, function(z) {
 ##     b  <- structure(pos, names = .split_chars(z))
 ##     sl <- slice_sptable(x, b)

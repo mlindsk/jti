@@ -6,9 +6,11 @@ Authors@R:
            family = "Lindskou",
            role = c("aut", "cre"),
            email = "mads@math.aau.dk")
-Description: This package introduce a minimal and fast implementation of the junction tree algorithm using the Laurtizen-Spiegelhalter scheme.
+Description: This package introduce a minimal and fast implementation of the junction tree algorithm using the
+	     Laurtizen-Spiegelhalter scheme.
 Depends: R (>= 3.5.0)
-License: GPL (>= 2)
+URL: https://github.com/mlindsk/jti
+License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Imports: 
@@ -17,3 +19,4 @@ Imports:
 LinkingTo: Rcpp
 RoxygenNote: 7.1.0
 SystemRequirements: C++11
+Suggests: tinytest

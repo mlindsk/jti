@@ -54,7 +54,7 @@ plot(g)
 
 # Data
 # ----
-# We use the asia data; the the man page (?asia)
+# We use the asia data; see the man page (?asia)
 
 # Example 1: sum-flow without evidence
 # ------------------------------------
@@ -88,7 +88,7 @@ e4  <- c(T = "y", X = "y", D = "y")
 jt4 <- jt(g, asia, e4, flow = "max")
 mpe(jt4)
 
-# Notice, that the S, B and E changed from "n" to "y"
+# Notice, that S, B and E has changed from "n" to "y"
 # as a consequence of the new evidence e4
 
 # Example 5: investigating the clique graph before propagating

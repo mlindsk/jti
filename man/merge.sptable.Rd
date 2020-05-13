@@ -19,9 +19,15 @@
 Multiplication or division of two sparse tables
 }
 \examples{
-x <- sptable(as.matrix(asia[, 3:5]))
-y <- sptable(as.matrix(asia[, 4:6]))
-x
-y
-merge(x, y, "/")
+
+# Variables in common
+# -------------------
+x1 <- sptable(as.matrix(asia[, 2:5]))
+y1 <- sptable(as.matrix(asia[, c(5, 8, 4)]))
+merge(x1, y1, "/")
+
+# No variables in common
+x2 <- sptable(as.matrix(asia[, 1:2]))
+y2 <- sptable(as.matrix(asia[, 3, drop = FALSE]))
+merge(x2, y2, "/")
 }

@@ -2,6 +2,7 @@ Makefile
 .yaml$
 ^README\.Rmd$
 ^README.html$
+^LICENSE.md$
 ^appveyor\.yml$
 ^data-raw$
 TODO\.org

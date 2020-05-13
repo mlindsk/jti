@@ -8,6 +8,13 @@
 \description{
 This package is a fast implementation of the junction tree algorithm using the LS-updating scheme.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/mlindsk/jti}
+}
+
+}
 \author{
 \strong{Maintainer}: Mads Lindskou \email{mads@math.aau.dk}
 

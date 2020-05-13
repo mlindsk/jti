@@ -150,7 +150,7 @@ set_evidence_jt <- function(charge, cliques, evidence) {
       e_val <- unname(e)
       if (e_var %in% Ck) {
         e_pos_charge_k    <- match(e_var, attr(charge$C[[k]], "vars"))
-        charge_k_by_e_pos <- find_cond_configs(charge$C[[k]], e_pos_charge_k)
+        charge_k_by_e_pos <- .find_cond_configs(charge$C[[k]], e_pos_charge_k)
         idx_to_keep   <- which(charge_k_by_e_pos == e_val)
         charge$C[[k]] <- charge$C[[k]][idx_to_keep]
       }
