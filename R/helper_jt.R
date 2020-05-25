@@ -1,39 +1,9 @@
-parents_igraph <- function(g) {
-  stopifnot(igraph::is_directed(g), igraph::is_dag(g))
-  Ag <- igraph::as_adjacency_matrix(g)
-  cn <- colnames(Ag)
-  if (is.null(cn)) {
-    stop("The vertices in the igraph object must have names")
-  }
-  apply(Ag, 2, function(x) {
-    names(which(x == 1L))
-  })
-}
-
-moralize_igraph <- function(g, parents) {
-  for (p in parents) {
-    if (length(p) > 1) {
-      pairs <- utils::combn(p, 2,  simplify = FALSE)
-      for (ps in pairs) {
-        g <- g + igraph::edge(ps[1], ps[2])
-      }
-    }
-  }
-  return(g)
-}
-
-triangulate_igraph <- function(g) {
-  igraph::is_chordal(g, fillin = FALSE, newgraph = TRUE)$newgraph
-}
-
-as_undirected_igraph <- function(g) igraph::as.undirected(g)
-
 new_schedule <- function(cliques) {
 
   nc <- length(cliques)
-  clique_tree <- matrix(0L, nc, nc)
-  coll_tree   <- clique_tree
-  dist_tree   <- clique_tree
+  clique_graph <- matrix(0L, nc, nc)
+  coll_tree   <- clique_graph
+  dist_tree   <- clique_graph
 
   # Alg. 4.8 - Probabilistic Expert Systems (p.55)
   for (i in seq_along(cliques)[-1L]) {
@@ -43,8 +13,8 @@ new_schedule <- function(cliques) {
       Hi_1 <- unlist(cliques[1:(i-1L)])
       Si   <- intersect(Ci, Hi_1)
       if (all(Si %in% Cj)) {
-        clique_tree[i, j]    <- 1L
-        clique_tree[j, i]    <- 1L
+        clique_graph[i, j]    <- 1L
+        clique_graph[j, i]    <- 1L
         is_new_directed_edge <- !neq_empt_int(which(coll_tree[i, ] == 1L))
         if (is_new_directed_edge) {
           coll_tree[i, j] <- 1L
@@ -66,7 +36,7 @@ new_schedule <- function(cliques) {
   collect    <- list(cliques = cliques, tree = coll_tree)
   distribute <- list(cliques = cliques, tree = dist_tree)
 
-  return(list(collect = collect , distribute = distribute, clique_tree = clique_tree))
+  return(list(collect = collect , distribute = distribute, clique_graph = clique_graph))
   
 }
 
@@ -160,50 +130,12 @@ set_evidence_jt <- function(charge, cliques, evidence) {
 }
 
 
-new_jt <- function(g, data, evidence = NULL, flow = "sum", validate = TRUE) {
+new_jt <- function(x, evidence = NULL, flow = "sum", validate = TRUE) {
+  # x: a charge object returned from compile
+  #  - a list with the charge and the cliques
   
-  if (validate) {
-    if( !only_single_chars(data)) {
-      stop("All values in data must be represented as a single character. Use to_single_chars(data)")
-    }
-    
-  }
-  
-  par_igraph <- NULL
-
-  adj <- if (igraph::is.igraph(g)) {
-    par_igraph <- parents_igraph(g)
-    g <- moralize_igraph(g, par_igraph)
-    g <- igraph::as.undirected(g)
-    g <- triangulate_igraph(g)
-    as_adj_lst(igraph::as_adjacency_matrix(g))    
-  } else if (inherits(g, "gengraph")) {
-    g$G_adj
-  } else {
-    stopifnot(is_decomposable(g))
-    g
-  }
-
-  if (!all(names(adj) %in% colnames(data))) {
-    stop("Variable names of the graph does not correspond to variables in data")
-  }
-  
-  rip_    <- rip(adj, check = FALSE)
-  cliques <- rip_$C
-  names(cliques) <- paste("C", 1:length(cliques), sep = "")
-
-  if (length(cliques) < 2) {
-    stop("No need to propagate for |C| < 2... But fix anyway...")
-  }
-
-  ## TODO: Specify a root in advance
-  ## ---------------------------------------------------------
-  # if (is.null(root)) reorder_cliques(cliques, root) { using kruskal } ?
-  ## See Soren and Lau p. 58 for specifying another root easily!
-  ## ---------------------------------------------------------
-
-  par    <- if (!is.null(par_igraph)) par_igraph  else rip_$P
-  charge <- new_charge(data, cliques, par)
+  charge  <- x$charge
+  cliques <- x$cliques
 
   if (!is.null(evidence)) charge <- set_evidence_jt(charge, cliques, evidence)
   
@@ -212,7 +144,7 @@ new_jt <- function(g, data, evidence = NULL, flow = "sum", validate = TRUE) {
     schedule    = schedule[1:2], # collect and distribute
     charge      = charge,
     cliques     = cliques,
-    clique_tree = schedule$clique_tree
+    clique_graph = schedule$clique_graph
   )
   
   class(jt)             <- c("jt", class(jt))
@@ -220,8 +152,9 @@ new_jt <- function(g, data, evidence = NULL, flow = "sum", validate = TRUE) {
   attr(jt, "flow")      <- flow
   if (flow == "max") {
     # most probable explanation
+    all_vars <- unique(unlist(cliques))
     attr(jt, "mpe") <- structure(
-      vector("character", length = ncol(data)), names = colnames(data)
+      vector("character", length = length(all_vars)), names = all_vars
     )
   }
   return(jt)
@@ -238,6 +171,8 @@ new_jt <- function(g, data, evidence = NULL, flow = "sum", validate = TRUE) {
 
 
 send_messages <- function(jt, flow = "sum") {
+
+  # TODO: wrap jt in an environment and make more small helper functions
 
   direction <- attr(jt, "direction")
   x   <- if (direction == "collect") jt$schedule$collect else jt$schedule$distribute
@@ -266,8 +201,8 @@ send_messages <- function(jt, flow = "sum") {
 
         if (direction == "collect") {
           message_k <- marginalize(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
-          jt$charge$C[[C_par_k_name]] <- merge(jt$charge$C[[C_par_k_name]], message_k, "*")
-          jt$charge$C[[C_lvs_k_name]] <- merge(jt$charge$C[[C_lvs_k_name]], message_k, "/")
+          jt$charge$C[[C_par_k_name]] <- merge(jt$charge$C[[C_par_k_name]], message_k, "*", validate = FALSE)
+          jt$charge$C[[C_lvs_k_name]] <- merge(jt$charge$C[[C_lvs_k_name]], message_k, "/", validate = FALSE)
         }
 
         if (direction == "distribute") {
@@ -284,7 +219,7 @@ send_messages <- function(jt, flow = "sum") {
           }
 
           message_k <- marginalize(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
-          jt$charge$C[[C_par_k_name]] <- merge(jt$charge$C[[C_par_k_name]], message_k, "*")
+          jt$charge$C[[C_par_k_name]] <- merge(jt$charge$C[[C_par_k_name]], message_k, "*", validate = FALSE)
 
           if (attr(jt, "flow") == "max") {
             ## The parent:
@@ -313,44 +248,4 @@ send_messages <- function(jt, flow = "sum") {
   prune_jt(jt)
 }
 
-new_charge <- function(data, cliques, conditional_parents) {
 
-  potC     <- vector("list", length(cliques))
-  potS     <- vector("list", length(cliques))
-  children <- names(conditional_parents)
-
-  for (x in children) {
-    parx <- conditional_parents[[x]]
-    spt  <- sptable(as.matrix(data[, c(x, parx), drop = FALSE]))
-    pspt <- parray(spt, parx)
-    
-    for (k in seq_along(cliques)) {
-      family_in_Ck <- all(c(x, parx) %in% cliques[[k]])
-      if (family_in_Ck) {
-        if (is.null(potC[[k]])) {
-          potC[[k]] <- pspt
-        } else {
-          potC[[k]] <- merge(potC[[k]], pspt)
-        }
-        break # Must only live in one clique
-      }
-    }
-  }
-
-  # Some clique potentials may be empty due to triangulation
-  # We set these to the identity = 1 for all configurations
-  which_is_null <- .map_lgl(potC, is.null)
-
-  if (any(which_is_null)) {
-    for (k in which(which_is_null)) {
-      sptk <- sptable(as.matrix(data[, cliques[[k]], drop = FALSE]))
-      sptk[1:length(sptk)] <- 1L
-      potC[[k]] <- sptk
-    }
-  }
-  
-  names(potS) <- paste("S", 1:length(potS), sep = "")
-  names(potC) <- names(cliques)
-  pots <- list(C = potC, S = potS)
-  return(pots)
-}

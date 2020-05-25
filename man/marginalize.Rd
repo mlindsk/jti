@@ -12,9 +12,9 @@ marginalize(p, s, flow = "sum")
 \arguments{
 \item{p}{A \code{sptable} object}
 
-\item{s}{The variables to marginalize out}
+\item{s}{The variables to be marginalized out}
 
-\item{flow}{Either "sum" or "max" where "max" is most useful in connection to the internals of  junction tree algorithm.}
+\item{flow}{Either "sum" or "max" where "max"}
 }
 \description{
 Marginalize

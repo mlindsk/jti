@@ -21,17 +21,10 @@ neq_empt_int <- function(x) !identical(x, integer(0))
 neq_empt_lst <- function(x) !identical(x, list())
 neq_null     <- function(x) !is.null(x)
 '%ni%'       <- Negate('%in%')
-# push         <- function(l, el, name = NULL) c(l, structure(list(el), names = name))
+push         <- function(l, el, name = NULL) c(l, structure(list(el), names = name))
 
-## MISC
-only_single_chars <- function(A) {
-  for (i in seq_along(nrow(A))) {
-    for (j in seq_along(ncol(A)))
-      if ( nchar(A[i,j]) != 1L ) return(FALSE)
-  }
-  return(TRUE)
-}
 
+## GRAPHS
 as_adj_lst <- function(A) {
   Delta <- colnames(A)
   out <- lapply(seq_along(Delta), function(r) {
@@ -45,6 +38,31 @@ is_decomposable <- function(adj) {
   m <- try(mcs(adj), silent = TRUE)
   if( inherits(m, "list") ) return(TRUE)
     else return(FALSE)
+}
+
+
+## MISC
+is_named_list <- function(x) {
+  if (is.null(names(x))) return(FALSE)
+  if ("" %in% names(x)) {
+    return(FALSE) 
+  } else {
+    return(TRUE)
+  }
+}
+
+only_single_chars <- function(A) {
+  for (i in seq_along(nrow(A))) {
+    for (j in seq_along(ncol(A)))
+      if ( nchar(A[i,j]) != 1L ) return(FALSE)
+  }
+  return(TRUE)
+}
+
+possible_chars <- function(n) {
+  chars <- c(letters, LETTERS, 0:9)
+  if (n > length(chars)) stop("One or more variables have more than 62 levels.")
+  return(chars[1:n])
 }
 
 ## ---------------------------------------------------------
@@ -65,8 +83,25 @@ to_single_chars <- function(x) {
   # Consider saving the olde levels so we can retrive them again easily later
   apply(x, 2, function(z) {
     f <- as.factor(z)
-    chars <- c(letters, LETTERS, 0:9)
-    levels(f) <- chars[1:length(levels(f))]
+    levels(f) <- possible_chars(length(levels(f)))
     as.character(f)
+  })
+}
+
+
+#' To come
+#'
+#' To come
+#'
+#' @param x Named list of arrays
+#' @examples
+#' # TBA
+#' @export
+dimnames_to_single_chars <- function(x) {
+  lapply(x, function(y) {
+    dimnames(y) <- lapply(dimnames(y), function(z) {
+      possible_chars(length(z))
+    })
+    y
   })
 }

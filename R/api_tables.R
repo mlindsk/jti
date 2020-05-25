@@ -42,6 +42,9 @@
 sptable <- function(x) {
   stopifnot(is.matrix(x), !is.null(colnames(x)))
   sptab <- sptab_(x)
+
+  # TODO: Convert to envir
+  
   class(sptab) <- c("sptable", class(sptab))
   return(sptab)
 }
@@ -85,7 +88,9 @@ parray <- function(x, y = NULL) {
 #' 
 #' @param x A \code{sptable} object
 #' @param y A \code{sptable} object
-#' @param op Either "*" (multiplication) or "/" (division)
+#' @param op Either "*" (multiplication), "/" (division), "+" (addition) or "-" (subtraction)
+#' @param validate Logical indicating wether or not it should be checked if the names
+#' of \code{x} and \code{y} are valid. The names are restricted to be one character long
 #' @param ... Not used. For S3 compatability
 #' @examples
 #'
@@ -99,10 +104,28 @@ parray <- function(x, y = NULL) {
 #' x2 <- sptable(as.matrix(asia[, 1:2]))
 #' y2 <- sptable(as.matrix(asia[, 3, drop = FALSE]))
 #' merge(x2, y2, "/")
+#'
+#' # Names not on correct form
+#' z  <- chickwts[, 2, drop = FALSE]
+#' x3 <- sptable(as.matrix(z))
+#' merge(x3, x3)
+#'
+#' # Correcting the names
+#' z_new <- to_single_chars(z)
+#' x4    <- sptable(as.matrix(z_new))
+#' x4
+#' 
 #' @export
-merge.sptable <- function(x, y, op = "*", ...) {
+merge.sptable <- function(x, y, op = "*", validate = TRUE, ...) {
+
+  if (validate) {
+    nvars_x <- length(attr(x, "vars"))
+    nvars_y <- length(attr(y, "vars"))
+    for (name in names(x)) if (nchar(name) > nvars_x) stop("One or more names of x is not valid. See to_single_chars().")
+    for (name in names(y)) if (nchar(name) > nvars_y) stop("One or more names of y is not valid. See to_single_chars().")
+  }
   
-  stopifnot(op %in% c("*", "/"))
+  stopifnot(op %in% c("*", "/", "+", "-"))
   
   vx  <- attr(x, "vars")
   vy  <- attr(y, "vars")
@@ -110,6 +133,7 @@ merge.sptable <- function(x, y, op = "*", ...) {
 
   # If no variables in common it is easy
   if (!neq_empt_chr(sep)) {
+    # TODO: Put this into a function: merge_tables_with_empty_separator
     spt <- lapply(seq_along(y), function(i) {
       yi <- y[i]
       structure(do.call(op, list(x, yi)),
@@ -133,7 +157,8 @@ merge.sptable <- function(x, y, op = "*", ...) {
 
   # We need to align the tables to have identical names in order to merge correctly
   # - (if !(length(sep) > 1) names in scfx and scfy must agree!
-  if (length(sep) > 1L && !identical(names(scfx), names(scfy))) { 
+  if (length(sep) > 1L && !identical(names(scfx), names(scfy))) {
+    # TODO: put this into a function
     posx_sep    <- structure(seq_along(posx), names = vx[posx])
     posy_sorted <- sort(posy)
     posy_sep    <- structure(seq_along(posy_sorted), names = vy[posy_sorted])
@@ -145,7 +170,8 @@ merge.sptable <- function(x, y, op = "*", ...) {
   sc_sep <- intersect(names(scfx), names(scfy))
   scfx   <- scfx[sc_sep]
   scfy   <- scfy[sc_sep]
-   
+
+  # TODO: Put this into a function
   spt <- lapply(sc_sep, function(z) {
 
     scfx_z <- scfx[[z]]
@@ -185,8 +211,8 @@ merge.sptable <- function(x, y, op = "*", ...) {
 #' Marginalize
 #'
 #' @param p A \code{sptable} object
-#' @param s The variables to marginalize out
-#' @param flow Either "sum" or "max" where "max" is most useful in connection to the internals of  junction tree algorithm.
+#' @param s The variables to be marginalized out
+#' @param flow Either "sum" or "max" where "max"
 #' @examples
 #' p <- sptable(as.matrix(asia[, 3:5]))
 #' p
@@ -209,7 +235,17 @@ marginalize.sptable <- function(p, s, flow = "sum") {
   cf  <- .find_cond_configs(p, pos)
   scf <- split(names(cf), cf)
 
+  ## penv <- new.env()
+  ## for (k in seq_along(p)) {
+  ##   penv[[names(p)[k]]] <- as.numeric(p[k])
+  ## }
+
+  ## spt <- lapply(scf, function(e) {
+  ##   if (flow == "sum") sum(unlist(mget(e, envir = penv))) else max(penv[[e]])
+  ## })
+
   spt <- lapply(scf, function(e) {
+    # TODO: Slow because we must "lookup" p[e] !!!
     if (flow == "sum") sum(p[e]) else max(p[e])
   })
   
@@ -255,100 +291,73 @@ print.sptable <- function(x, ...) {
   structure(.set_as_sptable(NextMethod()) , vars = attr(x, "vars"))
 }
 
+#' Array to Sparse Table
+#'
+#' Convert conditional probability table of array-type to a sparse representation
+#'
+#' @param x An \code{array}-like object
+#' @param validate Logical. Check if x has proper dimnames.
+#' @details Use only validate = FALSE if you are positve that the structure is correct.
+#' @examples
+#'
+#'
+#' # Convert one-dimensional array
+#'
+#' dmx <- list(X = c("a", "b"))
+#' x   <- array(c(1, 2), dimnames = dmx)
+#' as_sptable(x)
+#'
+#' # Convert mutli-dimensional array
+#' 
+#' dmy <- list(Y = c("a", "b"), Z = c("c", "d"), W = c("e", "f"))
+#' y   <- array(c(1,0,3,0,0,2,1,0), c(2,2,2), dimnames = dmy)
+#' as_sptable(y)
+#'
+#' # Convert a data frame to sptable
+#'
+#' as_sptable(table(asia[, 2:3]))
+#' 
+#'
+#' @export
+as_sptable <- function(x, validate = TRUE) UseMethod("as_sptable")
 
-## library(dplyr)
-## d <- as.matrix(tgp_dat[, 7:50])
-## colnames(d) <- letters[1:44]
+#' @rdname as_sptable
+#' @export
+as_sptable.array <- function(x, validate = TRUE)  {
 
-## sp <- sptable(d[, 1:30])
-## p  <- parray(sp)
-## m  <- marginalize(p, letters[1:10], sum)
-## sum(m)
+  if (validate) {
+    if (!is_named_list(dimnames(x))) stop("x must be a named array or matrix")
+    # Test for allowed chars in the future and dont convert automatically
+    dimnames(x) <- lapply(dimnames(x), function(x) possible_chars(length(x)))  
+  }
 
-## p1 <- sptable(d[, 1, drop = FALSE])
-## p <- sptable(d[, 1:2, drop = FALSE])
-## marginalize(p, c("b"), max)
-## mp <- merge(parray(p1), parray(p2), "*")
-## merge(parray(p2), mp)
-
-## p <- parray(sptable(d[, 1:5]))
-## marginalize(p, c("c", "e"), max)
-## slice_sptable(p, c("A" = 5))
-
-## p1 <- sptable(d[, c(2,1,3), drop = FALSE])
-## p2 <- sptable(d[, 1:5, drop = FALSE])
-## merge(p1, p2)
-
-
-
-## #' Slice of a sparse table
-## #'
-## #' Returns the b-slice of a conditional sparse contingency table for the variables in \code{x} as a vector.
-## #'
-## #' @param x A \code{sptable} object
-## #' @param b A named vector of indicies for which the variables are fixed
-## #' @description The names of \code{b} are the fixed values of the variables corresponding to the indicies
-## #' @seealso \code{\link{sptable}}
-## #' @examples
-## #' sp <- sptable(as.matrix(digits[, 1:3]))
-## #' # print(sp)
-## #' slice_sptable(sp, c(e = 3))
-## #' @export
-## slice_sptable <- function(x, b) {
-##   stopifnot(inherits(x, "sptable"))
-##   sl <- n_b(x, b)
-##   class(sl) <- c("slice", class(x))
-##   return(sl)
-## }
-
-
-
-## #' Conditional sparse table
-## #'
-## #' Returns a conditional sparse contingency table conditioned on variables in \code{b}.
-## #'
-## #' @param x A sparse table obtained from \code{sptable}
-## #' @param y Character vector with variables to condition on
-## #' @details If \code{y} is \code{NULL}, \code{x} is just converted to a \code{csptable} with no conditioning variables, i.e. the marginal table.
-## #' @seealso \code{\link{sptable}}, \code{\link{slice_sptable}}
-## #' @examples
-## #' sp <- sptable(as.matrix(digits[, 1:3]))
-## #' sp
-## #' length(sp)
-## #' csp <- csptable(sp, c("V3"))
-## #' csp
-## #' length(csp)
-## #' @export
-## csptable <- function(x, y) {
-##   # x : sptable
-##   # y : conditional variables
-##   if (is.null(y)) {
-##     cspt <- structure(list(x), names = "marg")
-##     class(cspt) <- c("csptable", class(cspt))
-##     return(cspt)
-##   }
+  # TODO: Use an iterator instead of copying!
+  cond_comb  <- expand.grid(dimnames(x), stringsAsFactors = FALSE)
+  spt        <- c()
+  cell_names <- c()
   
-##   # check if y is in the names of x
-##   if (!all(y %in% attr(x, "vars"))) stop("Some names in 'y' are not in 'x'")
+  for (k in 1:nrow(cond_comb)) {
+    cc  <- unlist(cond_comb[k, ])
+    val <- x[matrix(cc, 1L)]
+    if (val != 0) {
+      spt <- c(spt, val)
+      cell_names <- c(cell_names, paste(cc, collapse = ""))
+    }
+  }
+
+  spt <- structure(spt, names = cell_names)
+  attr(spt, "vars") <- names(dimnames(x))
+  class(spt) <- c("sptable", class(spt))
   
-##   pos     <- match(y, attr(x, "vars"))
-##   configs <- .find_cond_configs(x, pos)
-##   cspt <- lapply(configs, function(z) {
-##     b  <- structure(pos, names = .split_chars(z))
-##     sl <- slice_sptable(x, b)
-##     return(sl)
-##   })
-##   cspt <- structure(cspt, names = configs, pos = pos)
-##   class(cspt) <- c("csptable", class(cspt))
-##   cspt
-## }
+  return(spt)
+}
 
 
-## #' Print method for conditional sparse tables
-## #'
-## #' @param x A \code{csptable} object
-## #' @param ... Not used (for S3 compatability)
-## #' @export
-## print.csptable <- function(x, ...) {
-##   for (i in seq_along(x)) {print(x[[i]]); cat("\n")}
-## }
+#' @rdname as_sptable
+#' @export
+as_sptable.matrix <- as_sptable.array
+
+
+#' @rdname as_sptable
+#' @export
+as_sptable.table <- as_sptable.array

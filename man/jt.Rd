@@ -4,12 +4,10 @@
 \alias{jt}
 \title{Junction Tree}
 \usage{
-jt(g, data, evidence = NULL, flow = "sum", propagate = TRUE, validate = TRUE)
+jt(x, evidence = NULL, flow = "sum", propagate = TRUE, validate = TRUE)
 }
 \arguments{
-\item{g}{Either a decomposable undirected graph as a named list or a \code{gengraph} object or an \code{igraph} DAG}
-
-\item{data}{A \code{data.frame} of characters. Note: all values must only be a single character. See details.}
+\item{x}{An object return from \code{compile}}
 
 \item{evidence}{A named vector}
 
@@ -56,9 +54,13 @@ plot(g)
 # ----
 # We use the asia data; see the man page (?asia)
 
+# Compilation
+# -----------
+cp <- compile(asia, g)
+
 # Example 1: sum-flow without evidence
 # ------------------------------------
-jt1 <- jt(g, asia)
+jt1 <- jt(cp)
 plot(jt1)
 print(jt1)
 query_belief(jt1, c("E", "L", "T"))
@@ -67,7 +69,7 @@ query_belief(jt1, c("B", "D", "E"), type = "joint")
 # Example 2: sum-flow with evidence
 # ---------------------------------
 e2  <- c(A = "y", X = "n")
-jt2 <- jt(g, asia, e2)
+jt2 <- jt(cp, e2)
 query_belief(jt2, c("E", "L", "T"))
 query_belief(jt2, c("B", "D", "E"), type = "joint")
 
@@ -79,13 +81,13 @@ query_evidence(jt2)
 
 # Example 3: max-flow without evidence
 # ------------------------------------
-jt3 <- jt(g, asia, flow = "max")
+jt3 <- jt(cp, flow = "max")
 mpe(jt3)
 
 # Example 4: max-flow with evidence
 # ---------------------------------
 e4  <- c(T = "y", X = "y", D = "y")
-jt4 <- jt(g, asia, e4, flow = "max")
+jt4 <- jt(cp, e4, flow = "max")
 mpe(jt4)
 
 # Notice, that S, B and E has changed from "n" to "y"
@@ -94,6 +96,42 @@ mpe(jt4)
 # Example 5: investigating the clique graph before propagating
 # ------------------------------------------------------------
 # TBA
+
+# Example 6: compiling from a list of conditional probability tables (CPTs)
+# -------------------------------------------------------------------------
+
+# 1) We need some CPTs which we extract from the asia2 object
+# 2) The elements need to by an array-object and so we convert
+# 3) Some elements are one-dimensional and they dont have "dimnames"
+
+cpts <- lapply(asia2, function(x) {
+  arr <- as(x$prob, "array")
+  if (length(dim(arr)) == 1L) { # The onedimensional ones are not named
+    dimnames(arr) <- structure(dimnames(arr), names = x$node)
+   }
+  arr
+})
+
+# 4) The cpts object needs to be named and the names must be the
+#    - child node of the corresponding CPT. This is already the
+#    - case in this example
+
+print(cpts)
+
+# 5) The list of cpts needs to be converted in a "cpt_list" object
+#    - This is merely for checking if the cpts are of the correct type,
+#    - but also the cpts are now converted to a sparse representation
+#    - to obtain an increase in the compilation and propagation phase
+
+cl <- cpt_list(cpts)
+cp2 <- compile(cl)
+
+# Finally, cp2 is now of the same form as cp above and we can use the
+# junction tree algorithm
+
+jt6 <- jt(cp2)
+query_belief(jt2, c("E", "L", "T"))
+query_belief(jt2, c("B", "D", "E"), type = "joint")
 
 }
 \seealso{

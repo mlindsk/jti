@@ -1,0 +1,81 @@
+parents_igraph <- function(g) {
+  stopifnot(igraph::is_directed(g), igraph::is_dag(g))
+  Ag <- igraph::as_adjacency_matrix(g)
+  cn <- colnames(Ag)
+  if (is.null(cn)) {
+    stop("The vertices in the igraph object must have names")
+  }
+  apply(Ag, 2, function(x) {
+    names(which(x == 1L))
+  })
+}
+
+moralize_igraph <- function(g, parents) {
+  for (p in parents) {
+    if (length(p) > 1) {
+      pairs <- utils::combn(p, 2,  simplify = FALSE)
+      for (ps in pairs) {
+        if (!igraph::are.connected(g, ps[1], ps[2])) {
+          g <- g + igraph::edge(ps[1], ps[2]) 
+        }
+      }
+    }
+  }
+  return(g)
+}
+
+triangulate_igraph <- function(g) {
+  igraph::is.chordal(g, fillin = FALSE, newgraph = TRUE)$newgraph
+}
+
+as_undirected_igraph <- function(g) igraph::as.undirected(g)
+
+adjacency_list_from_moralization_and_triangulation_igraph <- function(g, par) {
+  g <- moralize_igraph(g, par)
+  g <- igraph::as.undirected(g)
+  g <- triangulate_igraph(g)
+  as_adj_lst(igraph::as_adjacency_matrix(g))
+}
+
+
+.allowed_cpt_classes <- function() {
+  c(.map_chr(utils::methods("as_sptable"), function(generic) sub("as_sptable.", "", generic)), "sptable")  
+}
+
+construct_cliques_and_parents <- function(adj) {
+  ## TODO: Specify a root in advance
+  ## ---------------------------------------------------------
+  ## See Soren and Lau p. 58 for specifying another root easily!
+  ## ---------------------------------------------------------
+  rip_ <- rip(adj, check = FALSE)
+  cliques <- rip_$C
+  names(cliques) <- paste("C", 1:length(cliques), sep = "")
+  if (length(cliques) < 2) {
+    stop("No need to propagate for |C| < 2... But fix anyway...")
+  }
+  # parents is only used if compile.data.frame is used
+  return(list(cliques = cliques, parents = rip_$P))
+}
+
+graph_from_cpt_list <- function(x) {
+  pairs <- lapply(seq_along(x), function(i) {
+    el <- x[[i]]
+    child <- names(x)[i]
+    parents <- setdiff(attr(el, "vars"), child)
+    as.matrix(expand.grid(parents, child, stringsAsFactors = FALSE))
+  })
+  el <- do.call(rbind, pairs)
+  igraph::graph_from_edgelist(el)
+}
+
+adjacency_list_from_graph <- function(g, pe) {
+  adj <- if (igraph::is.igraph(g)) {
+    pe$parents <- parents_igraph(g)
+    moralize_and_triangulate(g, pe$parents)
+  } else if (inherits(g, "gengraph")) {
+    g$G_adj
+  } else {
+    stopifnot(is_decomposable(g))
+    g
+  }
+}

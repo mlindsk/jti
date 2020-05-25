@@ -20,3 +20,13 @@
 #' 
 #' @references \href{https://www.bnlearn.com/documentation/man/asia.html}{bnlearn-asia}
 "asia"
+
+
+#' Asia bnlearn
+#'
+#' See the \code{asia} data for information. This version, has class \code{bn.fit}.
+#'
+#' @docType data
+#' 
+#' @references \href{https://www.bnlearn.com/bnrepository/discrete-small.html#asia}{bnlearn-asia}
+"asia2"
