@@ -1,50 +1,18 @@
 ## ---------------------------------------------------------
-##                NON-EXPORTED HELPERS
-## ---------------------------------------------------------
-.find_cond_configs <- function(x, pos) {
-  # x  : sptable
-  # pos: the position of the conditional variables
-
-  # Should we test for variablenames containing "@"?
-  skeleton <- paste(rep("@", nchar(names(x)[1])))
-  .map_chr(names(x), function(s) {
-    sk <- skeleton
-    s_pos_val <- .map_chr(pos, function(l) substr(s, l, l))
-    sk[pos] <- s_pos_val
-    paste(gsub("@", "", sk), collapse = "")
-  })
-}
-
-.reposition_names <- function(x, pos) {
-  # x : named list
-  structure(x, names =.map_chr(names(x), function(y) {
-    paste(.split_chars(y)[pos], collapse = "")
-  }))
-}
-
-.set_as_sptable <- function(x) {
-  structure(x, class = c("sptable", class(x)))
-}
-
-
-## ---------------------------------------------------------
 ##                 EXPORTED FUNCTIONS
 ## ---------------------------------------------------------
 #' Sparse table
 #'
-#' Returns a sparse contingency table for the variables in \code{x} as a vector .
+#' A sparse contingency table representation of a matrix.
 #'
 #' @param x Character matrix
-#' @seealso \code{\link{parray}}
+#' @seealso \code{\link{as_parray}}
 #' @examples
-#' sptable(as.matrix(asia[, 1:2]))
+#' sptable(as.matrix(asia[, 1:3]))
 #' @export
 sptable <- function(x) {
   stopifnot(is.matrix(x), !is.null(colnames(x)))
   sptab <- sptab_(x)
-
-  # TODO: Convert to envir
-  
   class(sptab) <- c("sptable", class(sptab))
   return(sptab)
 }
@@ -60,10 +28,15 @@ sptable <- function(x) {
 #' @seealso \code{\link{sptable}}
 #' @examples
 #' sp  <- sptable(as.matrix(asia[, 1:3]))
-#' psp <- parray(sp, c("S", "T"))
+#' psp <- as_parray(sp, c("S", "T"))
 #' sum(psp) # Since (S,T) have 4 configurations
 #' @export
-parray <- function(x, y = NULL) {
+as_parray <- function(x, y = NULL) UseMethod("as_parray")
+
+
+#' @rdname as_sptable
+#' @export
+as_parray.sptable <- function(x, y = NULL) {
   stopifnot(inherits(x, "sptable"))
   if (is.null(y)) {
     xs <- x / sum(x)
@@ -118,14 +91,20 @@ parray <- function(x, y = NULL) {
 #' @export
 merge.sptable <- function(x, y, op = "*", validate = TRUE, ...) {
 
+  stopifnot(op %in% c("*", "/", "+", "-"))
+  
+  if (inherits(x, "unity_table") || inherits(y, "unity_table")) {
+    return(merge_unity(x, y))
+  }
+  
   if (validate) {
     nvars_x <- length(attr(x, "vars"))
     nvars_y <- length(attr(y, "vars"))
-    for (name in names(x)) if (nchar(name) > nvars_x) stop("One or more names of x is not valid. See to_single_chars().")
-    for (name in names(y)) if (nchar(name) > nvars_y) stop("One or more names of y is not valid. See to_single_chars().")
+    msg1 <- "One or more names of" 
+    msg2 <- "has nchar(name) > 1 which is not allowed."
+    for (name in names(x)) if (nchar(name) > nvars_x) stop(paste(msg1, "x", msg2))
+    for (name in names(y)) if (nchar(name) > nvars_y) stop(paste(msg1, "y", msg2))
   }
-  
-  stopifnot(op %in% c("*", "/", "+", "-"))
   
   vx  <- attr(x, "vars")
   vy  <- attr(y, "vars")
@@ -224,9 +203,13 @@ marginalize <- function(p, s, flow = "sum") UseMethod("marginalize")
 #' @export
 marginalize.sptable <- function(p, s, flow = "sum") {
 
-  if (flow %ni% c("sum", "max")) stop("flow must be 'sum' or 'max'")
-  
+  # TODO: Fix!
+  #  - Just make all the combinations from attr(p, "lvls") and proceed as below?
+  if (inherits(p, "unity_table")) stop("Not implemented yet. Fix!")
+
   v <- attr(p, "vars")
+  
+  if (flow %ni% c("sum", "max")) stop("flow must be 'sum' or 'max'")
   if (any(is.na(match(s, v)))) stop("Some variables in s are not in p")
 
   marg_vars <- setdiff(v, s)
@@ -235,17 +218,20 @@ marginalize.sptable <- function(p, s, flow = "sum") {
   cf  <- .find_cond_configs(p, pos)
   scf <- split(names(cf), cf)
 
+  ## ---------------------------------------------------------
   ## penv <- new.env()
   ## for (k in seq_along(p)) {
   ##   penv[[names(p)[k]]] <- as.numeric(p[k])
   ## }
-
+  ## head(ls(envir = penv))
   ## spt <- lapply(scf, function(e) {
   ##   if (flow == "sum") sum(unlist(mget(e, envir = penv))) else max(penv[[e]])
   ## })
-
+  ## ---------------------------------------------------------
+  
   spt <- lapply(scf, function(e) {
     # TODO: Slow because we must "lookup" p[e] !!!
+    #  - maybe we make "[.sptable" faster!
     if (flow == "sum") sum(p[e]) else max(p[e])
   })
   
@@ -255,109 +241,58 @@ marginalize.sptable <- function(p, s, flow = "sum") {
   return(spt)
 }
 
-#' Print Sparse Table
-#'
-#' A print method for \code{sptable} and \code{slice_sptable} objects
-#'
-#' @param x A \code{sptable} object
-#' @param ... Not used (for S3 compatability)
-#' @export
-print.sptable <- function(x, ...) {
-  vars      <- attr(x, "vars")
-  vars_cond <- attr(x, "vars_cond")
-  nchr  <- sum(.map_int(vars, function(s) nchar(s))) + length(vars) + nchar("Vars:") - 1
-  N     <- length(x)
-  cells <- names(x)
-  cat("", paste0(rep("-", nchr), collapse = ""), "\n")
-  if (inherits(x, "slice")) {
-    cat("", paste(paste(names(vars_cond), "= "), vars_cond, sep = "", collapse = ", "), "\n")    
-  }
-  cat(" Vars:", paste0(vars, collapse = "-"), "\n")
-  cat("", paste0(rep("-", nchr), collapse = ""), "\n")
-  for (k in seq_along(cells)) {
-    cat(cells[k], ":", x[k], "\n")
-  }
-  invisible(x)
-}
 
-#' @export
-`[<-.sptable` <- function(x, i, value) {
-  NextMethod()
-}
-
-#' @export
-`[.sptable` <- function(x, i) {
-  if (is.character(i) && !all(i %in% names(x))) return(0L)
-  structure(.set_as_sptable(NextMethod()) , vars = attr(x, "vars"))
-}
-
-#' Array to Sparse Table
-#'
-#' Convert conditional probability table of array-type to a sparse representation
-#'
-#' @param x An \code{array}-like object
-#' @param validate Logical. Check if x has proper dimnames.
-#' @details Use only validate = FALSE if you are positve that the structure is correct.
-#' @examples
-#'
-#'
-#' # Convert one-dimensional array
-#'
-#' dmx <- list(X = c("a", "b"))
-#' x   <- array(c(1, 2), dimnames = dmx)
-#' as_sptable(x)
-#'
-#' # Convert mutli-dimensional array
-#' 
-#' dmy <- list(Y = c("a", "b"), Z = c("c", "d"), W = c("e", "f"))
-#' y   <- array(c(1,0,3,0,0,2,1,0), c(2,2,2), dimnames = dmy)
-#' as_sptable(y)
-#'
-#' # Convert a data frame to sptable
-#'
-#' as_sptable(table(asia[, 2:3]))
-#' 
-#'
-#' @export
-as_sptable <- function(x, validate = TRUE) UseMethod("as_sptable")
-
-#' @rdname as_sptable
-#' @export
-as_sptable.array <- function(x, validate = TRUE)  {
-
-  if (validate) {
-    if (!is_named_list(dimnames(x))) stop("x must be a named array or matrix")
-    # Test for allowed chars in the future and dont convert automatically
-    dimnames(x) <- lapply(dimnames(x), function(x) possible_chars(length(x)))  
-  }
-
-  # TODO: Use an iterator instead of copying!
-  cond_comb  <- expand.grid(dimnames(x), stringsAsFactors = FALSE)
-  spt        <- c()
-  cell_names <- c()
-  
-  for (k in 1:nrow(cond_comb)) {
-    cc  <- unlist(cond_comb[k, ])
-    val <- x[matrix(cc, 1L)]
-    if (val != 0) {
-      spt <- c(spt, val)
-      cell_names <- c(cell_names, paste(cc, collapse = ""))
-    }
-  }
-
-  spt <- structure(spt, names = cell_names)
-  attr(spt, "vars") <- names(dimnames(x))
-  class(spt) <- c("sptable", class(spt))
-  
-  return(spt)
-}
+## ---------------------------------------------------------
+##                     SANDBOX
+## ---------------------------------------------------------
+## x1 <- sptable(as.matrix(asia[, 2:5]))
+## y1 <- sptable(as.matrix(asia[, c(5, 8, 4, 1)]))
+## y1[1:length(y1)] <- 1L
+## z1 <- structure(numeric(0), class = c("sptable", "integer"))
+## ny <- c("n", "y")
+## attr(z1, "lvls") <- list(B = ny, D = ny, L = ny, A = ny)
+## attr(z1, "vars") <- names(attr(z1, "lvls"))
+## class(z1) <- c("unity_table", class(z1))
 
 
-#' @rdname as_sptable
-#' @export
-as_sptable.matrix <- as_sptable.array
+## microbenchmark::microbenchmark(
+##   merge(x1, y1),
+##   merge_unity(x1, z1)  
+## )
 
 
-#' @rdname as_sptable
-#' @export
-as_sptable.table <- as_sptable.array
+## x2 <- sptable(as.matrix(derma[, 1:10]))
+## y2 <- sptable(as.matrix(derma[, 6:15]))
+## z2 <- structure(numeric(0), class = c("sptable", "integer"))
+## attr(z2, "lvls") <- lapply(derma[, 6:15], unique)
+## attr(z2, "vars") <- names(attr(z2, "lvls"))
+## class(z2) <- c("unity_table", class(z2))
+
+
+## microbenchmark::microbenchmark(
+##   merge(x2, y2),
+##   merge_unity(x2, z2)  
+## )
+
+
+## x <- structure(numeric(0), class = c("unity_table","sptable", "integer"))
+## nx <- c("0", "1", "2")
+## attr(x, "lvls") <- list(A = nx, B = "0", C = c("2", "0"))
+## attr(x, "vars") <- names(attr(x, "lvls"))
+
+## y <- structure(numeric(0), class = c("unity_table","sptable", "integer"))
+## attr(y, "lvls") <- list(D = c("1", "2"))
+## attr(y, "vars") <- names(attr(y, "lvls"))
+
+## out <- merge_unity(x,y)
+
+## x1 <- sptable(as.matrix(asia[, 2:5]))
+## y1 <- sptable(as.matrix(asia[, 6:8]))
+## y1[1:length(y1)] <- 1L
+## z1 <- structure(numeric(0), class = c("sptable", "integer"))
+## ny <- c("n", "y")
+## attr(z1, "lvls") <- list(E = ny, X = ny, D = ny)
+## attr(z1, "vars") <- names(attr(z1, "lvls"))
+## class(z1) <- c("unity_table", class(z1))
+
+## merge_unity(x1, z1)

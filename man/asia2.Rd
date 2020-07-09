@@ -5,7 +5,7 @@
 \alias{asia2}
 \title{Asia bnlearn}
 \format{
-An object of class \code{bn.fit} (inherits from \code{bn.fit.dnet}) of length 8.
+An object of class \code{list} of length 8.
 }
 \usage{
 asia2

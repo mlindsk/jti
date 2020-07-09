@@ -61,3 +61,11 @@ sptab_ <- function(A) {
     .Call('_jti_sptab_', PACKAGE = 'jti', A)
 }
 
+count_unique2 <- function(x) {
+    .Call('_jti_count_unique2', PACKAGE = 'jti', x)
+}
+
+sptab_2 <- function(A) {
+    .Call('_jti_sptab_2', PACKAGE = 'jti', A)
+}
+

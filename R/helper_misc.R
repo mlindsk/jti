@@ -21,7 +21,10 @@ neq_empt_int <- function(x) !identical(x, integer(0))
 neq_empt_lst <- function(x) !identical(x, list())
 neq_null     <- function(x) !is.null(x)
 '%ni%'       <- Negate('%in%')
-push         <- function(l, el, name = NULL) c(l, structure(list(el), names = name))
+push         <- function(l, el, name = NULL) {
+  # TODO: if el is a named list, we must take this into account
+  c(l, structure(list(el), names = name))
+}
 
 
 ## GRAPHS

@@ -11,7 +11,7 @@ jt(x, evidence = NULL, flow = "sum", propagate = TRUE, validate = TRUE)
 
 \item{evidence}{A named vector}
 
-\item{flow}{Character. Either "sum" or "max"}
+\item{flow}{Either "sum" or "max"}
 
 \item{propagate}{Logical}
 
@@ -46,7 +46,8 @@ el <- matrix(c(
  nc = 2,
  byrow = TRUE)
 
-g <- graph_from_edgelist(el)
+g <- igraph::graph_from_edgelist(el)
+parents_igraph(g)
 plot(g)
 # -----------------------
 
@@ -104,13 +105,7 @@ mpe(jt4)
 # 2) The elements need to by an array-object and so we convert
 # 3) Some elements are one-dimensional and they dont have "dimnames"
 
-cpts <- lapply(asia2, function(x) {
-  arr <- as(x$prob, "array")
-  if (length(dim(arr)) == 1L) { # The onedimensional ones are not named
-    dimnames(arr) <- structure(dimnames(arr), names = x$node)
-   }
-  arr
-})
+cpts <- dimnames_to_single_chars(asia2)
 
 # 4) The cpts object needs to be named and the names must be the
 #    - child node of the corresponding CPT. This is already the
@@ -121,7 +116,7 @@ print(cpts)
 # 5) The list of cpts needs to be converted in a "cpt_list" object
 #    - This is merely for checking if the cpts are of the correct type,
 #    - but also the cpts are now converted to a sparse representation
-#    - to obtain an increase in the compilation and propagation phase
+#    - to obtain a better runtime in the compilation and propagation phase
 
 cl <- cpt_list(cpts)
 cp2 <- compile(cl)
@@ -130,8 +125,8 @@ cp2 <- compile(cl)
 # junction tree algorithm
 
 jt6 <- jt(cp2)
-query_belief(jt2, c("E", "L", "T"))
-query_belief(jt2, c("B", "D", "E"), type = "joint")
+query_belief(jt6, c("either", "smoke"))
+query_belief(jt6, c("either", "smoke"), type = "joint")
 
 }
 \seealso{

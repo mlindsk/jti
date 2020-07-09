@@ -1,4 +1,5 @@
 parents_igraph <- function(g) {
+  # out: named list where a name is the child and elements are parents
   stopifnot(igraph::is_directed(g), igraph::is_dag(g))
   Ag <- igraph::as_adjacency_matrix(g)
   cn <- colnames(Ag)
@@ -37,11 +38,6 @@ adjacency_list_from_moralization_and_triangulation_igraph <- function(g, par) {
   as_adj_lst(igraph::as_adjacency_matrix(g))
 }
 
-
-.allowed_cpt_classes <- function() {
-  c(.map_chr(utils::methods("as_sptable"), function(generic) sub("as_sptable.", "", generic)), "sptable")  
-}
-
 construct_cliques_and_parents <- function(adj) {
   ## TODO: Specify a root in advance
   ## ---------------------------------------------------------
@@ -71,7 +67,7 @@ graph_from_cpt_list <- function(x) {
 adjacency_list_from_graph <- function(g, pe) {
   adj <- if (igraph::is.igraph(g)) {
     pe$parents <- parents_igraph(g)
-    moralize_and_triangulate(g, pe$parents)
+    adjacency_list_from_moralization_and_triangulation_igraph(g, pe$parents)
   } else if (inherits(g, "gengraph")) {
     g$G_adj
   } else {
