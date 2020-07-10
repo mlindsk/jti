@@ -76,8 +76,6 @@ merge_unity <- function(x, y, op = "*", validate = TRUE, ...) {
   y_res_lvl  <- if (neq_empt_int(posx)) attr(y, "lvls")[-which(vy %in% sep)] else attr(y, "lvls")
   y_res_comb <- expand.grid(y_res_lvl, stringsAsFactors = FALSE)
   y_res_comb <- apply(y_res_comb, 1L, paste0, collapse = "")
-
-  # browser()
   
   spt <- unlist(lapply(names(cfx), function(string) {
     structure(rep(x[string], length(y_res_comb)), names = paste(string, y_res_comb, sep = ""))
@@ -91,6 +89,15 @@ merge_unity <- function(x, y, op = "*", validate = TRUE, ...) {
 ## ---------------------------------------------------------
 ##                   EXPORTED HELPERS
 ## ---------------------------------------------------------
+
+#' @export
+unity_table <- function(vars, lvls) {
+  spt <- numeric(0)
+  attr(spt, "vars") <- vars
+  attr(spt, "lvls") <- lvls
+  class(spt) <- c("unity_table","sptable", class(spt))
+  spt
+}
 
 #' @export
 `[<-.sptable` <- function(x, i, value) {

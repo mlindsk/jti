@@ -150,7 +150,6 @@ merge.sptable <- function(x, y, op = "*", validate = TRUE, ...) {
   scfx   <- scfx[sc_sep]
   scfy   <- scfy[sc_sep]
 
-  # TODO: Put this into a function
   spt <- lapply(sc_sep, function(z) {
 
     scfx_z <- scfx[[z]]
@@ -212,6 +211,7 @@ marginalize.sptable <- function(p, s, flow = "sum") {
   if (flow %ni% c("sum", "max")) stop("flow must be 'sum' or 'max'")
   if (any(is.na(match(s, v)))) stop("Some variables in s are not in p")
 
+
   marg_vars <- setdiff(v, s)
   pos <- match(marg_vars, v)
 
@@ -219,21 +219,23 @@ marginalize.sptable <- function(p, s, flow = "sum") {
   scf <- split(names(cf), cf)
 
   ## ---------------------------------------------------------
-  ## penv <- new.env()
-  ## for (k in seq_along(p)) {
-  ##   penv[[names(p)[k]]] <- as.numeric(p[k])
-  ## }
-  ## head(ls(envir = penv))
-  ## spt <- lapply(scf, function(e) {
-  ##   if (flow == "sum") sum(unlist(mget(e, envir = penv))) else max(penv[[e]])
-  ## })
+  penv <- new.env()
+  for (k in seq_along(p)) {
+    penv[[names(p)[k]]] <- as.numeric(p[k])
+  }
+  head(ls(envir = penv))
+  spt <- lapply(scf, function(e) {
+    if (flow == "sum") sum(unlist(mget(e, envir = penv))) else max(penv[[e]])
+  })
+
+  spt <- unlist(spt)
   ## ---------------------------------------------------------
   
-  spt <- lapply(scf, function(e) {
-    # TODO: Slow because we must "lookup" p[e] !!!
-    #  - maybe we make "[.sptable" faster!
-    if (flow == "sum") sum(p[e]) else max(p[e])
-  })
+  ## spt <- lapply(scf, function(e) {
+  ##   # TODO: Slow because we must "lookup" p[e] !!!
+  ##   #  - maybe we make "[.sptable" faster!
+  ##   if (flow == "sum") sum(p[e]) else max(p[e])
+  ## })
   
   spt <- unlist(spt)
   attr(spt, "vars") <- marg_vars

@@ -119,7 +119,6 @@ jt <- function(x, evidence = NULL, flow = "sum", propagate = TRUE, validate = TR
 #' rdname jt
 #' @export
 jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = TRUE, validate = TRUE) {
-  browser()
   jt <- new_jt(x, evidence, flow, validate) # TODO: Is'nt validate handled in compile?
   if (!propagate) return(jt)
   m <- send_messages(jt, flow)

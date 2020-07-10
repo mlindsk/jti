@@ -202,9 +202,14 @@ send_messages <- function(jt, flow = "sum") {
 
         message_k_names <- setdiff(C_lvs_k, Sk)
 
-        if (inherits(jt$charge$C[[C_par_k_name]], "unity_table") || inherits(jt$charge$C[[C_lvs_k_name]], "unity_table")) browser()
-        
+        browser()
+
         if (direction == "collect") {
+
+          # TODO: This is faster :D ! 
+          # e1 <- as_env.sptable(jt$charge$C[[C_lvs_k_name]])
+          # res <- marginalize.sptable_env(e1, message_k_names, "sum")
+          
           message_k <- marginalize(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
           jt$charge$C[[C_par_k_name]] <- merge(jt$charge$C[[C_par_k_name]], message_k, "*", validate = FALSE)
           jt$charge$C[[C_lvs_k_name]] <- merge(jt$charge$C[[C_lvs_k_name]], message_k, "/", validate = FALSE)
