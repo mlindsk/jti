@@ -18,6 +18,23 @@ RIV count_unique(VS  x) { // std::unordered_map<std::string, int>
 }
 
 // [[Rcpp::export]]
+RE count_unique_env(VS x) {
+  int n = x.size();
+  RE env = new_env();
+  for (int i = 0; i < n; i++) {
+    auto s = x[i];
+    if (env.exists(s)) {
+      int curr = env[s];
+      env[s] = curr + 1; 
+    } else {
+      env[s] = 1;
+    }
+  }
+  return env;
+}
+
+
+// [[Rcpp::export]]
 VS matpr(Rcpp::CharacterMatrix A) {
   // Paste rows in a character matrix
   int n = A.nrow();
@@ -42,6 +59,14 @@ RIV sptab_(RCM & A) {
   VS x = matpr(A);
   auto na = count_unique(x);
   // Rcpp::List Delta_A = A.attr("dimnames"); // Use colnames(A) ?
+  na.attr("vars") = Rcpp::colnames(A); //Delta_A[1];
+  return na;
+}
+
+// [[Rcpp::export]]
+RE sptab_env_(RCM & A) {
+  VS x = matpr(A);
+  auto na = count_unique_env(x);
   na.attr("vars") = Rcpp::colnames(A); //Delta_A[1];
   return na;
 }

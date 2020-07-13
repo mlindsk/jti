@@ -2,10 +2,10 @@
 ##                NON-EXPORTED HELPERS
 ## ---------------------------------------------------------
 .find_cond_configs <- function(x, pos) {
-  # x  : sptable
+  # x  : sptable / sptable_env
   # pos: the position of the conditional variables
 
-  # TODO: Should we test for variablenames containing "@"?
+  # TODO: Should we test for variable names containing "@"?
   skeleton <- paste(rep("@", nchar(names(x)[1])))
   .map_chr(names(x), function(s) {
     sk <- skeleton
@@ -16,7 +16,10 @@
 }
 
 .reposition_names <- function(x, pos) {
-  # x : named list
+  # x : named list / sptable_env
+
+  # TODO: This is just 'str_rem' in disguise? Fix!
+  # - or is it 'str_extract' ?
   structure(x, names =.map_chr(names(x), function(y) {
     paste(.split_chars(y)[pos], collapse = "")
   }))

@@ -11,7 +11,14 @@
 neq_null     <- function(x) !is.null(x)
 
 ## STRINGS
-str_rem      <- function(s, pos) paste0(.split_chars(s)[-pos], collapse = "")
+str_rem <- function(s, pos) {
+  .map_chr(strsplit(s, ""), function(x) {
+    paste0(x[-pos], collapse = "")
+  })
+}
+# str_rem <- function(s, pos) paste0(.split_chars(s)[-pos], collapse = "")
+
+# TODO: Test if length(x) > 1L ? And throw an error?
 .split_chars <- function(x) unlist(strsplit(x, ""))
 
 ## SETS

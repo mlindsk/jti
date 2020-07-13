@@ -37,18 +37,20 @@ as_parray <- function(x, y = NULL) UseMethod("as_parray")
 #' @rdname as_sptable
 #' @export
 as_parray.sptable <- function(x, y = NULL) {
-  stopifnot(inherits(x, "sptable"))
+
   if (is.null(y)) {
     xs <- x / sum(x)
     class(xs) <- class(x)
     return(xs)
   }
+  
   pos  <- match(y, attr(x, "vars"))
   conf <- .find_cond_configs(x, pos)
   conditional_list <- split(names(conf), conf)
   parr <- unlist(unname(lapply(conditional_list, function(e) {
     x[e] / sum(x[e])
   })))
+  
   attr(parr, "vars") <- attr(x, "vars")
   class(parr) <- class(x)
   return(parr)
@@ -217,25 +219,11 @@ marginalize.sptable <- function(p, s, flow = "sum") {
 
   cf  <- .find_cond_configs(p, pos)
   scf <- split(names(cf), cf)
-
-  ## ---------------------------------------------------------
-  penv <- new.env()
-  for (k in seq_along(p)) {
-    penv[[names(p)[k]]] <- as.numeric(p[k])
-  }
-  head(ls(envir = penv))
-  spt <- lapply(scf, function(e) {
-    if (flow == "sum") sum(unlist(mget(e, envir = penv))) else max(penv[[e]])
-  })
-
-  spt <- unlist(spt)
-  ## ---------------------------------------------------------
   
-  ## spt <- lapply(scf, function(e) {
-  ##   # TODO: Slow because we must "lookup" p[e] !!!
-  ##   #  - maybe we make "[.sptable" faster!
-  ##   if (flow == "sum") sum(p[e]) else max(p[e])
-  ## })
+  spt <- lapply(scf, function(e) {
+    # Slow because we must "lookup" p[e] over and over!!!
+    if (flow == "sum") sum(p[e]) else max(p[e])
+  })
   
   spt <- unlist(spt)
   attr(spt, "vars") <- marg_vars

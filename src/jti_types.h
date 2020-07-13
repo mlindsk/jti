@@ -19,5 +19,6 @@ using RL  = Rcpp::List;
 using RIV = Rcpp::IntegerVector;
 using RCV = Rcpp::CharacterVector;
 using RCM = Rcpp::CharacterMatrix;
+using RE  = Rcpp::Environment;
 
 #endif
