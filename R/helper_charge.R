@@ -25,7 +25,7 @@ allocate_child_to_potential <- function(potC, x, cliques, child, parents) {
 }
 
 
-make_unity_sptable <- function(potC, k, x, clique) {
+make_clique_unity_sptable_env <- function(potC, k, x, clique) {
 
   if (inherits(x, "data.frame")) {
     ## sptk <- sptable(as.matrix(x[, clique, drop = FALSE]))
@@ -34,11 +34,11 @@ make_unity_sptable <- function(potC, k, x, clique) {
     xk   <- x[, clique, drop = FALSE]
     lvls <- lapply(xk, unique)
     vars <- colnames(xk)
-    potC$C[[k]] <- unity_table(vars, lvls)
+    potC$C[[k]] <- make_unity_table(vars, lvls)
   } else {        
     vars <- attr(x[[k]], "vars")
     lvls <- attr(x, "lvls")[vars]
-    potC$C[[k]] <- unity_table(vars, lvls)
+    potC$C[[k]] <- make_unity_table(vars, lvls)
   }
   
 }
@@ -63,7 +63,7 @@ new_charge <- function(x, cliques, parents) {
   if (any(is_null)) {
     which_is_null <- which(is_null)
     for (k in which_is_null) {
-      make_unity_sptable(potC, k, x, cliques[[k]])
+      make_clique_unity_sptable_env(potC, k, x, cliques[[k]])
     }
   }
 

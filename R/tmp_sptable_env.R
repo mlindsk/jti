@@ -1,15 +1,28 @@
-deep_copy_env <- function(x) structure(list2env(as.list(x)), class = class(x), vars = attr(x, "vars"))
+deep_copy_env <- function(x) {
+  new_env <- list2env(as.list(x))
+  new_struct <- structure(new_env, class = class(x), vars = attr(x, "vars"))
+  if (inherits(x, "unity_sptable_env")) attr(new_struct, "lvls") <- attr(x, "lvls")
+  return(new_struct)
+}
 
 ## ---------------------------------------------------------
 ##              NEW FUNCTIONS ON TRIAL
 ## ---------------------------------------------------------
 #' @export
+sptable_env <- function(x) {
+  stopifnot(is.matrix(x), !is.null(colnames(x)))
+  sptab <- sptab_env_(x)
+  class(sptab) <- c("sptable_env", class(sptab))
+  return(sptab)
+}
+
+#' @export
 merge.sptable_env <- function(x, y, op = "*", validate = TRUE, ...) {
 
   stopifnot(op %in% c("*", "/", "+", "-"))
   
-  if (inherits(x, "unity_table") || inherits(y, "unity_table")) {
-    return(merge_unity(x, y))
+  if (inherits(x, "unity_sptable_env") || inherits(y, "unity_sptable_env")) {
+    return(merge_unity_sptable_env(x, y, op, validate))
   }
   
   if (validate) {
@@ -162,8 +175,12 @@ print.sptable_env <- function(x, ...) {
   cat("", paste0(rep("-", nchr), collapse = ""), "\n")
   cat(" Vars:", paste0(vars, collapse = "-"), "\n")
   cat("", paste0(rep("-", nchr), collapse = ""), "\n")
-  for (cell in cells) {
-    cat(cell, ":", x[[cell]], "\n")
+  if (inherits(x, "unity_sptable_env")) {
+    cat(" <unity_stable_env> \n")
+  } else {
+    for (cell in cells) {
+      cat(cell, ":", x[[cell]], "\n")
+    }
   }
   invisible(NULL)
 }
@@ -278,3 +295,106 @@ as_sptable_env.matrix <- as_sptable_env.array
 #' @rdname as_sptable_env
 #' @export
 as_sptable_env.table <- as_sptable_env.array
+
+
+
+
+
+## ---------------------------------------------------------
+##                    BOOKMARK
+## ---------------------------------------------------------
+
+#' @export
+make_unity_sptable_env <- function(vars, lvls) {
+  stopifnot(setequal(vars, names(lvls)))
+  spt <- new.env()
+  attr(spt, "vars") <- vars
+  attr(spt, "lvls") <- lvls
+  class(spt) <- c("unity_sptable_env","sptable_env", class(spt))
+  spt
+}
+
+
+merge_two_unities_env <- function(x, y) {
+
+  vx  <- attr(x, "vars")
+  vy  <- attr(y, "vars")
+  sep_var <- intersect(vx, vy)
+
+  if (length(sep_var) == length(vx)) {
+    # If they are identical
+
+    new_lvls <- mapply(function(a, b) {
+      if (length(a) <= length(b)) return(a) else return(b)
+    }, attr(x, "lvls"), attr(y, "lvls"), SIMPLIFY = FALSE)
+    
+    spt <- deep_copy_env(x)
+    attr(spt, "lvls") <- new_lvls
+    return(spt)
+  }
+
+  if (!neq_empt_chr(sep_var)) {
+    # If no vars in commong
+    spt <- deep_copy_env(x)
+    attr(spt, "vars") <- c(attr(spt, "vars"), attr(y, "vars"))
+    attr(spt, "lvls") <- c(attr(spt, "lvls"), attr(y, "lvls"))
+    return(spt)
+  }
+  
+  sep_lvl_x   <- attr(x, "lvls")[sep_var]
+  sep_lvl_y   <- attr(y, "lvls")[sep_var]
+
+  sep_lvl_new <- mapply(function(a, b) {
+    if (length(a) <= length(b)) return(a) else return(b)
+  }, sep_lvl_x, sep_lvl_y, SIMPLIFY = FALSE)
+
+  spt <- deep_copy_env(x)
+
+  attr(spt, "lvls")[sep_var] <- sep_lvl_new
+
+  res_var <- setdiff(vy, vx)
+  res_lvl <- attr(y, "lvls")[res_var]
+
+  for (k in 1:length(res_lvl)) {
+    attr(spt, "lvls") <- push(attr(spt, "lvls"), res_lvl[[k]], names(res_lvl)[k])
+  }
+  attr(spt, "vars") <- c(attr(spt, "vars"), res_var)
+  
+  return(spt)
+}
+
+merge_unity_sptable_env <- function(x, y, op = "*", validate = TRUE, ...) {
+
+  stopifnot(op %in% c("*", "/", "+", "-"))
+
+  if (inherits(x, "unity_sptable_env") && inherits(y, "unity_sptable_env")) {
+    return(merge_two_unities_env(x, y))
+  }
+
+  if (inherits(x, "unity_sptable_env")) {
+    # assumming that x is sptable_env and y is unity_sptable_env
+    tmp <- x
+    x <- y
+    y <- tmp
+  }
+  
+  vx  <- attr(x, "vars")
+  vy  <- attr(y, "vars")
+  sep <- intersect(vx, vy)
+
+  posx <- match(sep, vx)
+
+  # The if statement ensures correctness even if no vars in common
+  cfx <- if (neq_empt_int(posx)) .find_cond_configs(x, posx) else x
+  y_res_lvl  <- if (neq_empt_int(posx)) attr(y, "lvls")[-which(vy %in% sep)] else attr(y, "lvls")
+  y_res_comb <- expand.grid(y_res_lvl, stringsAsFactors = FALSE)
+  y_res_comb <- apply(y_res_comb, 1L, paste0, collapse = "")
+
+  spt <- unlist(lapply(names(cfx), function(string) {
+    structure(rep(x[string, "value"], length(y_res_comb)), names = paste(string, y_res_comb, sep = ""))
+  }))
+  
+  attr(spt, "vars") <- c(vx, setdiff(vy, vx))
+  class(spt) <- c("sptable", class(spt))
+  return(spt)
+}

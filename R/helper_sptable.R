@@ -94,7 +94,7 @@ merge_unity <- function(x, y, op = "*", validate = TRUE, ...) {
 ## ---------------------------------------------------------
 
 #' @export
-unity_table <- function(vars, lvls) {
+make_unity_table <- function(vars, lvls) {
   spt <- numeric(0)
   attr(spt, "vars") <- vars
   attr(spt, "lvls") <- lvls
