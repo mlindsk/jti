@@ -31,7 +31,6 @@
 #'  byrow = TRUE)
 #' 
 #' g <- igraph::graph_from_edgelist(el)
-#' parents_igraph(g)
 #' plot(g)
 #' # -----------------------
 #'
@@ -42,19 +41,22 @@
 #' # Compilation
 #' # -----------
 #' cp <- compile(asia, g)
-#' 
+#'
+#' # microbenchmark::microbenchmark(jt(compile(asia, g)))
+#'
 #' # Example 1: sum-flow without evidence
 #' # ------------------------------------
 #' jt1 <- jt(cp)
 #' plot(jt1)
 #' print(jt1)
+#' jt1$charge$C$C2
 #' query_belief(jt1, c("E", "L", "T"))
 #' query_belief(jt1, c("B", "D", "E"), type = "joint")
 #'
 #' # Example 2: sum-flow with evidence
 #' # ---------------------------------
 #' e2  <- c(A = "y", X = "n")
-#' jt2 <- jt(cp, e2)
+#' jt2 <- jt(cp, e2) 
 #' query_belief(jt2, c("E", "L", "T"))
 #' query_belief(jt2, c("B", "D", "E"), type = "joint")
 #'
@@ -100,7 +102,7 @@
 #' # 5) The list of cpts needs to be converted in a "cpt_list" object
 #' #    - This is merely for checking if the cpts are of the correct type,
 #' #    - but also the cpts are now converted to a sparse representation
-#' #    - to obtain a better runtime in the compilation and propagation phase
+#' #      to obtain a better runtime in the compilation and propagation phase
 #' 
 #' cl <- cpt_list(cpts)
 #' cp2 <- compile(cl)

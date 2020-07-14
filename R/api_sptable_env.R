@@ -1,13 +1,14 @@
-deep_copy_env <- function(x) {
-  new_env <- list2env(as.list(x))
-  new_struct <- structure(new_env, class = class(x), vars = attr(x, "vars"))
-  if (inherits(x, "unity_sptable_env")) attr(new_struct, "lvls") <- attr(x, "lvls")
-  return(new_struct)
-}
-
 ## ---------------------------------------------------------
 ##              NEW FUNCTIONS ON TRIAL
 ## ---------------------------------------------------------
+#' Sparse table
+#'
+#' A sparse contingency table representation of a matrix.
+#'
+#' @param x Character matrix
+#' @seealso \code{\link{as_parray}}
+#' @examples
+#' sptable_env(as.matrix(asia[, 1:3]))
 #' @export
 sptable_env <- function(x) {
   stopifnot(is.matrix(x), !is.null(colnames(x)))
@@ -16,6 +17,85 @@ sptable_env <- function(x) {
   return(sptab)
 }
 
+#' Conditional probability table
+#'
+#' Returns a sparse conditional probability table conditioned on variables in \code{b}.
+#'
+#' @param x A sparse table obtained from \code{sptable}
+#' @param y Character vector with variables to condition on
+#' @details If \code{y} is \code{NULL}, \code{x} is just converted to a \code{sptable} with no conditioning variables, i.e. the marginal table.
+#' @return A \code{sptable} object
+#' @seealso \code{\link{sptable}}
+#' @examples
+#' sp  <- sptable_env(as.matrix(asia[, 1:3]))
+#' psp <- as_parray(sp, c("S", "T"))
+#' sum(psp) # Since (S,T) have 4 configurations
+#' @export
+as_parray <- function(x, y = NULL) UseMethod("as_parray")
+
+#' @rdname as_sptable
+#' @export
+as_parray.sptable_env <- function(x, y = NULL) {
+
+  if (is.null(y) || !neq_empt_chr(y)) {
+    sum_x <- sum(x)
+    parr <- list2env(eapply(x, function(x_) x_ / sum_x))
+    class(parr) <- class(x)
+    attr(parr, "vars") <- attr(x, "vars")
+    return(parr)
+  }
+
+  if (any(y %ni% attr(x, "vars"))) stop("some elements in y are not in x")
+  
+  pos  <- match(y, attr(x, "vars"))
+  conf <- .find_cond_configs(x, pos)
+  conditional_list <- split(names(conf), conf)
+  
+  parr <- list2env(as.list(unlist(unname(lapply(conditional_list, function(e) {
+    xe <- x[e]
+    sum_xe <- sum(xe)
+    eapply(xe, function(xe_) xe_ / sum_xe)
+  })))))
+  
+  attr(parr, "vars") <- attr(x, "vars")
+  class(parr) <- class(x)
+  return(parr)
+}
+
+
+#' Merge sparse tables
+#'
+#' Multiplication or division of two sparse tables
+#' 
+#' @param x A \code{sptable_env} object
+#' @param y A \code{sptable_env} object
+#' @param op Either "*" (multiplication), "/" (division), "+" (addition) or "-" (subtraction)
+#' @param validate Logical indicating wether or not it should be checked if the names
+#' of \code{x} and \code{y} are valid. The names are restricted to be one character long
+#' @param ... Not used. For S3 compatability
+#' @examples
+#'
+#' # Variables in common
+#' # -------------------
+#' x1 <- sptable_env(as.matrix(asia[, 2:5]))
+#' y1 <- sptable_env(as.matrix(asia[, c(5, 8, 4)]))
+#' merge(x1, y1, "/")
+#'
+#' # No variables in common
+#' x2 <- sptable_env(as.matrix(asia[, 1:2]))
+#' y2 <- sptable_env(as.matrix(asia[, 3, drop = FALSE]))
+#' merge(x2, y2, "/")
+#'
+#' # Names not on correct form
+#' z  <- chickwts[, 2, drop = FALSE]
+#' x3 <- sptable_env(as.matrix(z))
+#' merge(x3, x3)
+#'
+#' # Correcting the names
+#' z_new <- to_single_chars(z)
+#' x4    <- sptable_env(as.matrix(z_new))
+#' x4
+#' 
 #' @export
 merge.sptable_env <- function(x, y, op = "*", validate = TRUE, ...) {
 
@@ -34,13 +114,14 @@ merge.sptable_env <- function(x, y, op = "*", validate = TRUE, ...) {
     for (name in names(y)) if (nchar(name) > nvars_y) stop(paste(msg1, "y", msg2))
   }
 
-  # Interchange x and y such that x is shortest gives better performance in vectorization.
-  if (length(x) > length(y)) {
-    tmp <- deep_copy_env(y)
-    y <- x
-    x <- tmp
-    rm(tmp)
-  }
+  ## Interchange x and y such that x is shortest gives better performance in vectorization.
+  ## - this will change the order of division - not good. But is it still a good speedup?
+  ## if (length(x) > length(y)) {
+  ##   tmp <- deep_copy_env(y)
+  ##   y <- x
+  ##   x <- tmp
+  ##   rm(tmp)
+  ## }
   
   vx  <- attr(x, "vars")
   vy  <- attr(y, "vars")
@@ -48,8 +129,7 @@ merge.sptable_env <- function(x, y, op = "*", validate = TRUE, ...) {
 
   # If no variables in common it is easy
   if (!neq_empt_chr(sep)) {
-    # TODO: Put this into a function: merge_tables_with_empty_separator
-    
+    # TODO: Put this into a function: merge_sptables_env_with_empty_separator
     spt <- unlist(lapply(names(x), function(nx_) {
       .names <- paste0(nx_, names(y))
       .vals  <- do.call(op, list(x[nx_, "value"], y[names(y), "value"]))
@@ -79,7 +159,7 @@ merge.sptable_env <- function(x, y, op = "*", validate = TRUE, ...) {
     posy_sorted <- sort(posy)
     posy_sep    <- structure(seq_along(posy_sorted), names = vy[posy_sorted])
     posy_new    <- posy_sep[names(posx_sep)]
-    stop("reposition not implemented for sptable_env yet. fix")
+    # stop("reposition not implemented for sptable_env yet. fix")
     scfy        <- .reposition_names(scfy, posy_new)
   }
 
@@ -113,7 +193,20 @@ merge.sptable_env <- function(x, y, op = "*", validate = TRUE, ...) {
   return(spt)
 }
 
+#' Marginalize
+#'
+#' @param p A \code{sptable} object
+#' @param s The variables to be marginalized out
+#' @param flow Either "sum" or "max" where "max"
+#' @examples
+#' p <- sptable_env(as.matrix(asia[, 3:5]))
+#' p
+#' marginalize(p, "L")
+#' @export
+marginalize <- function(p, s, flow = "sum") UseMethod("marginalize")
 
+
+#' @rdname marginalize
 #' @export
 marginalize.sptable_env <- function(p, s, flow = "sum") {
 
@@ -128,42 +221,67 @@ marginalize.sptable_env <- function(p, s, flow = "sum") {
   cf  <- .find_cond_configs(p, pos)
   scf <- split(names(cf), cf)
 
-  spt <- unlist(lapply(scf, function(e) {
+  spt <- list2env(lapply(scf, function(e) {
     # if (flow == "sum") sum(unlist(mget(e, envir = p))) else max(unlist(mget(e, envir = p)))
     if (flow == "sum") sum(p[e]) else max(p[e])
   }))
-  
+
+  class(spt) <- c("sptable_env", "environment")
   attr(spt, "vars") <- marg_vars
-  class(spt) <- c("sptable_env", class(spt))
   return(spt)
 }
 
-#' @rdname as_sptable
-#' @export
-as_parray.sptable_env <- function(x, y = NULL) {
 
-  if (is.null(y)) {
-    sum_x <- sum(x)
-    parr <- list2env(eapply(x, function(x_) x_ / sum_x))
-    class(parr) <- class(x)
-    attr(parr, "vars") <- attr(x, "vars")
-    return(parr)
+#' Convert array-like objev to sptable_env
+#' @export
+as_sptable_env <- function(x, validate = TRUE) UseMethod("as_sptable_env")
+
+#' @rdname as_sptable_env
+#' @export
+as_sptable_env.array <- function(x, validate = TRUE)  {
+
+  if (inherits(x, "sptable_env")) return(x)
+
+  if (validate) {
+    if (!is_named_list(dimnames(x))) {
+      msg_allowed <- paste(.allowed_cpt_classes(), collapse = ", ")
+      msg <- paste(
+        "x must be a _named_ array-like object. Allowed classes are:",
+        msg_allowed
+      )
+      stop(msg)
+    }
+    # TODO: Test for allowed chars in the future and dont convert automatically
+    dimnames(x) <- lapply(dimnames(x), function(x) possible_chars(length(x)))  
   }
 
-  pos  <- match(y, attr(x, "vars"))
-  conf <- .find_cond_configs(x, pos)
-  conditional_list <- split(names(conf), conf)
+  all_comb <- expand.grid(dimnames(x), stringsAsFactors = FALSE)
+  all_comb <- apply(all_comb, 1L, paste0, collapse = "")
+  x_vec <- as.vector(x)
 
-  parr <- list2env(unlist(unname(lapply(conditional_list, function(e) {
-    xe <- x[e]
-    sum_xe <- sum(xe)
-    eapply(xe, function(xe_) xe_ / sum_xe)
-  }))))
+  # NOTE: We rely on all_comb and x_vec to conform (names correspond to values)
+  non_zero_cells <- which(x_vec != 0)
+  non_zero_names <- all_comb[non_zero_cells]
+
+  spt <- new.env()
+  for (k in seq_along(non_zero_cells)) {
+    spt[[non_zero_names[k]]] <- x_vec[non_zero_cells[k]]
+  }
+
+  attr(spt, "vars") <- names(dimnames(x))
+  class(spt) <- c("sptable_env", class(spt))
   
-  attr(parr, "vars") <- attr(x, "vars")
-  class(parr) <- class(x)
-  return(parr)
+  return(spt)
 }
+
+#' @rdname as_sptable_env
+#' @export
+as_sptable_env.matrix <- as_sptable_env.array
+
+
+#' @rdname as_sptable_env
+#' @export
+as_sptable_env.table <- as_sptable_env.array
 
 
 #' @export
@@ -185,6 +303,7 @@ print.sptable_env <- function(x, ...) {
   invisible(NULL)
 }
 
+#' @export
 head.sptable_env <- function(x, n = 10) {
   # TODO: DONT JUST COPY THE PRINT FUNCTION! MAKE IT SHORTER!
   vars  <- attr(x, "vars")
@@ -243,158 +362,4 @@ as_env.sptable <- function(x) {
   warning("obsolete")
   .class <- c("sptable_env", "environment")
   structure(list2env(as.list(x)), "vars" = attr(x, "vars"), class = .class)
-}
-
-
-#' @export
-as_sptable_env <- function(x, validate = TRUE) UseMethod("as_sptable")
-
-#' @rdname as_sptable_env
-#' @export
-as_sptable_env.array <- function(x, validate = TRUE)  {
-
-  if (inherits(x, "sptable_env")) return(x)
-
-  if (validate) {
-    if (!is_named_list(dimnames(x))) {
-      msg_allowed <- paste(.allowed_cpt_classes(), collapse = ", ")
-      msg <- paste(
-        "x must be a _named_ array-like object. Allowed classes are:",
-        msg_allowed
-      )
-      stop(msg)
-    }
-    # TODO: Test for allowed chars in the future and dont convert automatically
-    dimnames(x) <- lapply(dimnames(x), function(x) possible_chars(length(x)))  
-  }
-
-  all_comb <- expand.grid(dimnames(x), stringsAsFactors = FALSE)
-  all_comb <- apply(all_comb, 1L, paste0, collapse = "")
-  x_vec <- as.vector(x)
-
-  # NOTE: We rely on all_comb and x_vec to conform (names correspond to values)
-  non_zero_cells <- which(x_vec != 0)
-  non_zero_names <- all_comb[non_zero_cells]
-
-  spt <- new.env()
-  for (k in seq_along(non_zero_cells)) {
-    spt[[non_zero_names[k]]] <- x_vec[non_zero_cells[k]]
-  }
-
-  attr(spt, "vars") <- names(dimnames(x))
-  class(spt) <- c("sptable_env", class(spt))
-  
-  return(spt)
-}
-
-#' @rdname as_sptable_env
-#' @export
-as_sptable_env.matrix <- as_sptable_env.array
-
-
-#' @rdname as_sptable_env
-#' @export
-as_sptable_env.table <- as_sptable_env.array
-
-
-
-
-
-## ---------------------------------------------------------
-##                    BOOKMARK
-## ---------------------------------------------------------
-
-#' @export
-make_unity_sptable_env <- function(vars, lvls) {
-  stopifnot(setequal(vars, names(lvls)))
-  spt <- new.env()
-  attr(spt, "vars") <- vars
-  attr(spt, "lvls") <- lvls
-  class(spt) <- c("unity_sptable_env","sptable_env", class(spt))
-  spt
-}
-
-
-merge_two_unities_env <- function(x, y) {
-
-  vx  <- attr(x, "vars")
-  vy  <- attr(y, "vars")
-  sep_var <- intersect(vx, vy)
-
-  if (length(sep_var) == length(vx)) {
-    # If they are identical
-
-    new_lvls <- mapply(function(a, b) {
-      if (length(a) <= length(b)) return(a) else return(b)
-    }, attr(x, "lvls"), attr(y, "lvls"), SIMPLIFY = FALSE)
-    
-    spt <- deep_copy_env(x)
-    attr(spt, "lvls") <- new_lvls
-    return(spt)
-  }
-
-  if (!neq_empt_chr(sep_var)) {
-    # If no vars in commong
-    spt <- deep_copy_env(x)
-    attr(spt, "vars") <- c(attr(spt, "vars"), attr(y, "vars"))
-    attr(spt, "lvls") <- c(attr(spt, "lvls"), attr(y, "lvls"))
-    return(spt)
-  }
-  
-  sep_lvl_x   <- attr(x, "lvls")[sep_var]
-  sep_lvl_y   <- attr(y, "lvls")[sep_var]
-
-  sep_lvl_new <- mapply(function(a, b) {
-    if (length(a) <= length(b)) return(a) else return(b)
-  }, sep_lvl_x, sep_lvl_y, SIMPLIFY = FALSE)
-
-  spt <- deep_copy_env(x)
-
-  attr(spt, "lvls")[sep_var] <- sep_lvl_new
-
-  res_var <- setdiff(vy, vx)
-  res_lvl <- attr(y, "lvls")[res_var]
-
-  for (k in 1:length(res_lvl)) {
-    attr(spt, "lvls") <- push(attr(spt, "lvls"), res_lvl[[k]], names(res_lvl)[k])
-  }
-  attr(spt, "vars") <- c(attr(spt, "vars"), res_var)
-  
-  return(spt)
-}
-
-merge_unity_sptable_env <- function(x, y, op = "*", validate = TRUE, ...) {
-
-  stopifnot(op %in% c("*", "/", "+", "-"))
-
-  if (inherits(x, "unity_sptable_env") && inherits(y, "unity_sptable_env")) {
-    return(merge_two_unities_env(x, y))
-  }
-
-  if (inherits(x, "unity_sptable_env")) {
-    # assumming that x is sptable_env and y is unity_sptable_env
-    tmp <- x
-    x <- y
-    y <- tmp
-  }
-  
-  vx  <- attr(x, "vars")
-  vy  <- attr(y, "vars")
-  sep <- intersect(vx, vy)
-
-  posx <- match(sep, vx)
-
-  # The if statement ensures correctness even if no vars in common
-  cfx <- if (neq_empt_int(posx)) .find_cond_configs(x, posx) else x
-  y_res_lvl  <- if (neq_empt_int(posx)) attr(y, "lvls")[-which(vy %in% sep)] else attr(y, "lvls")
-  y_res_comb <- expand.grid(y_res_lvl, stringsAsFactors = FALSE)
-  y_res_comb <- apply(y_res_comb, 1L, paste0, collapse = "")
-
-  spt <- unlist(lapply(names(cfx), function(string) {
-    structure(rep(x[string, "value"], length(y_res_comb)), names = paste(string, y_res_comb, sep = ""))
-  }))
-  
-  attr(spt, "vars") <- c(vx, setdiff(vy, vx))
-  class(spt) <- c("sptable", class(spt))
-  return(spt)
 }

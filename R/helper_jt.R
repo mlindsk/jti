@@ -59,6 +59,15 @@ parents_jt <- function(x, lvs) {
   return(par)
 }
 
+
+normalize_root <- function(root, norm_val) {
+  root_normalized <- eapply(root, function(x) x / norm_val)
+  root_normalized <- list2env(root_normalized)
+  attr(root_normalized, "vars") <- attr(root, "vars")
+  class(root_normalized) <- class(root)
+  return(root_normalized)
+}
+
 prune_jt <- function(jt) {
 
   direction <- attr(jt, "direction")
@@ -84,9 +93,18 @@ prune_jt <- function(jt) {
     if (direction == "collect") {
       jt$schedule$collect    <- "FULL"
       attr(jt, "direction")  <- "distribute"
+
+      # Normalize C1
       probability_of_evidence <- sum(jt$charge$C[["C1"]])
       attr(jt, "probability_of_evidence") <- probability_of_evidence
-      jt$charge$C[["C1"]] <- jt$charge$C[["C1"]] / probability_of_evidence
+      jt$charge$C[["C1"]] <- normalize_root(jt$charge$C[["C1"]], probability_of_evidence)
+
+      ## C1_normalized <- eapply(jt$charge$C[["C1"]], function(x) x / probability_of_evidence)
+      ## C1_normalized <- list2env(C1_normalized)
+      ## attr(C1_normalized, "vars") <- attr(jt$charge$C[["C1"]], "vars")
+      ## class(C1_normalized) <- class(jt$charge$C[["C1"]])
+      ## jt$charge$C[["C1"]] <- C1_normalized
+      # jt$charge$C[["C1"]] <- jt$charge$C[["C1"]] / probability_of_evidence
     } else {
       jt$schedule$distribute <- "FULL"
       attr(jt, "direction")  <- "FULL"
@@ -122,10 +140,11 @@ set_evidence_jt <- function(charge, cliques, evidence) {
       e_var <- names(e)
       e_val <- unname(e)
       if (e_var %in% Ck) {
+        # just match the names instead
         e_pos_charge_k <- match(e_var, attr(charge$C[[k]], "vars"))
         charge_k_by_e_pos <- .find_cond_configs(charge$C[[k]], e_pos_charge_k)
-        idx_to_keep   <- which(charge_k_by_e_pos == e_val)
-        charge$C[[k]] <- charge$C[[k]][idx_to_keep]
+        names_to_keep   <- names(charge$C[[k]])[which(charge_k_by_e_pos == e_val)]
+        charge$C[[k]] <- charge$C[[k]][names_to_keep]
       }
     }
   }
@@ -143,10 +162,10 @@ new_jt <- function(x, evidence = NULL, flow = "sum", validate = TRUE) {
   if (!is.null(evidence)) charge <- set_evidence_jt(charge, cliques, evidence)
   
   schedule  <- new_schedule(cliques)
-  jt        <- list(
-    schedule    = schedule[1:2], # collect and distribute
-    charge      = charge,
-    cliques     = cliques,
+  jt <- list(
+    schedule = schedule[1:2], # collect and distribute
+    charge   = charge,
+    cliques  = cliques,
     clique_graph = schedule$clique_graph
   )
   
@@ -206,11 +225,6 @@ send_messages <- function(jt, flow = "sum") {
 
           message_k <- marginalize(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
 
-          # e1 <- as_env.sptable(jt$charge$C[[C_lvs_k_name]])
-          # message_k <- marginalize.sptable_env(e1, message_k_names, attr(jt, "flow"))
-          # e2 <- as_env.sptable(message_k)
-          # hh <- merge.sptable_env(e1, e2, "*", validate = FALSE)
-          
           jt$charge$C[[C_par_k_name]] <- merge(jt$charge$C[[C_par_k_name]], message_k, "*", validate = FALSE)
           jt$charge$C[[C_lvs_k_name]] <- merge(jt$charge$C[[C_lvs_k_name]], message_k, "/", validate = FALSE)
         }

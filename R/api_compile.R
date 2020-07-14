@@ -1,7 +1,7 @@
 #' @export
 cpt_list <- function(x) { 
   # x: list of cpts with dimnames
-  
+
   if (!is_named_list(x)) {
     stop("x must be a named list of cpts. A name should be the name of the corresponding child node.")
   }
@@ -13,7 +13,7 @@ cpt_list <- function(x) {
     class_allowed <- any(.map_lgl(.allowed_cpt_classes(), function(x) inherits(l, x)))
     if (!class_allowed) stop("one ore more elements in x is not an array-like object")
     if (!is_named_list(dimnames(l))) stop("one or more elements in x does not have proper dimnames")
-    sptl <- as_sptable(l)
+    sptl <- as_sptable_env(l)
     diml <- dimnames(l) # used to populate/create empty/unity potentials in new_charge
     lapply(diml, function(x) { # sptables cant handle lvls with nchar > 1L ! (thats why they are fast)
       for (e in x) {
@@ -48,7 +48,7 @@ compile.cpt_list <- function(x, g = NULL) {
 compile.data.frame <- function(x, g, validate = TRUE) {
 
   if (validate) {
-    if( !only_single_chars(x)) {
+    if (!only_single_chars(x)) {
       stop("All values in x must be represented as a single character. Use to_single_chars(x)")
     }
   }

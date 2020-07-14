@@ -47,7 +47,6 @@ el <- matrix(c(
  byrow = TRUE)
 
 g <- igraph::graph_from_edgelist(el)
-parents_igraph(g)
 plot(g)
 # -----------------------
 
@@ -59,18 +58,21 @@ plot(g)
 # -----------
 cp <- compile(asia, g)
 
+# microbenchmark::microbenchmark(jt(compile(asia, g)))
+
 # Example 1: sum-flow without evidence
 # ------------------------------------
 jt1 <- jt(cp)
 plot(jt1)
 print(jt1)
+jt1$charge$C$C2
 query_belief(jt1, c("E", "L", "T"))
 query_belief(jt1, c("B", "D", "E"), type = "joint")
 
 # Example 2: sum-flow with evidence
 # ---------------------------------
 e2  <- c(A = "y", X = "n")
-jt2 <- jt(cp, e2)
+jt2 <- jt(cp, e2) 
 query_belief(jt2, c("E", "L", "T"))
 query_belief(jt2, c("B", "D", "E"), type = "joint")
 

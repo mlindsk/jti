@@ -1,7 +1,7 @@
 extract_or_make_cpt <- function(x, child, parents) {
   # x: data.frame or cpt_list
   if (inherits(x, "data.frame")) {
-    spt  <- sptable(as.matrix(x[, c(child, parents), drop = FALSE]))
+    spt  <- sptable_env(as.matrix(x[, c(child, parents), drop = FALSE]))
     return(as_parray(spt, parents))
   } else {
     return(x[[child]])
@@ -34,11 +34,11 @@ make_clique_unity_sptable_env <- function(potC, k, x, clique) {
     xk   <- x[, clique, drop = FALSE]
     lvls <- lapply(xk, unique)
     vars <- colnames(xk)
-    potC$C[[k]] <- make_unity_table(vars, lvls)
+    potC$C[[k]] <- make_unity_sptable_env(vars, lvls)
   } else {        
     vars <- attr(x[[k]], "vars")
     lvls <- attr(x, "lvls")[vars]
-    potC$C[[k]] <- make_unity_table(vars, lvls)
+    potC$C[[k]] <- make_unity_sptable_env(vars, lvls)
   }
   
 }
