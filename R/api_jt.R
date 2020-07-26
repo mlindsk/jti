@@ -9,7 +9,7 @@
 #' @param validate Logical. See details.
 #' @details It is assumed that all values in \code{data}, for all variables,
 #' are represented as a single character. If \code{validate} is \code{TRUE} this is checked.
-#' If values are not single characters, one may exploit the \code{to_single_chars} function.
+#' If values are not single characters, one may exploit the \code{to_chars} function.
 #' @return A \code{jt} object
 #' @seealso \code{\link{query_belief}}, \code{\link{mpe}}, \code{\link{get_cliques}}
 #' @examples
@@ -49,7 +49,6 @@
 #' jt1 <- jt(cp)
 #' plot(jt1)
 #' print(jt1)
-#' jt1$charge$C$C2
 #' query_belief(jt1, c("E", "L", "T"))
 #' query_belief(jt1, c("B", "D", "E"), type = "joint")
 #'
@@ -91,7 +90,7 @@
 #' # 2) The elements need to by an array-object and so we convert
 #' # 3) Some elements are one-dimensional and they dont have "dimnames"
 #' 
-#' cpts <- dimnames_to_single_chars(asia2)
+#' cpts <- dimnames_to_chars(asia2)
 #'
 #' # 4) The cpts object needs to be named and the names must be the
 #' #    - child node of the corresponding CPT. This is already the
@@ -173,6 +172,7 @@ query_evidence <- function(x) UseMethod("query_evidence")
 #' @rdname query_evidence
 #' @export
 query_evidence.jt <- function(x) {
+
   if(attr(x, "flow") != "sum") {
     stop("The flow of the junction tree must be 'sum'.")
   }

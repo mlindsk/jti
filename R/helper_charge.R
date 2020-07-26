@@ -2,7 +2,7 @@ extract_or_make_cpt <- function(x, child, parents) {
   # x: data.frame or cpt_list
   if (inherits(x, "data.frame")) {
     spt  <- sptable_env(as.matrix(x[, c(child, parents), drop = FALSE]))
-    return(as_parray(spt, parents))
+    return(to_cpt(spt, parents))
   } else {
     return(x[[child]])
   }

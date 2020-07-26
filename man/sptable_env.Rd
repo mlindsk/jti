@@ -13,8 +13,8 @@ sptable_env(x)
 A sparse contingency table representation of a matrix.
 }
 \examples{
-sptable(as.matrix(asia[, 1:3]))
+sptable_env(as.matrix(asia[, 1:3]))
 }
 \seealso{
-\code{\link{as_parray}}
+\code{\link{to_cpt}}
 }

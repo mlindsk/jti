@@ -7,16 +7,22 @@
  *      elements in x
  ***************************************/
 // [[Rcpp::export]]
-RIV count_unique(VS  x) { // std::unordered_map<std::string, int>
-  std::map<std::string, int> tab;
-  int n = x.size();
-  for (int i = 0; i < n; i++) {
-    auto s = x[i];
-    tab[s]++;
-  }
-  return Rcpp::wrap(tab);
-}
+// RIV count_unique(VS  x) { // std::unordered_map<std::string, int>
+//   std::map<std::string, int> tab;
+//   int n = x.size();
+//   for (int i = 0; i < n; i++) {
+//     auto s = x[i];
+//     tab[s]++;
+//   }
+//   return Rcpp::wrap(tab);
+// }
 
+/*****************************************
+ * In:
+ * - x: Vector of strings
+ * Out: An environment of counts of all unique
+ *      elements in x
+ ***************************************/
 // [[Rcpp::export]]
 RE count_unique_env(VS x) {
   int n = x.size();
@@ -55,13 +61,13 @@ VS matpr(Rcpp::CharacterMatrix A) {
  * Out: The a-marginal table with attribute = variable names
  ***************************************/
 // [[Rcpp::export]]
-RIV sptab_(RCM & A) {
-  VS x = matpr(A);
-  auto na = count_unique(x);
-  // Rcpp::List Delta_A = A.attr("dimnames"); // Use colnames(A) ?
-  na.attr("vars") = Rcpp::colnames(A); //Delta_A[1];
-  return na;
-}
+// RIV sptab_(RCM & A) {
+//   VS x = matpr(A);
+//   auto na = count_unique(x);
+//   // Rcpp::List Delta_A = A.attr("dimnames"); // Use colnames(A) ?
+//   na.attr("vars") = Rcpp::colnames(A); //Delta_A[1];
+//   return na;
+// }
 
 // [[Rcpp::export]]
 RE sptab_env_(RCM & A) {

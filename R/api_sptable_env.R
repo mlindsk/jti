@@ -6,12 +6,18 @@
 #' A sparse contingency table representation of a matrix.
 #'
 #' @param x Character matrix
-#' @seealso \code{\link{as_parray}}
+#' @param validate Logical. If TRUE, it checks whether or not the values of all variables
+#' in \code{A} are constrained to a single character. If not, an error is produced. 
+#' @seealso \code{\link{to_cpt}}
+#' @details The reason for the values to be constrained to a single character is due to
+#' an increase in performance.
 #' @examples
 #' sptable_env(as.matrix(asia[, 1:3]))
 #' @export
-sptable_env <- function(x) {
+sptable_env <- function(x, validate = TRUE) {
   stopifnot(is.matrix(x), !is.null(colnames(x)))
+  # TODO: Check if x has cells with nchar(name) > 1
+  if (validate) stopifnot(only_chars(x))
   sptab <- sptab_env_(x)
   class(sptab) <- c("sptable_env", class(sptab))
   return(sptab)
@@ -25,17 +31,17 @@ sptable_env <- function(x) {
 #' @param y Character vector with variables to condition on
 #' @details If \code{y} is \code{NULL}, \code{x} is just converted to a \code{sptable} with no conditioning variables, i.e. the marginal table.
 #' @return A \code{sptable} object
-#' @seealso \code{\link{sptable}}
+#' @seealso \code{\link{sptable_env}}
 #' @examples
 #' sp  <- sptable_env(as.matrix(asia[, 1:3]))
-#' psp <- as_parray(sp, c("S", "T"))
+#' psp <- to_cpt(sp, c("S", "T"))
 #' sum(psp) # Since (S,T) have 4 configurations
 #' @export
-as_parray <- function(x, y = NULL) UseMethod("as_parray")
+to_cpt <- function(x, y = NULL) UseMethod("to_cpt")
 
-#' @rdname as_sptable
+#' @rdname to_cpt
 #' @export
-as_parray.sptable_env <- function(x, y = NULL) {
+to_cpt.sptable_env <- function(x, y = NULL) {
 
   if (is.null(y) || !neq_empt_chr(y)) {
     sum_x <- sum(x)
@@ -92,7 +98,7 @@ as_parray.sptable_env <- function(x, y = NULL) {
 #' merge(x3, x3)
 #'
 #' # Correcting the names
-#' z_new <- to_single_chars(z)
+#' z_new <- to_chars(z)
 #' x4    <- sptable_env(as.matrix(z_new))
 #' x4
 #' 

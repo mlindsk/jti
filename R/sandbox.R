@@ -2,7 +2,7 @@
 
 ## munin <- readRDS("../inst/extdata/munin.rds")
 
-## cpts <- lapply(munin[1:25], function(x) {
+## cpts <- lapply(munin[1:45], function(x) {
 ##   arr <- as(x$prob, "array")
 ##   if (length(dim(arr)) == 1L) { # The onedimensional ones are not named
 ##     dimnames(arr) <- structure(dimnames(arr), names = x$node)
@@ -10,13 +10,13 @@
 ##   arr
 ## }) 
 
-## cpts <- dimnames_to_single_chars(cpts)
+## cpts <- dimnames_to_chars(cpts)
 ## cl   <- cpt_list(cpts)
 ## cp   <- compile(cl)
-
-## j    <- jt(cp, propagate = FALSE)
+## j    <- jt(cp, propagate = TRUE)
 
 ## plot(j, vertex.size = 0.1, vertex.label = NA)
+
 ## j <- send_messages(j); plot(j)
 
 
@@ -44,7 +44,7 @@
 ## e2 <- as_env.sptable(cl[[10]])
 ## merge.sptable_env(e1, e2)
 
-## as_parray(e2, "DIFFN_PATHO")
+## to_cpt(e2, "DIFFN_PATHO")
 ## marginalize(e2, "DIFFN_PATHO", "sum")
 
 ## x <- cpts[[10]]

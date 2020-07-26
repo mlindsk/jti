@@ -65,7 +65,6 @@ cp <- compile(asia, g)
 jt1 <- jt(cp)
 plot(jt1)
 print(jt1)
-jt1$charge$C$C2
 query_belief(jt1, c("E", "L", "T"))
 query_belief(jt1, c("B", "D", "E"), type = "joint")
 
@@ -118,7 +117,7 @@ print(cpts)
 # 5) The list of cpts needs to be converted in a "cpt_list" object
 #    - This is merely for checking if the cpts are of the correct type,
 #    - but also the cpts are now converted to a sparse representation
-#    - to obtain a better runtime in the compilation and propagation phase
+#      to obtain a better runtime in the compilation and propagation phase
 
 cl <- cpt_list(cpts)
 cp2 <- compile(cl)

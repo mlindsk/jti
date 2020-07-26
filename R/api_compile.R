@@ -48,8 +48,8 @@ compile.cpt_list <- function(x, g = NULL) {
 compile.data.frame <- function(x, g, validate = TRUE) {
 
   if (validate) {
-    if (!only_single_chars(x)) {
-      stop("All values in x must be represented as a single character. Use to_single_chars(x)")
+    if (!only_chars(x)) {
+      stop("All values in x must be represented as a single character. Use to_chars(x)")
     }
   }
 
