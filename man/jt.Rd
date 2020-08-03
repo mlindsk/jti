@@ -4,7 +4,7 @@
 \alias{jt}
 \title{Junction Tree}
 \usage{
-jt(x, evidence = NULL, flow = "sum", propagate = TRUE, validate = TRUE)
+jt(x, evidence = NULL, flow = "sum", propagate = TRUE)
 }
 \arguments{
 \item{x}{An object return from \code{compile}}
@@ -14,19 +14,12 @@ jt(x, evidence = NULL, flow = "sum", propagate = TRUE, validate = TRUE)
 \item{flow}{Either "sum" or "max"}
 
 \item{propagate}{Logical}
-
-\item{validate}{Logical. See details.}
 }
 \value{
 A \code{jt} object
 }
 \description{
 Construction of a junction tree and compilation of the network
-}
-\details{
-It is assumed that all values in \code{data}, for all variables,
-are represented as a single character. If \code{validate} is \code{TRUE} this is checked.
-If values are not single characters, one may exploit the \code{to_chars} function.
 }
 \examples{
 
@@ -57,8 +50,6 @@ plot(g)
 # Compilation
 # -----------
 cp <- compile(asia, g)
-
-# microbenchmark::microbenchmark(jt(compile(asia, g)))
 
 # Example 1: sum-flow without evidence
 # ------------------------------------
@@ -106,7 +97,7 @@ mpe(jt4)
 # 2) The elements need to by an array-object and so we convert
 # 3) Some elements are one-dimensional and they dont have "dimnames"
 
-cpts <- dimnames_to_chars(asia2)
+# cpts <- dimnames_to_chars(asia2)
 
 # 4) The cpts object needs to be named and the names must be the
 #    - child node of the corresponding CPT. This is already the
@@ -119,7 +110,7 @@ print(cpts)
 #    - but also the cpts are now converted to a sparse representation
 #      to obtain a better runtime in the compilation and propagation phase
 
-cl <- cpt_list(cpts)
+cl <- cpt_list(asia2) # cpt_list(cpts)
 cp2 <- compile(cl)
 
 # Finally, cp2 is now of the same form as cp above and we can use the

@@ -29,16 +29,20 @@ merge(x1, y1, "/")
 # No variables in common
 x2 <- sptable(as.matrix(asia[, 1:2]))
 y2 <- sptable(as.matrix(asia[, 3, drop = FALSE]))
-merge(x2, y2, "/")
+x2 \%m/\% y2
 
 # Names not on correct form
 z  <- chickwts[, 2, drop = FALSE]
-x3 <- sptable(as.matrix(z))
+x3 <- sptable(as.matrix(z)) # error
+x3 <- sptable(to_chars(as.matrix(z))) # corrected
 merge(x3, x3)
 
 # Correcting the names
 z_new <- to_chars(z)
 x4    <- sptable(as.matrix(z_new))
 x4
+
+}
+\seealso{
 
 }

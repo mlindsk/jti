@@ -5,7 +5,7 @@
 \alias{as_sptable.array}
 \alias{as_sptable.matrix}
 \alias{as_sptable.table}
-\title{Convert array-like objev to sptable}
+\title{Convert array-like object to sptable}
 \usage{
 as_sptable(x, validate = TRUE)
 
@@ -16,5 +16,5 @@ as_sptable(x, validate = TRUE)
 \method{as_sptable}{table}(x, validate = TRUE)
 }
 \description{
-Convert array-like objev to sptable
+Convert array-like object to sptable
 }

@@ -4,7 +4,7 @@
 \alias{jt.charge}
 \title{rdname jt}
 \usage{
-\method{jt}{charge}(x, evidence = NULL, flow = "sum", propagate = TRUE, validate = TRUE)
+\method{jt}{charge}(x, evidence = NULL, flow = "sum", propagate = TRUE)
 }
 \description{
 rdname jt
