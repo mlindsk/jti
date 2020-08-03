@@ -9,7 +9,7 @@ jt(x, evidence = NULL, flow = "sum", propagate = TRUE, validate = TRUE)
 \arguments{
 \item{x}{An object return from \code{compile}}
 
-\item{evidence}{A named vector}
+\item{evidence}{A named vector. The names are the variabes and the elements are the evidence}
 
 \item{flow}{Either "sum" or "max"}
 
@@ -26,7 +26,7 @@ Construction of a junction tree and compilation of the network
 \details{
 It is assumed that all values in \code{data}, for all variables,
 are represented as a single character. If \code{validate} is \code{TRUE} this is checked.
-If values are not single characters, one may exploit the \code{to_single_chars} function.
+If values are not single characters, one may exploit the \code{to_chars} function.
 }
 \examples{
 
@@ -106,7 +106,7 @@ mpe(jt4)
 # 2) The elements need to by an array-object and so we convert
 # 3) Some elements are one-dimensional and they dont have "dimnames"
 
-cpts <- dimnames_to_single_chars(asia2)
+cpts <- dimnames_to_chars(asia2)
 
 # 4) The cpts object needs to be named and the names must be the
 #    - child node of the corresponding CPT. This is already the

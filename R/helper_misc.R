@@ -91,6 +91,7 @@ possible_chars <- function(n) {
 to_chars <- function(x) {
   # Implicitly assumes that no columns has more than length(chars) = 62 unique levels
   # Consider saving the olde levels so we can retrive them again easily later
+  stop("deprectated. Use char_frame!") 
   apply(x, 2, function(z) {
     f <- as.factor(z)
     levels(f) <- possible_chars(length(levels(f)))
@@ -108,6 +109,7 @@ to_chars <- function(x) {
 #' # TBA
 #' @export
 dimnames_to_chars <- function(x) {
+  stop("deprectated. Use char_frame!") 
   lapply(x, function(y) {
     dimnames(y) <- lapply(dimnames(y), function(z) {
       possible_chars(length(z))
@@ -115,3 +117,4 @@ dimnames_to_chars <- function(x) {
     y
   })
 }
+

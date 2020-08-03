@@ -3,13 +3,9 @@
 #' Construction of a junction tree and compilation of the network
 #' 
 #' @param x An object return from \code{compile}
-#' @param evidence A named vector
+#' @param evidence A named vector. The names are the variabes and the elements are the evidence
 #' @param flow Either "sum" or "max"
 #' @param propagate Logical
-#' @param validate Logical. See details.
-#' @details It is assumed that all values in \code{data}, for all variables,
-#' are represented as a single character. If \code{validate} is \code{TRUE} this is checked.
-#' If values are not single characters, one may exploit the \code{to_chars} function.
 #' @return A \code{jt} object
 #' @seealso \code{\link{query_belief}}, \code{\link{mpe}}, \code{\link{get_cliques}}
 #' @examples
@@ -41,8 +37,6 @@
 #' # Compilation
 #' # -----------
 #' cp <- compile(asia, g)
-#'
-#' # microbenchmark::microbenchmark(jt(compile(asia, g)))
 #'
 #' # Example 1: sum-flow without evidence
 #' # ------------------------------------
@@ -90,7 +84,7 @@
 #' # 2) The elements need to by an array-object and so we convert
 #' # 3) Some elements are one-dimensional and they dont have "dimnames"
 #' 
-#' cpts <- dimnames_to_chars(asia2)
+#' # cpts <- dimnames_to_chars(asia2)
 #'
 #' # 4) The cpts object needs to be named and the names must be the
 #' #    - child node of the corresponding CPT. This is already the
@@ -103,7 +97,7 @@
 #' #    - but also the cpts are now converted to a sparse representation
 #' #      to obtain a better runtime in the compilation and propagation phase
 #' 
-#' cl <- cpt_list(cpts)
+#' cl <- cpt_list(asia2) # cpt_list(cpts)
 #' cp2 <- compile(cl)
 #'
 #' # Finally, cp2 is now of the same form as cp above and we can use the
@@ -114,17 +108,16 @@
 #' query_belief(jt6, c("either", "smoke"), type = "joint")
 #' 
 #' @export
-jt <- function(x, evidence = NULL, flow = "sum", propagate = TRUE, validate = TRUE) UseMethod("jt")
-
+jt <- function(x, evidence = NULL, flow = "sum", propagate = TRUE) UseMethod("jt")
 
 #' rdname jt
 #' @export
-jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = TRUE, validate = TRUE) {
-  jt <- new_jt(x, evidence, flow, validate) # TODO: Is'nt validate handled in compile?
+jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = TRUE) {
+  jt <- new_jt(x, evidence, flow)
   if (!propagate) return(jt)
   m <- send_messages(jt, flow)
   while (attr(m, "direction") != "FULL") m <- send_messages(m, flow)
-  return(m)
+  m
 }
 
 #' Most Probable Explanation
@@ -235,13 +228,19 @@ query_belief.jt <- function(x, nodes, type = "marginal") {
     idx <- index_in_which_cliques[which.min(length_of_possible_cliques)]
     pot <- x$charge$C[[idx]]
     rm_var <- setdiff(attr(pot, "vars"), z)
-
+    
     return(marginalize(pot, rm_var))
   })
 
   if (type == "joint") {
-    return(.query[[1]])
+    out <- .query[[1]]
+    lu   <- attr(x, "lookup")[attr(out, "vars")] # Correct order now
+    return(as_array(out, lu))
   } else {
+    .query <- lapply(.query, function(z) {
+      lu   <- attr(x, "lookup")[attr(z, "vars")] # Correct order now
+      as_array(z, lu)
+    })
     return(structure(.query, names = nodes))
   }
 }

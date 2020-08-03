@@ -3,9 +3,8 @@
 
 #include "jti_types.h"
 
-VS  matpr(Rcpp::CharacterMatrix A);
-RIV sptab_(RCM & A);
-RE  sptab_env_(RCM & A);
-RE  count_unique_env(VS x);
+VS  matpr(Rcpp::CharacterMatrix A, bool validate);
+RE  sptab_(RCM & A, bool validate);
+RE  count_unique(VS x);
 
 #endif

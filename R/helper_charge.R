@@ -1,7 +1,7 @@
 extract_or_make_cpt <- function(x, child, parents) {
   # x: data.frame or cpt_list
   if (inherits(x, "data.frame")) {
-    spt  <- sptable_env(as.matrix(x[, c(child, parents), drop = FALSE]))
+    spt  <- sptable(as.matrix(x[, c(child, parents), drop = FALSE]))
     return(to_cpt(spt, parents))
   } else {
     return(x[[child]])
@@ -24,25 +24,27 @@ allocate_child_to_potential <- function(potC, x, cliques, child, parents) {
   }
 }
 
-
-make_clique_unity_sptable_env <- function(potC, k, x, clique) {
+make_clique_unity_sptable <- function(potC, k, x, clique) {
 
   if (inherits(x, "data.frame")) {
+    # TODO: Clean up these comments
     ## sptk <- sptable(as.matrix(x[, clique, drop = FALSE]))
     ## sptk[1:length(sptk)] <- 1L # TODO: Change to numeric(0L)
     ## potC$C[[k]] <- sptk    
     xk   <- x[, clique, drop = FALSE]
-    lvls <- lapply(xk, unique)
     vars <- colnames(xk)
-    potC$C[[k]] <- make_unity_sptable_env(vars, lvls)
+    ## lvls <- lapply(xk, unique)
+    ## potC$C[[k]] <- make_unity_sptable(vars, lvls)
+    potC$C[[k]] <- make_unity_sptable(vars, lookup(xk))
   } else {        
     vars <- attr(x[[k]], "vars")
-    lvls <- attr(x, "lvls")[vars]
-    potC$C[[k]] <- make_unity_sptable_env(vars, lvls)
+    # lvls <- attr(x, "lvls")[vars]
+    # potC$C[[k]] <- make_unity_sptable(vars, lvls)
+    lu <- attr(x, "lookup")[vars]
+    potC$C[[k]] <- make_unity_sptable(vars, lu)
   }
   
 }
-
 
 new_charge <- function(x, cliques, parents) {
   # x: data.frame or cpt_list
@@ -63,7 +65,7 @@ new_charge <- function(x, cliques, parents) {
   if (any(is_null)) {
     which_is_null <- which(is_null)
     for (k in which_is_null) {
-      make_clique_unity_sptable_env(potC, k, x, cliques[[k]])
+      make_clique_unity_sptable(potC, k, x, cliques[[k]])
     }
   }
 

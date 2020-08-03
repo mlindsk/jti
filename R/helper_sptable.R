@@ -1,15 +1,15 @@
 ## ---------------------------------------------------------
 ##                NON-EXPORTED HELPERS
 ## ---------------------------------------------------------
-deep_copy_env <- function(x) {
-  new_env <- list2env(as.list(x))
-  new_struct <- structure(new_env, class = class(x), vars = attr(x, "vars"))
-  if (inherits(x, "unity_sptable_env")) attr(new_struct, "lvls") <- attr(x, "lvls")
+deep_copy <- function(x) {
+  new <- list2env(as.list(x))
+  new_struct <- structure(new, class = class(x), vars = attr(x, "vars"))
+  if (inherits(x, "unity_sptable")) attr(new_struct, "lvls") <- attr(x, "lvls")
   return(new_struct)
 }
 
 .find_cond_configs <- function(x, pos) {
-  # x  : sptable / sptable_env
+  # x  : sptable / sptable
   # pos: the position of the conditional variables
 
   # TODO: Should we test for variable names containing "@"?
@@ -23,7 +23,7 @@ deep_copy_env <- function(x) {
 }
 
 .reposition_names <- function(x, pos) {
-  # x : named list / sptable_env
+  # x : named list / sptable
 
   # TODO: This is just 'str_rem' in disguise? Fix!
   # - or is it 'str_extract' ?
@@ -38,10 +38,10 @@ deep_copy_env <- function(x) {
 
 
 .allowed_cpt_classes <- function() {
-  c(.map_chr(utils::methods("as_sptable_env"), function(generic) sub("as_sptable_env.", "", generic)), "sptable_env")  
+  c(.map_chr(utils::methods("as_sptable"), function(generic) sub("as_sptable.", "", generic)), "sptable")  
 }
 
-merge_two_unities_env <- function(x, y) {
+merge_two_unities <- function(x, y) {
 
   vx  <- attr(x, "vars")
   vy  <- attr(y, "vars")
@@ -54,14 +54,14 @@ merge_two_unities_env <- function(x, y) {
       if (length(a) <= length(b)) return(a) else return(b)
     }, attr(x, "lvls"), attr(y, "lvls"), SIMPLIFY = FALSE)
     
-    spt <- deep_copy_env(x)
+    spt <- deep_copy(x)
     attr(spt, "lvls") <- new_lvls
     return(spt)
   }
 
   if (!neq_empt_chr(sep_var)) {
     # If no vars in commong
-    spt <- deep_copy_env(x)
+    spt <- deep_copy(x)
     attr(spt, "vars") <- c(attr(spt, "vars"), attr(y, "vars"))
     attr(spt, "lvls") <- c(attr(spt, "lvls"), attr(y, "lvls"))
     return(spt)
@@ -74,7 +74,7 @@ merge_two_unities_env <- function(x, y) {
     if (length(a) <= length(b)) return(a) else return(b)
   }, sep_lvl_x, sep_lvl_y, SIMPLIFY = FALSE)
 
-  spt <- deep_copy_env(x)
+  spt <- deep_copy(x)
 
   attr(spt, "lvls")[sep_var] <- sep_lvl_new
 
@@ -89,17 +89,17 @@ merge_two_unities_env <- function(x, y) {
   return(spt)
 }
 
-merge_unity_sptable_env <- function(x, y, op = "*", validate = TRUE, ...) {
+merge_unity_sptable <- function(x, y, op = "*", validate = TRUE, ...) {
 
   stopifnot(op %in% c("*", "/", "+", "-"))
 
-  if (inherits(x, "unity_sptable_env") && inherits(y, "unity_sptable_env")) {
-    return(merge_two_unities_env(x, y))
+  if (inherits(x, "unity_sptable") && inherits(y, "unity_sptable")) {
+    return(merge_two_unities(x, y))
     print("Test")
   }
 
-  if (inherits(x, "unity_sptable_env")) {
-    # assumming that x is sptable_env and y is unity_sptable_env
+  if (inherits(x, "unity_sptable")) {
+    # assumming that x is sptable and y is unity_sptable
     tmp <- x
     x <- y
     y <- tmp
@@ -122,7 +122,7 @@ merge_unity_sptable_env <- function(x, y, op = "*", validate = TRUE, ...) {
   }))))
   
   attr(spt, "vars") <- c(vx, setdiff(vy, vx))
-  class(spt) <- c("sptable_env", "environment")
+  class(spt) <- c("sptable", "environment")
   return(spt)
 }
 
@@ -132,12 +132,13 @@ merge_unity_sptable_env <- function(x, y, op = "*", validate = TRUE, ...) {
 ## ---------------------------------------------------------
 
 #' @export
-make_unity_sptable_env <- function(vars, lvls) {
+make_unity_sptable <- function(vars, lvls) {
+  # Just input lvls? If vars is the names of lvls anyway!
   stopifnot(setequal(vars, names(lvls)))
   spt <- new.env()
   attr(spt, "vars") <- vars
   attr(spt, "lvls") <- lvls
-  class(spt) <- c("unity_sptable_env","sptable_env", class(spt))
+  class(spt) <- c("unity_sptable","sptable", class(spt))
   spt
 }
 

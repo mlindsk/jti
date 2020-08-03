@@ -53,19 +53,11 @@ count_unique <- function(x) {
     .Call('_jti_count_unique', PACKAGE = 'jti', x)
 }
 
-count_unique_env <- function(x) {
-    .Call('_jti_count_unique_env', PACKAGE = 'jti', x)
+matpr <- function(A, validate = TRUE) {
+    .Call('_jti_matpr', PACKAGE = 'jti', A, validate)
 }
 
-matpr <- function(A) {
-    .Call('_jti_matpr', PACKAGE = 'jti', A)
-}
-
-sptab_ <- function(A) {
-    .Call('_jti_sptab_', PACKAGE = 'jti', A)
-}
-
-sptab_env_ <- function(A) {
-    .Call('_jti_sptab_env_', PACKAGE = 'jti', A)
+sptab_ <- function(A, validate = TRUE) {
+    .Call('_jti_sptab_', PACKAGE = 'jti', A, validate)
 }
 

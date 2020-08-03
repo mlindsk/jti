@@ -12,14 +12,12 @@
 #' @details The reason for the values to be constrained to a single character is due to
 #' an increase in performance.
 #' @examples
-#' sptable_env(as.matrix(asia[, 1:3]))
+#' sptable(as.matrix(asia[, 1:3]))
 #' @export
-sptable_env <- function(x, validate = TRUE) {
+sptable <- function(x, validate = TRUE) {
   stopifnot(is.matrix(x), !is.null(colnames(x)))
-  # TODO: Check if x has cells with nchar(name) > 1
-  if (validate) stopifnot(only_chars(x))
-  sptab <- sptab_env_(x)
-  class(sptab) <- c("sptable_env", class(sptab))
+  sptab <- sptab_(x, validate)
+  class(sptab) <- c("sptable", class(sptab))
   return(sptab)
 }
 
@@ -31,9 +29,9 @@ sptable_env <- function(x, validate = TRUE) {
 #' @param y Character vector with variables to condition on
 #' @details If \code{y} is \code{NULL}, \code{x} is just converted to a \code{sptable} with no conditioning variables, i.e. the marginal table.
 #' @return A \code{sptable} object
-#' @seealso \code{\link{sptable_env}}
+#' @seealso \code{\link{sptable}}
 #' @examples
-#' sp  <- sptable_env(as.matrix(asia[, 1:3]))
+#' sp  <- sptable(as.matrix(asia[, 1:3]))
 #' psp <- to_cpt(sp, c("S", "T"))
 #' sum(psp) # Since (S,T) have 4 configurations
 #' @export
@@ -41,7 +39,7 @@ to_cpt <- function(x, y = NULL) UseMethod("to_cpt")
 
 #' @rdname to_cpt
 #' @export
-to_cpt.sptable_env <- function(x, y = NULL) {
+to_cpt.sptable <- function(x, y = NULL) {
 
   if (is.null(y) || !neq_empt_chr(y)) {
     sum_x <- sum(x)
@@ -73,57 +71,49 @@ to_cpt.sptable_env <- function(x, y = NULL) {
 #'
 #' Multiplication or division of two sparse tables
 #' 
-#' @param x A \code{sptable_env} object
-#' @param y A \code{sptable_env} object
+#' @param x A \code{sptable} object
+#' @param y A \code{sptable} object
 #' @param op Either "*" (multiplication), "/" (division), "+" (addition) or "-" (subtraction)
-#' @param validate Logical indicating wether or not it should be checked if the names
-#' of \code{x} and \code{y} are valid. The names are restricted to be one character long
 #' @param ... Not used. For S3 compatability
+#' @seealso \code{\link{%m*%}}, \code{\link{%m/%}}, \code{\link{%m+%}}, \code{\link{%m-%}}
 #' @examples
 #'
 #' # Variables in common
 #' # -------------------
-#' x1 <- sptable_env(as.matrix(asia[, 2:5]))
-#' y1 <- sptable_env(as.matrix(asia[, c(5, 8, 4)]))
+#' x1 <- sptable(as.matrix(asia[, 2:5]))
+#' y1 <- sptable(as.matrix(asia[, c(5, 8, 4)]))
 #' merge(x1, y1, "/")
 #'
 #' # No variables in common
-#' x2 <- sptable_env(as.matrix(asia[, 1:2]))
-#' y2 <- sptable_env(as.matrix(asia[, 3, drop = FALSE]))
-#' merge(x2, y2, "/")
+#' x2 <- sptable(as.matrix(asia[, 1:2]))
+#' y2 <- sptable(as.matrix(asia[, 3, drop = FALSE]))
+#' x2 %m/% y2
 #'
 #' # Names not on correct form
 #' z  <- chickwts[, 2, drop = FALSE]
-#' x3 <- sptable_env(as.matrix(z))
+#' x3 <- sptable(as.matrix(z)) # error
+#' x3 <- sptable(to_chars(as.matrix(z))) # corrected
 #' merge(x3, x3)
 #'
 #' # Correcting the names
 #' z_new <- to_chars(z)
-#' x4    <- sptable_env(as.matrix(z_new))
+#' x4    <- sptable(as.matrix(z_new))
 #' x4
 #' 
 #' @export
-merge.sptable_env <- function(x, y, op = "*", validate = TRUE, ...) {
-
+merge.sptable <- function(x, y, op = "*", validate = TRUE, ...) {
+  
   stopifnot(op %in% c("*", "/", "+", "-"))
+  stopifnot(inherits(y, "sptable")) # Since no double dispatch
   
-  if (inherits(x, "unity_sptable_env") || inherits(y, "unity_sptable_env")) {
-    return(merge_unity_sptable_env(x, y, op, validate))
+  if (inherits(x, "unity_sptable") || inherits(y, "unity_sptable")) {
+    return(merge_unity_sptable(x, y, op, validate))
   }
   
-  if (validate) {
-    nvars_x <- length(attr(x, "vars"))
-    nvars_y <- length(attr(y, "vars"))
-    msg1 <- "One or more names of" 
-    msg2 <- "has nchar(name) > 1 which is not allowed."
-    for (name in names(x)) if (nchar(name) > nvars_x) stop(paste(msg1, "x", msg2))
-    for (name in names(y)) if (nchar(name) > nvars_y) stop(paste(msg1, "y", msg2))
-  }
-
   ## Interchange x and y such that x is shortest gives better performance in vectorization.
   ## - this will change the order of division - not good. But is it still a good speedup?
   ## if (length(x) > length(y)) {
-  ##   tmp <- deep_copy_env(y)
+  ##   tmp <- deep_copy(y)
   ##   y <- x
   ##   x <- tmp
   ##   rm(tmp)
@@ -135,7 +125,7 @@ merge.sptable_env <- function(x, y, op = "*", validate = TRUE, ...) {
 
   # If no variables in common it is easy
   if (!neq_empt_chr(sep)) {
-    # TODO: Put this into a function: merge_sptables_env_with_empty_separator
+    # TODO: Put this into a function: merge_sptables_with_empty_separator
     spt <- unlist(lapply(names(x), function(nx_) {
       .names <- paste0(nx_, names(y))
       .vals  <- do.call(op, list(x[nx_, "value"], y[names(y), "value"]))
@@ -144,7 +134,7 @@ merge.sptable_env <- function(x, y, op = "*", validate = TRUE, ...) {
 
     spt <- list2env(as.list(spt))
     attr(spt, "vars") <- c(vx, vy)
-    class(spt) <- c("sptable_env", class(spt))
+    class(spt) <- c("sptable", class(spt))
     return(spt)
   }
 
@@ -165,7 +155,7 @@ merge.sptable_env <- function(x, y, op = "*", validate = TRUE, ...) {
     posy_sorted <- sort(posy)
     posy_sep    <- structure(seq_along(posy_sorted), names = vy[posy_sorted])
     posy_new    <- posy_sep[names(posx_sep)]
-    # stop("reposition not implemented for sptable_env yet. fix")
+    # stop("reposition not implemented for sptable yet. fix")
     scfy        <- .reposition_names(scfy, posy_new)
   }
 
@@ -195,9 +185,22 @@ merge.sptable_env <- function(x, y, op = "*", validate = TRUE, ...) {
 
   spt <- list2env(as.list(unlist(spt, recursive = FALSE)))
   attr(spt, "vars") <- c(vx, setdiff(vy, vx))
-  class(spt) <- c("sptable_env", class(spt))
+  class(spt) <- c("sptable", class(spt))
   return(spt)
 }
+
+#' @export
+"%m*%" <- function(x, y) merge(x, y, op = "*")
+
+#' @export
+"%m/%" <- function(x, y) merge(x, y, op = "/")
+
+#' @export
+"%m+%" <- function(x, y) merge(x, y, op = "+")
+
+#' @export
+"%m-%" <- function(x, y) merge(x, y, op = "-")
+
 
 #' Marginalize
 #'
@@ -205,7 +208,7 @@ merge.sptable_env <- function(x, y, op = "*", validate = TRUE, ...) {
 #' @param s The variables to be marginalized out
 #' @param flow Either "sum" or "max" where "max"
 #' @examples
-#' p <- sptable_env(as.matrix(asia[, 3:5]))
+#' p <- sptable(as.matrix(asia[, 3:5]))
 #' p
 #' marginalize(p, "L")
 #' @export
@@ -214,7 +217,7 @@ marginalize <- function(p, s, flow = "sum") UseMethod("marginalize")
 
 #' @rdname marginalize
 #' @export
-marginalize.sptable_env <- function(p, s, flow = "sum") {
+marginalize.sptable <- function(p, s, flow = "sum") {
 
   if (flow %ni% c("sum", "max")) stop("flow must be 'sum' or 'max'")
 
@@ -232,21 +235,21 @@ marginalize.sptable_env <- function(p, s, flow = "sum") {
     if (flow == "sum") sum(p[e]) else max(p[e])
   }))
 
-  class(spt) <- c("sptable_env", "environment")
+  class(spt) <- c("sptable", "environment")
   attr(spt, "vars") <- marg_vars
   return(spt)
 }
 
 
-#' Convert array-like objev to sptable_env
+#' Convert array-like object to sptable
 #' @export
-as_sptable_env <- function(x, validate = TRUE) UseMethod("as_sptable_env")
+as_sptable <- function(x, validate = TRUE) UseMethod("as_sptable")
 
-#' @rdname as_sptable_env
+#' @rdname as_sptable
 #' @export
-as_sptable_env.array <- function(x, validate = TRUE)  {
+as_sptable.array <- function(x, validate = TRUE)  {
 
-  if (inherits(x, "sptable_env")) return(x)
+  if (inherits(x, "sptable")) return(x)
 
   if (validate) {
     if (!is_named_list(dimnames(x))) {
@@ -257,8 +260,8 @@ as_sptable_env.array <- function(x, validate = TRUE)  {
       )
       stop(msg)
     }
-    # TODO: Test for allowed chars in the future and dont convert automatically
-    dimnames(x) <- lapply(dimnames(x), function(x) possible_chars(length(x)))  
+    # TODO: Test for allowed chars
+    # if (only_chars.array) x <- char_array(x)
   }
 
   all_comb <- expand.grid(dimnames(x), stringsAsFactors = FALSE)
@@ -275,23 +278,47 @@ as_sptable_env.array <- function(x, validate = TRUE)  {
   }
 
   attr(spt, "vars") <- names(dimnames(x))
-  class(spt) <- c("sptable_env", class(spt))
+  class(spt) <- c("sptable", class(spt))
   
   return(spt)
 }
 
-#' @rdname as_sptable_env
+#' @rdname as_sptable
 #' @export
-as_sptable_env.matrix <- as_sptable_env.array
+as_sptable.matrix <- as_sptable.array
 
 
-#' @rdname as_sptable_env
+#' @rdname as_sptable
 #' @export
-as_sptable_env.table <- as_sptable_env.array
+as_sptable.table <- as_sptable.array
 
+
+#' Convert sptable to array-like object
+#' @export
+as_array <- function(x, dim_names = NULL) UseMethod("as_array")
+
+as_array.sptable <- function(x, dim_names = NULL) {
+
+  if (!inherits(dim_names, "lookup")) stop("dim_names must be of class 'lookup'")
+  
+  dim_true_names <- if (!is.null(dim_names)) lapply(dim_names, names) else dimnames(x)
+  dim_char_names <- if (!is.null(dim_names)) lapply(dim_names, unname) else dimnames(x)
+  
+  arr     <- array(0L, .map_int(dim_names, length), dim_char_names)
+  arr_vec <- unlist(as.list(x))
+  
+  split_vec <- structure(strsplit(names(arr_vec), ""), names = names(arr_vec))
+  
+  for (k in seq_along(split_vec)) {
+    arr[matrix(split_vec[[k]], 1L)] <- arr_vec[k]
+  }
+  
+  dimnames(arr) <- dim_true_names
+  arr
+}
 
 #' @export
-print.sptable_env <- function(x, ...) {
+print.sptable <- function(x, ...) {
   vars  <- attr(x, "vars")
   nchr  <- sum(.map_int(vars, function(s) nchar(s))) + length(vars) + nchar("Vars:") - 1
   N     <- length(x)
@@ -299,8 +326,8 @@ print.sptable_env <- function(x, ...) {
   cat("", paste0(rep("-", nchr), collapse = ""), "\n")
   cat(" Vars:", paste0(vars, collapse = "-"), "\n")
   cat("", paste0(rep("-", nchr), collapse = ""), "\n")
-  if (inherits(x, "unity_sptable_env")) {
-    cat(" <unity_stable_env> \n")
+  if (inherits(x, "unity_sptable")) {
+    cat(" <unity_stable> \n")
   } else {
     for (cell in cells) {
       cat(cell, ":", x[[cell]], "\n")
@@ -310,8 +337,8 @@ print.sptable_env <- function(x, ...) {
 }
 
 #' @export
-head.sptable_env <- function(x, n = 10) {
-  # TODO: DONT JUST COPY THE PRINT FUNCTION! MAKE IT SHORTER!
+head.sptable <- function(x, n = 10) {
+  # TODO: Dont just copy the print method? Can we inherit?
   vars  <- attr(x, "vars")
   nchr  <- sum(.map_int(vars, function(s) nchar(s))) + length(vars) + nchar("Vars:") - 1
   N     <- length(x)
@@ -327,12 +354,12 @@ head.sptable_env <- function(x, n = 10) {
 }
 
 #' @export
-`[.sptable_env` <- function(x, i, result = "sptable_env") {
-  # result: 'sptable_env' or 'value'
-  if (!is.character(i)) stop("an object of result 'sptable_env' is only subsettable via characters")
-  if (result %ni% c("sptable_env", "value")) stop("result must be 'sptable_env' or 'value'")
+`[.sptable` <- function(x, i, result = "sptable") {
+  # result: 'sptable' or 'value'
+  if (!is.character(i)) stop("an object of result 'sptable' is only subsettable via characters")
+  if (result %ni% c("sptable", "value")) stop("result must be 'sptable' or 'value'")
   y <- mget(i, x, ifnotfound = 0L) 
-  if (result == "sptable_env") {
+  if (result == "sptable") {
     out <- list2env(y)
     class(out) <- class(x)
     attr(out, "vars") <- attr(x, "vars")
@@ -349,23 +376,16 @@ head.sptable_env <- function(x, n = 10) {
 
 
 #' @export
-sum.sptable_env <- function(x, ...) {
+sum.sptable <- function(x, ...) {
   sum(x[ls(envir = x), "value"])
 }
 
 #' @export
-max.sptable_env <- function(x, ...) {
+max.sptable <- function(x, ...) {
   max(x[ls(envir = x), "value"])
 }
 
 #' @export
-min.sptable_env <- function(x, ...) {
+min.sptable <- function(x, ...) {
   min(x[ls(envir = x), "value"])
-}
-
-#' @export
-as_env.sptable <- function(x) {
-  warning("obsolete")
-  .class <- c("sptable_env", "environment")
-  structure(list2env(as.list(x)), "vars" = attr(x, "vars"), class = .class)
 }

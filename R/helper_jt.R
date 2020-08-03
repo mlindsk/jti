@@ -152,7 +152,7 @@ set_evidence_jt <- function(charge, cliques, evidence) {
 }
 
 
-new_jt <- function(x, evidence = NULL, flow = "sum", validate = TRUE) {
+new_jt <- function(x, evidence = NULL, flow = "sum") {
   # x: a charge object returned from compile
   #  - a list with the charge and the cliques
   
@@ -171,7 +171,9 @@ new_jt <- function(x, evidence = NULL, flow = "sum", validate = TRUE) {
   
   class(jt)             <- c("jt", class(jt))
   attr(jt, "direction") <- "collect" # collect, distribute or full
+  attr(jt, "lookup")    <- attr(x, "lookup")
   attr(jt, "flow")      <- flow
+  
   if (flow == "max") {
     # most probable explanation
     all_vars <- unique(unlist(cliques))
@@ -197,6 +199,11 @@ send_messages <- function(jt, flow = "sum") {
   # TODO: wrap jt in an environment and make more small helper functions
 
   direction <- attr(jt, "direction")
+  if (direction == "FULL") {
+    message("The junction tree is already propagated fully. jt is returned")
+    return(jt)
+  }
+  
   x   <- if (direction == "collect") jt$schedule$collect else jt$schedule$distribute
   lvs <- attr(x$tree, "leaves")
   par <- attr(x$tree, "parents")
@@ -223,10 +230,10 @@ send_messages <- function(jt, flow = "sum") {
 
         if (direction == "collect") {
 
-          message_k <- marginalize(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
-
+          message_k                   <- marginalize(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
           jt$charge$C[[C_par_k_name]] <- merge(jt$charge$C[[C_par_k_name]], message_k, "*", validate = FALSE)
           jt$charge$C[[C_lvs_k_name]] <- merge(jt$charge$C[[C_lvs_k_name]], message_k, "/", validate = FALSE)
+          
         }
 
         if (direction == "distribute") {

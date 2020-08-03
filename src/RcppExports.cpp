@@ -148,7 +148,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // count_unique
-RIV count_unique(VS x);
+RE count_unique(VS x);
 RcppExport SEXP _jti_count_unique(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -158,47 +158,27 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// count_unique_env
-RE count_unique_env(VS x);
-RcppExport SEXP _jti_count_unique_env(SEXP xSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< VS >::type x(xSEXP);
-    rcpp_result_gen = Rcpp::wrap(count_unique_env(x));
-    return rcpp_result_gen;
-END_RCPP
-}
 // matpr
-VS matpr(Rcpp::CharacterMatrix A);
-RcppExport SEXP _jti_matpr(SEXP ASEXP) {
+VS matpr(Rcpp::CharacterMatrix A, bool validate);
+RcppExport SEXP _jti_matpr(SEXP ASEXP, SEXP validateSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::CharacterMatrix >::type A(ASEXP);
-    rcpp_result_gen = Rcpp::wrap(matpr(A));
+    Rcpp::traits::input_parameter< bool >::type validate(validateSEXP);
+    rcpp_result_gen = Rcpp::wrap(matpr(A, validate));
     return rcpp_result_gen;
 END_RCPP
 }
 // sptab_
-RIV sptab_(RCM& A);
-RcppExport SEXP _jti_sptab_(SEXP ASEXP) {
+RE sptab_(RCM& A, bool validate);
+RcppExport SEXP _jti_sptab_(SEXP ASEXP, SEXP validateSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< RCM& >::type A(ASEXP);
-    rcpp_result_gen = Rcpp::wrap(sptab_(A));
-    return rcpp_result_gen;
-END_RCPP
-}
-// sptab_env_
-RE sptab_env_(RCM& A);
-RcppExport SEXP _jti_sptab_env_(SEXP ASEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< RCM& >::type A(ASEXP);
-    rcpp_result_gen = Rcpp::wrap(sptab_env_(A));
+    Rcpp::traits::input_parameter< bool >::type validate(validateSEXP);
+    rcpp_result_gen = Rcpp::wrap(sptab_(A, validate));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -217,10 +197,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_jti_set_issubeq", (DL_FUNC) &_jti_set_issubeq, 2},
     {"_jti_set_any", (DL_FUNC) &_jti_set_any, 1},
     {"_jti_count_unique", (DL_FUNC) &_jti_count_unique, 1},
-    {"_jti_count_unique_env", (DL_FUNC) &_jti_count_unique_env, 1},
-    {"_jti_matpr", (DL_FUNC) &_jti_matpr, 1},
-    {"_jti_sptab_", (DL_FUNC) &_jti_sptab_, 1},
-    {"_jti_sptab_env_", (DL_FUNC) &_jti_sptab_env_, 1},
+    {"_jti_matpr", (DL_FUNC) &_jti_matpr, 2},
+    {"_jti_sptab_", (DL_FUNC) &_jti_sptab_, 2},
     {NULL, NULL, 0}
 };
 
