@@ -2,9 +2,12 @@
 % Please edit documentation in R/api_jt.R
 \name{jt}
 \alias{jt}
+\alias{jt.charge}
 \title{Junction Tree}
 \usage{
-jt(x, evidence = NULL, flow = "sum", propagate = TRUE)
+jt(x, evidence = NULL, flow = "sum", propagate = "full")
+
+\method{jt}{charge}(x, evidence = NULL, flow = "sum", propagate = "full")
 }
 \arguments{
 \item{x}{An object return from \code{compile}}
@@ -13,13 +16,13 @@ jt(x, evidence = NULL, flow = "sum", propagate = TRUE)
 
 \item{flow}{Either "sum" or "max"}
 
-\item{propagate}{Logical}
+\item{propagate}{Either "no", "collect" or "full".}
 }
 \value{
 A \code{jt} object
 }
 \description{
-Construction of a junction tree and compilation of the network
+Construction of a junction tree and message passing
 }
 \examples{
 
@@ -66,7 +69,7 @@ jt2 <- jt(cp, e2)
 query_belief(jt2, c("E", "L", "T"))
 query_belief(jt2, c("B", "D", "E"), type = "joint")
 
-# Notice that, the configuration "yyn" has changed
+# Notice that, the configuration (D,E,B) = (y,y,n) has changed
 # dramatically as a consequence of the evidence
 
 # We can get the probability of the evidence:
@@ -86,37 +89,39 @@ mpe(jt4)
 # Notice, that S, B and E has changed from "n" to "y"
 # as a consequence of the new evidence e4
 
-# Example 5: investigating the clique graph before propagating
-# ------------------------------------------------------------
-# TBA
 
-# Example 6: compiling from a list of conditional probability tables (CPTs)
+# Example 5: specifying a root node and only collect to save run time
+# -------------------------------------------------------------------------
+cp5 <- compile(asia, g, "X")
+jt5 <- jt(cp5, propagate = "collect")
+
+# We can only query from the root clique now (clique 1)
+# but we have ensured that the node of interest, "X", does indeed live in
+# this clique
+
+query_belief(jt5, get_cliques(jt5)$C1, "joint")
+
+# Example 6: Compiling from a list of conditional probabilities
 # -------------------------------------------------------------------------
 
-# 1) We need some CPTs which we extract from the asia2 object
-# 2) The elements need to by an array-object and so we convert
-# 3) Some elements are one-dimensional and they dont have "dimnames"
+# 1) We need a list with CPTs which we extract from the asia2 object
+#    - the list must be named with child nodes
+# 2) The elements need to by an array-like object
+#
+#  Note: Some elements are one-dimensional and they may not have "dimnames"
 
-# cpts <- dimnames_to_chars(asia2)
-
-# 4) The cpts object needs to be named and the names must be the
-#    - child node of the corresponding CPT. This is already the
-#    - case in this example
-
-print(cpts)
-
-# 5) The list of cpts needs to be converted in a "cpt_list" object
+# 3) The list of cpts needs to be converted into a "cpt_list" object
 #    - This is merely for checking if the cpts are of the correct type,
 #    - but also the cpts are now converted to a sparse representation
 #      to obtain a better runtime in the compilation and propagation phase
 
-cl <- cpt_list(asia2) # cpt_list(cpts)
-cp2 <- compile(cl)
+cl  <- cpt_list(asia2)
+cp6 <- compile(cl)
 
-# Finally, cp2 is now of the same form as cp above and we can use the
+# Finally, cp6 is now of the same form as cp above and we can use the
 # junction tree algorithm
 
-jt6 <- jt(cp2)
+jt6 <- jt(cp6)
 query_belief(jt6, c("either", "smoke"))
 query_belief(jt6, c("either", "smoke"), type = "joint")
 

@@ -38,17 +38,10 @@ adjacency_list_from_moralization_and_triangulation_igraph <- function(g, par) {
   as_adj_lst(igraph::as_adjacency_matrix(g))
 }
 
-construct_cliques_and_parents <- function(adj) {
-  ## TODO: Specify a root in advance
-  ## ---------------------------------------------------------
-  ## See Soren and Lau p. 58 for specifying another root easily!
-  ## ---------------------------------------------------------
-  rip_ <- rip(adj, check = FALSE)
+construct_cliques_and_parents <- function(adj, root_node = "") {
+  rip_ <- rip(adj, root_node, check = FALSE)
   cliques <- rip_$C
   names(cliques) <- paste("C", 1:length(cliques), sep = "")
-  if (length(cliques) < 2) {
-    stop("No need to propagate for |C| < 2... But fix anyway...")
-  }
   # parents is only used if compile.data.frame is used
   return(list(cliques = cliques, parents = rip_$P))
 }

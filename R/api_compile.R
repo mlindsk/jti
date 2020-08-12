@@ -1,51 +1,12 @@
-## #' @export
-## cpt_list2 <- function(x) { 
-##   # x: list of cpts with dimnames
-
-##   # TODO: Test if x is already a sptable and return it if so!
-  
-##   if (!is_named_list(x)) {
-##     stop("x must be a named list of cpts. A name should be the name of the corresponding child node.")
-##   }
-
-##   lvls <- vector("list")
-  
-##   y <- lapply(seq_along(x), function(i) {
-##     l <- x[[i]]
-##     class_allowed <- any(.map_lgl(.allowed_cpt_classes(), function(x) inherits(l, x)))
-##     if (!class_allowed) stop("one ore more elements in x is not an array-like object")
-##     if (!is_named_list(dimnames(l))) stop("one or more elements in x does not have proper dimnames")
-
-
-##     # TODO: make a char_array instead of dimnames_to_chars(cpts)
-
-##     sptl <- as_sptable(l)
-##     lu <- dimnames(l) # used to populate/create empty/unity potentials in new_charge
-
-##     # Dont use lapply here
-
-##     # Dont test!! Just make a char_frame - no matter if they all have nchar == 1 in advance!
-##     lapply(lu, function(x) { # sptables cant handle lvls with nchar > 1L ! (thats why they are fast)
-##       for (e in x) {
-##         if (nchar(e) != 1L) {
-##           stop("dimnames of x is not on correct form. All levels are restricted to be a single character.")
-##         }
-##       }
-##     })
-
-    
-##     for (k in seq_along(lu)) lvls <<- push(lvls, unname(lu[[k]]), names(lu)[k])
-##     return(sptl)
-##   })
-
-##   lvls <- lvls[unique(names(lvls))]
-
-##   # TODO: lvls should now conform with char_frame api !!! It should be of class lookup!
-##   # so; lvls <- lookup(lu)
-##   structure(y, names = names(x), class = c("cpt_list", class(x)), lvls = lvls)
-## }
-
-
+#' Conditional probability list
+#'
+#' A check and conversion of cpts to be used in the junction tree algorithm
+#'
+#' @param x A named list with cpts in form of array-like object(s).
+#' The name must be the child.
+#' @examples
+#' print(asia2)
+#' cpt_list(asia2)
 #' @export
 cpt_list <- function(x) { 
   # x: list of cpts with dimnames
@@ -83,27 +44,45 @@ cpt_list <- function(x) {
   structure(y, names = names(x), lookup = lookup, class = c("cpt_list", class(x)))
 }
 
-
-
 # TODO: Make a vanilla print method avoiding all the sptables
 
+#' Compile information
+#'
+#' Compiled objects are used as building blocks for junction tree inference
+#'
+#' @param x Either a \code{data.frame} or an object returned from \code{cpt_list}
+#' @param g Either a directed acyclic graph (DAG) as an igraph object or a
+#' decomposable graph obtained from \code{ess::fit_graph} or an
+#' adjacency list - a named list where an element is a character vector defining
+#' the neigbors of the element. If \code{x} is a \code{cpt_list},
+#' \code{g} must be \code{NULL}. The procdure then deduce the graph
+#' from the conditional probability tables that was inputtet in \code{cpt_list}
+#' @param root_node A node for which we require it to live in the root clique (the first clique).
 #' @export
-compile <- function(x, g = NULL) UseMethod("compile")
+compile <- function(x, g = NULL, root_node = "") UseMethod("compile")
 
-
-compile.cpt_list <- function(x, g = NULL) {
+#' @rdname compile
+#' @export
+compile.cpt_list <- function(x, g = NULL, root_node = "") {
   # x is validated in cpt_list
   if (!is.null(g)) stop("g must be 'NULL'")
   g       <- graph_from_cpt_list(x)
   parents <- parents_igraph(g)
   adj     <- adjacency_list_from_moralization_and_triangulation_igraph(g, parents)
-  cliques <- construct_cliques_and_parents(adj)$cliques
+  cliques <- construct_cliques_and_parents(adj, root_node)$cliques
   charge  <- new_charge(x, cliques, parents)
   # TODO: Also output the lookup!
-  structure(list(charge = charge, cliques = cliques), lookup = attr(x, "lookup"), class = c("charge", "list"))
+  structure(
+    list(charge = charge, cliques = cliques),
+    lookup = attr(x, "lookup"),
+    root_node = root_node,
+    class = c("charge", "list")
+  )
 }
 
-compile.data.frame <- function(x, g) {
+#' @rdname compile
+#' @export
+compile.data.frame <- function(x, g, root_node = "") {
 
   # TODO: Make a vanilla print method
 
@@ -114,9 +93,14 @@ compile.data.frame <- function(x, g) {
   pe[["parents"]] <- NULL
   
   adj     <- adjacency_list_from_graph(g, pe)
-  cp      <- construct_cliques_and_parents(adj)
+  cp      <- construct_cliques_and_parents(adj, root_node)
   parents <- if (is.null(pe$parents))  cp$parents else pe$parents
   charge  <- new_charge(x, cp$cliques, parents)
 
-  structure(list(charge = charge, cliques = cp$cliques), lookup = lookup(x), class = c("charge", "list"))
+  structure(
+    list(charge = charge, cliques = cp$cliques),
+    lookup = lookup(x),
+    root_node = root_node,
+    class = c("charge", "list")
+  )
 }

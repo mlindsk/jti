@@ -1,9 +1,39 @@
+#' Character frame
+#'
+#' Convert a data frame or matrix into a new representation where all values
+#' are a single character.
+#'
+#' @param x data.frame or matrix
+#' @details \code{sptable} objects only allow for single
+#' character-representations and \code{char_frame} helps achieve this.
+#' Using \code{lookup} in a \code{char_frame} yields a lookup table
+#' such that new and old values can be compared and looked up. To find
+#' a particular value use \code{find.}
+#' @examples
+#'
+#' # Note: asia is already on correct form, so
+#' # no need to use char_frame in principle
+#' 
+#' ca <- char_frame(asia[, 1:3])
+#' sptable(as.matrix(ca))
+#'
+#' # retrieve the old dimnames:
+#' lu <- lookup(ca)
+#'
+#' # find a particular combination
+#' find(lu, c(A = "y", S = "y", T = "n"))
+#' @export
 char_frame <- function(x) UseMethod("char_frame")
 
+#' @rdname char_frame
+#' @export
 char_frame.data.frame <- function(x) {
   # Implicitly assumes that no columns has more than 62 unique levels
 
+  if (!is_character_frame(x)) stop("some columns in x are not of type character")
+  
   is_matrix <- inherits(x, "matrix")
+
   if (is_matrix) x <- as.data.frame(x, stringsAsFactors = FALSE)
 
   old_vals <- lapply(x, unique)
@@ -22,14 +52,30 @@ char_frame.data.frame <- function(x) {
 
 char_frame.matrix <- char_frame.data.frame
 
+
+#' Lookup
+#'
+#' @param x lookup object returned from char_frame or char_array
+#' @export
 lookup <- function(x) UseMethod("lookup")
 
+#' @rdname lookup
+#' @export
 lookup.char_frame <- function(x) attr(x, "lookup")
 
+#' @rdname lookup
+#' @export
 lookup.char_array <- lookup.char_frame
 
+#' Find
+#'
+#' @param x lookup object returned from char_frame or char_array
+#' @param y named vector
+#' @export
 find <- function(x, y) UseMethod("find")
 
+#' @rdname find
+#' @export
 find.lookup <- function(x, y) {
   # x: lookup 
   # y: c(var1 =  val1, var2 = val2, ...)
@@ -47,6 +93,25 @@ find.lookup <- function(x, y) {
   })
 }
 
+
+#' Character array
+#'
+#' Convert an array-like object into a new representation where all values
+#' are a single character.
+#'
+#' @param x array, matrix or table
+#' @details \code{sptable} objects only allow for single
+#' character-representations and \code{char_frame} helps achieve this 
+#' @examples
+#' 
+#' ca <- char_array(HairEyeColor)
+#'
+#' # retrieve the old dimnames:
+#' lu <- lookup(ca)
+#'
+#' # find a particular combination
+#' find(lu, c(Eye = "Brown", Sex = "Male", Hair = "Red"))
+#' @export
 char_array <- function(x) UseMethod("char_array")
 
 char_array.array <- function(x) {
@@ -78,18 +143,35 @@ char_array.array <- function(x) {
   structure(x, lookup = lu, class = c("char_array", class(x)))
 }
 
+#' @rdname char_array
+#' @export
 char_array.matrix <- char_array.array
 
+#' @rdname char_array
+#' @export
 char_array.table  <- char_array.array
 
-
-`[.char_frame` <- function(x, i, j, ...) {
-  lu <- lookup(x)[j]
-  structure(NextMethod(x[i, j, ...]), lookup = lu)
-}
-
+#' Subset lookup
+#'
+#' @param x lookup object
+#' @param i integer vector
+#' @export
 `[.lookup` <- function(x, i) {
   structure(NextMethod(x[i]), class = class(x))
+}
+
+
+#' Subset char frame
+#'
+#' @param x \code{char_frame} object
+#' @param i First index for subsetting. Behaves as an ordinary data frame
+#' @param j Second index for subsetting. Behaves as an ordinary data frame
+#' @param ... For S3 compatability
+#' @param drop If TRUE the result is coerced to the lowest possible dimension
+#' @export
+`[.char_frame` <- function(x, i, j, ..., drop = FALSE) {
+  lu <- lookup(x)[j]
+  structure(NextMethod(x[i, j, ..., drop = FALSE]), lookup = lu)
 }
 
 ## d <- data.frame(

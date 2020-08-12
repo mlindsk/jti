@@ -1,3 +1,45 @@
+leaves_jt <- function(x) {
+  # x: rooted tree structure of a junctions tree (jt$schedule$collect$tree)
+  which(colSums(x) == 0L)
+}
+
+parents_jt <- function(x, lvs) {
+  # x:   rooted tree structure of a junctions tree (jt$schedule$collect$tree)
+  # lvs: leaves of the junction tree
+  par <- vector("list", length = length(lvs))
+  for (i in seq_along(lvs)) {
+    pari <- which(x[lvs[i], ] == 1L)
+    par[[i]] <- pari
+  }
+  return(par)
+}
+
+valid_evidence <- function(x, e) UseMethod("valid_evidence")
+
+valid_evidence.lookup <- function(x, e) {
+  tryCatch(
+  {
+    find(x, e)
+    TRUE
+  },
+  error = function(err) {
+    FALSE
+  }
+  )
+}
+
+has_root_node <- function(x) UseMethod("has_root_node")
+
+has_root_node.jt <- function(x) attr(x, "root_node") != ""
+
+normalize_root <- function(root, norm_val) {
+  root_normalized <- eapply(root, function(x) x / norm_val)
+  root_normalized <- list2env(root_normalized)
+  attr(root_normalized, "vars") <- attr(root, "vars")
+  class(root_normalized) <- class(root)
+  return(root_normalized)
+}
+
 new_schedule <- function(cliques) {
 
   nc <- length(cliques)
@@ -43,37 +85,13 @@ new_schedule <- function(cliques) {
   
 }
 
-leaves_jt <- function(x) {
-  # x: rooted tree structure of a junctions tree (jt$schedule$collect$tree)
-  which(colSums(x) == 0L)
-}
-
-parents_jt <- function(x, lvs) {
-  # x:   rooted tree structure of a junctions tree (jt$schedule$collect$tree)
-  # lvs: leaves of the junction tree
-  par <- vector("list", length = length(lvs))
-  for (i in seq_along(lvs)) {
-    pari <- which(x[lvs[i], ] == 1L)
-    par[[i]] <- pari
-  }
-  return(par)
-}
-
-
-normalize_root <- function(root, norm_val) {
-  root_normalized <- eapply(root, function(x) x / norm_val)
-  root_normalized <- list2env(root_normalized)
-  attr(root_normalized, "vars") <- attr(root, "vars")
-  class(root_normalized) <- class(root)
-  return(root_normalized)
-}
 
 prune_jt <- function(jt) {
 
   direction <- attr(jt, "direction")
   x <- if (direction == "collect") jt$schedule$collect else jt$schedule$distribute
 
-  if (identical(x, "FULL")) {
+  if (identical(x, "full")) {
     stop("The junction tree has already been propagated in this direction!")  
   }
 
@@ -91,7 +109,7 @@ prune_jt <- function(jt) {
   has_arrived_at_root <- length(x$cliques) < 2L
   if (has_arrived_at_root) {
     if (direction == "collect") {
-      jt$schedule$collect    <- "FULL"
+      jt$schedule$collect    <- "full"
       attr(jt, "direction")  <- "distribute"
 
       # Normalize C1
@@ -106,8 +124,8 @@ prune_jt <- function(jt) {
       ## jt$charge$C[["C1"]] <- C1_normalized
       # jt$charge$C[["C1"]] <- jt$charge$C[["C1"]] / probability_of_evidence
     } else {
-      jt$schedule$distribute <- "FULL"
-      attr(jt, "direction")  <- "FULL"
+      jt$schedule$distribute <- "full"
+      attr(jt, "direction")  <- "full"
     }
     return(jt)
   }
@@ -159,7 +177,11 @@ new_jt <- function(x, evidence = NULL, flow = "sum") {
   charge  <- x$charge
   cliques <- x$cliques
 
-  if (!is.null(evidence)) charge <- set_evidence_jt(charge, cliques, evidence)
+  if (!is.null(evidence)) {
+    le <- attr(x, "lookup")[names(evidence)]
+    evidence <- .map_chr(names(evidence), function(e) le[[e]][evidence[e]])
+    charge <- set_evidence_jt(charge, cliques, evidence)
+  }
   
   schedule  <- new_schedule(cliques)
   jt <- list(
@@ -173,6 +195,7 @@ new_jt <- function(x, evidence = NULL, flow = "sum") {
   attr(jt, "direction") <- "collect" # collect, distribute or full
   attr(jt, "lookup")    <- attr(x, "lookup")
   attr(jt, "flow")      <- flow
+  attr(jt, "root_node") <- attr(x, "root_node")
   
   if (flow == "max") {
     # most probable explanation
@@ -186,7 +209,7 @@ new_jt <- function(x, evidence = NULL, flow = "sum") {
 
 .get_max_info <- function(pot) {
   # Helper function to locate the maximum configuration
-  max_idx    <- which.max(pot)
+  max_idx    <- which_max(pot)
   max_config <- pot[max_idx]
   max_vars   <- attr(max_config, "vars")
   max_vals   <- .split_chars(names(max_config))
@@ -199,7 +222,7 @@ send_messages <- function(jt, flow = "sum") {
   # TODO: wrap jt in an environment and make more small helper functions
 
   direction <- attr(jt, "direction")
-  if (direction == "FULL") {
+  if (direction == "full") {
     message("The junction tree is already propagated fully. jt is returned")
     return(jt)
   }
@@ -231,8 +254,8 @@ send_messages <- function(jt, flow = "sum") {
         if (direction == "collect") {
 
           message_k                   <- marginalize(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
-          jt$charge$C[[C_par_k_name]] <- merge(jt$charge$C[[C_par_k_name]], message_k, "*", validate = FALSE)
-          jt$charge$C[[C_lvs_k_name]] <- merge(jt$charge$C[[C_lvs_k_name]], message_k, "/", validate = FALSE)
+          jt$charge$C[[C_par_k_name]] <- merge(jt$charge$C[[C_par_k_name]], message_k, "*")
+          jt$charge$C[[C_lvs_k_name]] <- merge(jt$charge$C[[C_lvs_k_name]], message_k, "/")
           
         }
 
@@ -240,7 +263,7 @@ send_messages <- function(jt, flow = "sum") {
 
           if (attr(jt, "flow") == "max") {
             ## The child:
-            max_idx <- which.max(jt$charge$C[[C_lvs_k_name]])
+            max_idx <- which_max(jt$charge$C[[C_lvs_k_name]])
             # Here we must change the leave potential and send this new message to the parent
             # - and so we can't use .get_max_info
             jt$charge$C[[C_lvs_k_name]] <- jt$charge$C[[C_lvs_k_name]][max_idx]

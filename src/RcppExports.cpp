@@ -7,14 +7,15 @@
 using namespace Rcpp;
 
 // mcs
-Rcpp::List mcs(Rcpp::List& adj, bool check);
-RcppExport SEXP _jti_mcs(SEXP adjSEXP, SEXP checkSEXP) {
+Rcpp::List mcs(Rcpp::List& adj, std::string start_node, bool check);
+RcppExport SEXP _jti_mcs(SEXP adjSEXP, SEXP start_nodeSEXP, SEXP checkSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::List& >::type adj(adjSEXP);
+    Rcpp::traits::input_parameter< std::string >::type start_node(start_nodeSEXP);
     Rcpp::traits::input_parameter< bool >::type check(checkSEXP);
-    rcpp_result_gen = Rcpp::wrap(mcs(adj, check));
+    rcpp_result_gen = Rcpp::wrap(mcs(adj, start_node, check));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -53,14 +54,15 @@ BEGIN_RCPP
 END_RCPP
 }
 // rip
-Rcpp::List rip(Rcpp::List& adj, bool check);
-RcppExport SEXP _jti_rip(SEXP adjSEXP, SEXP checkSEXP) {
+Rcpp::List rip(Rcpp::List& adj, std::string start_node, bool check);
+RcppExport SEXP _jti_rip(SEXP adjSEXP, SEXP start_nodeSEXP, SEXP checkSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::List& >::type adj(adjSEXP);
+    Rcpp::traits::input_parameter< std::string >::type start_node(start_nodeSEXP);
     Rcpp::traits::input_parameter< bool >::type check(checkSEXP);
-    rcpp_result_gen = Rcpp::wrap(rip(adj, check));
+    rcpp_result_gen = Rcpp::wrap(rip(adj, start_node, check));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -184,11 +186,11 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_jti_mcs", (DL_FUNC) &_jti_mcs, 2},
+    {"_jti_mcs", (DL_FUNC) &_jti_mcs, 3},
     {"_jti_perfect_cliques", (DL_FUNC) &_jti_perfect_cliques, 1},
     {"_jti_perfect_separators", (DL_FUNC) &_jti_perfect_separators, 1},
     {"_jti_parents", (DL_FUNC) &_jti_parents, 2},
-    {"_jti_rip", (DL_FUNC) &_jti_rip, 2},
+    {"_jti_rip", (DL_FUNC) &_jti_rip, 3},
     {"_jti_set_intersect", (DL_FUNC) &_jti_set_intersect, 2},
     {"_jti_set_union", (DL_FUNC) &_jti_set_union, 2},
     {"_jti_set_diff", (DL_FUNC) &_jti_set_diff, 2},

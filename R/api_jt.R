@@ -1,11 +1,11 @@
 #' Junction Tree
 #'
-#' Construction of a junction tree and compilation of the network
+#' Construction of a junction tree and message passing
 #' 
 #' @param x An object return from \code{compile}
 #' @param evidence A named vector. The names are the variabes and the elements are the evidence
 #' @param flow Either "sum" or "max"
-#' @param propagate Logical
+#' @param propagate Either "no", "collect" or "full".
 #' @return A \code{jt} object
 #' @seealso \code{\link{query_belief}}, \code{\link{mpe}}, \code{\link{get_cliques}}
 #' @examples
@@ -53,7 +53,7 @@
 #' query_belief(jt2, c("E", "L", "T"))
 #' query_belief(jt2, c("B", "D", "E"), type = "joint")
 #'
-#' # Notice that, the configuration "yyn" has changed
+#' # Notice that, the configuration (D,E,B) = (y,y,n) has changed
 #' # dramatically as a consequence of the evidence
 #'
 #' # We can get the probability of the evidence:
@@ -73,51 +73,66 @@
 #' # Notice, that S, B and E has changed from "n" to "y"
 #' # as a consequence of the new evidence e4
 #'
-#' # Example 5: investigating the clique graph before propagating
-#' # ------------------------------------------------------------
-#' # TBA
+#' 
+#' # Example 5: specifying a root node and only collect to save run time
+#' # -------------------------------------------------------------------------
+#' cp5 <- compile(asia, g, "X")
+#' jt5 <- jt(cp5, propagate = "collect")
 #'
-#' # Example 6: compiling from a list of conditional probability tables (CPTs)
+#' # We can only query from the root clique now (clique 1)
+#' # but we have ensured that the node of interest, "X", does indeed live in
+#' # this clique
+#' 
+#' query_belief(jt5, get_cliques(jt5)$C1, "joint")
+#'
+#' # Example 6: Compiling from a list of conditional probabilities
 #' # -------------------------------------------------------------------------
 #'
-#' # 1) We need some CPTs which we extract from the asia2 object
-#' # 2) The elements need to by an array-object and so we convert
-#' # 3) Some elements are one-dimensional and they dont have "dimnames"
-#' 
-#' # cpts <- dimnames_to_chars(asia2)
+#' # 1) We need a list with CPTs which we extract from the asia2 object
+#' #    - the list must be named with child nodes
+#' # 2) The elements need to by an array-like object
+#' #
+#' #  Note: Some elements are one-dimensional and they may not have "dimnames"
 #'
-#' # 4) The cpts object needs to be named and the names must be the
-#' #    - child node of the corresponding CPT. This is already the
-#' #    - case in this example
-#'
-#' print(cpts)
-#'
-#' # 5) The list of cpts needs to be converted in a "cpt_list" object
+#' # 3) The list of cpts needs to be converted into a "cpt_list" object
 #' #    - This is merely for checking if the cpts are of the correct type,
 #' #    - but also the cpts are now converted to a sparse representation
 #' #      to obtain a better runtime in the compilation and propagation phase
 #' 
-#' cl <- cpt_list(asia2) # cpt_list(cpts)
-#' cp2 <- compile(cl)
+#' cl  <- cpt_list(asia2)
+#' cp6 <- compile(cl)
 #'
-#' # Finally, cp2 is now of the same form as cp above and we can use the
+#' # Finally, cp6 is now of the same form as cp above and we can use the
 #' # junction tree algorithm
 #'
-#' jt6 <- jt(cp2)
+#' jt6 <- jt(cp6)
 #' query_belief(jt6, c("either", "smoke"))
 #' query_belief(jt6, c("either", "smoke"), type = "joint")
 #' 
 #' @export
-jt <- function(x, evidence = NULL, flow = "sum", propagate = TRUE) UseMethod("jt")
+jt <- function(x, evidence = NULL, flow = "sum", propagate = "full") UseMethod("jt")
 
-#' rdname jt
+
+#' @rdname jt
 #' @export
-jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = TRUE) {
+jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = "full") {
+  if (!is.null(evidence)) {
+    if (!valid_evidence(attr(x, "lookup"), evidence)) {
+      stop("evidence is not on correct form", call. = FALSE)
+    }
+  }
   jt <- new_jt(x, evidence, flow)
-  if (!propagate) return(jt)
-  m <- send_messages(jt, flow)
-  while (attr(m, "direction") != "FULL") m <- send_messages(m, flow)
-  m
+  if (propagate == "no") {
+    return(jt)
+  } else if (propagate == "collect") {
+    m <- send_messages(jt, flow)    
+    while (attr(m, "direction") != "distribute") m <- send_messages(m, flow)
+    return(m)
+  } else {
+    m <- send_messages(jt, flow)
+    while (attr(m, "direction") != "full") m <- send_messages(m, flow)
+    return(m)
+  }
 }
 
 #' Most Probable Explanation
@@ -135,7 +150,15 @@ mpe <- function(x) UseMethod("mpe")
 #' @export
 mpe.jt <- function(x) {
   if(attr(x, "flow") != "max") stop("The flow of the junction tree is not 'max'.")
-  return(attr(x, "mpe"))
+
+  mpe_ <- attr(x, "mpe")
+  lu <- attr(x, "lookup")
+
+  for (name in names(mpe_)) {
+    mpe_[name] <- names(lu[[name]][match(mpe_[name], lu[[name]])])
+  }
+  
+  return(mpe_)
 }
 
 
@@ -196,23 +219,48 @@ query_belief <- function(x, nodes, type = "marginal") UseMethod("query_belief")
 #' @export
 query_belief.jt <- function(x, nodes, type = "marginal") {
   
-  if (type %ni% c("marginal", "joint")) stop("Type must be 'marginal' or 'joint'.")
+  if (type %ni% c("marginal", "joint")) {
+    stop("Type must be 'marginal' or 'joint'.", call. = FALSE)
+  }
   
   if (attr(x, "flow") == "max") {
     stop("It does not make sense to query probablities from a junction tree with max-flow. ",
-      "Use mpe(x) to obtain the max configuration.")
+      "Use 'mpe' to obtain the max configuration.", call. = FALSE)
   }
-  
+
+  has_rn <- has_root_node(x)
+
+  if (has_rn) if (!all(nodes %in% attr(x$charge$C$C1, "vars"))) {
+    stop(
+      "All nodes must be in the root node (clique 1) ",
+      "since the junction tree has only collected! ",
+      "See get_cliques(x).",
+      call. = FALSE
+    )
+  }
+
+
   node_lst <- if (type == "joint") {
     list(nodes)
   } else {
     as.list(nodes)
   }
-    
+  
   .query <- lapply(node_lst, function(z) {
-
+    
+    if (has_rn) {
+      
+      sd <- setdiff(x$cliques$C1, z)
+      if (!neq_empt_chr(sd)) return(x$charge$C$C1)
+      return(marginalize(x$charge$C$C1, sd))
+      
+    }
+    
     # TODO: Also check the separators! They may be much smaller!!!
     # - especially for type = "marginal"!
+
+    # TODO: Use mapply over cliques and separators?
+
     in_which_cliques <- .map_lgl(x$cliques, function(clq) all(z %in% clq))
     
     if (!any(in_which_cliques) && type == "joint") {
@@ -233,14 +281,18 @@ query_belief.jt <- function(x, nodes, type = "marginal") {
   })
 
   if (type == "joint") {
+    
     out <- .query[[1]]
-    lu   <- attr(x, "lookup")[attr(out, "vars")] # Correct order now
+    lu  <- attr(x, "lookup")[attr(out, "vars")] # Correct order now
     return(as_array(out, lu))
+    
   } else {
+    
     .query <- lapply(.query, function(z) {
       lu   <- attr(x, "lookup")[attr(z, "vars")] # Correct order now
       as_array(z, lu)
     })
+    
     return(structure(.query, names = nodes))
   }
 }
@@ -304,6 +356,7 @@ plot.jt <- function(x, ...) {
       type    = "undirected"
     )
   }
+
   .names <- unlist(lapply(y$cliques, function(z) paste(z, collapse = "\n")))
   dimnames(y$tree) <- list(.names, .names)
   g <- igraph::graph_from_adjacency_matrix(y$tree, y$type)

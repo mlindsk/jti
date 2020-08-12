@@ -27,21 +27,15 @@ allocate_child_to_potential <- function(potC, x, cliques, child, parents) {
 make_clique_unity_sptable <- function(potC, k, x, clique) {
 
   if (inherits(x, "data.frame")) {
-    # TODO: Clean up these comments
-    ## sptk <- sptable(as.matrix(x[, clique, drop = FALSE]))
-    ## sptk[1:length(sptk)] <- 1L # TODO: Change to numeric(0L)
-    ## potC$C[[k]] <- sptk    
     xk   <- x[, clique, drop = FALSE]
     vars <- colnames(xk)
-    ## lvls <- lapply(xk, unique)
-    ## potC$C[[k]] <- make_unity_sptable(vars, lvls)
-    potC$C[[k]] <- make_unity_sptable(vars, lookup(xk))
+    # potC$C[[k]] <- make_unity_sptable(vars, lookup(xk))
+    potC$C[[k]] <- make_unity_sptable(lookup(xk))
   } else {        
     vars <- attr(x[[k]], "vars")
-    # lvls <- attr(x, "lvls")[vars]
-    # potC$C[[k]] <- make_unity_sptable(vars, lvls)
     lu <- attr(x, "lookup")[vars]
-    potC$C[[k]] <- make_unity_sptable(vars, lu)
+    # potC$C[[k]] <- make_unity_sptable(vars, lu)
+    potC$C[[k]] <- make_unity_sptable(lu)
   }
   
 }

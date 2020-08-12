@@ -1,12 +1,22 @@
-## library(igraph)
+## g <- ess::fit_graph(asia, q = 0)
+
+## cp1 <- compile(asia, g)
+## cp2 <- compile(asia, g, "D")
+
+
+## microbenchmark::microbenchmark(
+##   jt(cp1),
+##   jt(cp1, propagate = "collect")
+## )
 
 ## ---------------------------------------------------------
 ##                       MUNIN
 ## ---------------------------------------------------------
 
+## library(igraph)
 ## munin <- readRDS("../inst/extdata/munin.rds")
 
-## cpts <- lapply(munin[1:20], function(x) {
+## cpts <- lapply(munin[1:31], function(x) {
 ##   arr <- as(x$prob, "array")
 ##   if (length(dim(arr)) == 1L) { # The onedimensional ones are not named
 ##     dimnames(arr) <- structure(dimnames(arr), names = x$node)
@@ -14,13 +24,23 @@
 ##   arr
 ## }) 
 
-## cl <- cpt_list(cpts)
-## cp <- compile(cl)
-## j <- jt(cp, propagate = TRUE)
+## cl  <- cpt_list(cpts)
+## cp1 <- compile(cl)
+## cp2 <- compile(cl, root_node = "DIFFN_SENS_SEV")
 
-## plot(j, vertex.size = 5)
-## get_cliques(j)
-## qb <- query_belief(j, c("DIFFN_DISTR", "DIFFN_SENS_SEV", "DIFFN_S_SEV_DIST"), "joint")
+## microbenchmark::microbenchmark(
+##   jt(cp1),
+##   jt(cp2, propagate = "collect"),
+##   times = 2,
+##   unit  = "s"
+## )
+
+## j1 <- jt(cp1)
+## j2 <- jt(cp2)
+
+## plot(j1, vertex.size = 5)
+## get_cliques(j1)
+## qb <- query_belief(j1, c("DIFFN_DISTR", "DIFFN_SENS_SEV", "DIFFN_S_SEV_DIST"), "joint")
 
 ## ftable(qb)
 
@@ -134,3 +154,53 @@
 ## query_belief(j, c("buying", "class", "maint"), "joint")
 
 ## as_sptable(char_array(query_belief(j, c("buying", "class", "maint"), "joint")))
+
+
+## ---------------------------------------------------------
+##                  GRAIN COMPARISON
+## ---------------------------------------------------------
+## library(gRbase)
+## x1 <- Reduce(tabMult, cpts[1:12])
+## x2 <- Reduce(tabMult, cpts[5:17])
+## length(x1)
+## object.size(x1)[1] / 1e6
+
+## xx <- tabMult(x1, x2)
+
+## # BIG ARRAYS
+## a  <- lapply(cpts, function(x) as_sptable(char_array(x)))
+## a1 <- Reduce(merge, a[1:7])
+## a2 <- Reduce(merge, a[4:10])
+## length(a2)
+## object.size(a2)[1] / 1e6
+
+## aa <- merge(a1, a2)
+
+## microbenchmark::microbenchmark(
+##   x1 %a*% x2, 
+##   a1 %m*% a2,
+##   times = 3,
+##   unit = "s"
+## )
+
+
+## dim  <- c(2,2,2)
+## cell <- c(1,1,1)
+
+## cell <- next_cell(cell, dim)
+## cell
+
+
+## cell2entry(cell, dim)
+
+## cellf <- cell[1:2]
+## cellg <- cell[c(1,3)]
+
+## cf <- cell2entry(cellf, dim[1:2])
+## cell2entry(cellg, dim[c(1,3)])
+
+## tabf <- c(10, 200)
+## tabfi <- c(2, 4)
+
+## tabf[which(tabfi == cf)]
+
