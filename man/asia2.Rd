@@ -3,7 +3,7 @@
 \docType{data}
 \name{asia2}
 \alias{asia2}
-\title{Asia bnlearn}
+\title{Asia2}
 \format{
 An object of class \code{list} of length 8.
 }

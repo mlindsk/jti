@@ -22,7 +22,7 @@
 "asia"
 
 
-#' Asia bnlearn
+#' Asia2
 #'
 #' See the \code{asia} data for information. This version, has class \code{bn.fit}.
 #'
@@ -30,3 +30,13 @@
 #' 
 #' @references \href{https://www.bnlearn.com/bnrepository/discrete-small.html#asia}{bnlearn-asia}
 "asia2"
+
+
+#' Munin
+#'
+#' A massive bayesian network 
+#'
+#' @docType data
+#' 
+#' @references \href{https://www.bnlearn.com/bnrepository/discrete-massive.html#munin}{bnlearn-munin}
+"munin"
