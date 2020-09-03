@@ -25,7 +25,7 @@ allocate_child_to_potential <- function(potC, x, cliques, child, parents) {
   NULL
 }
 
-make_clique_unity_sptable <- function(potC, k, x, clique) {
+make_clique_sparta_unity <- function(potC, k, x, clique) {
   potC$C[[k]] <- sparta::sparta_unity(attr(x, "dim_names")[clique])
   NULL
 }
@@ -49,7 +49,7 @@ new_charge <- function(x, cliques, parents) {
   if (any(is_null)) {
     which_is_null <- which(is_null)
     for (k in which_is_null) {
-      make_clique_unity_sptable(potC, k, x, cliques[[k]])
+      make_clique_sparta_unity(potC, k, x, cliques[[k]])
     }
   }
 
