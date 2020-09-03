@@ -40,7 +40,8 @@ el <- matrix(c(
 "E", "D",
 "B", "D"),
  nc = 2,
- byrow = TRUE)
+ byrow = TRUE
+)
 
 g <- igraph::graph_from_edgelist(el)
 plot(g)

@@ -22,7 +22,8 @@ the neigbors of the element. If \code{x} is a \code{cpt_list},
 \code{g} must be \code{NULL}. The procdure then deduce the graph
 from the conditional probability tables that was inputtet in \code{cpt_list}}
 
-\item{root_node}{A node for which we require it to live in the root clique (the first clique).}
+\item{root_node}{A node for which we require it to live in the root
+clique (the first clique).}
 }
 \description{
 Compiled objects are used as building blocks for junction tree inference

@@ -14,18 +14,13 @@ parents_jt <- function(x, lvs) {
   return(par)
 }
 
-valid_evidence <- function(x, e) UseMethod("valid_evidence")
-
-valid_evidence.lookup <- function(x, e) {
-  tryCatch(
-  {
-    find(x, e)
-    TRUE
-  },
-  error = function(err) {
-    FALSE
+valid_evidence <- function(dim_names, e) {
+  lookup <- mapply(match, e, dim_names[names(e)])
+  if (anyNA(lookup)) {
+    return(FALSE)
+  } else {
+    return(TRUE)
   }
-  )
 }
 
 has_root_node <- function(x) UseMethod("has_root_node")
@@ -113,16 +108,10 @@ prune_jt <- function(jt) {
       attr(jt, "direction")  <- "distribute"
 
       # Normalize C1
-      probability_of_evidence <- sum(jt$charge$C[["C1"]])
+      probability_of_evidence <- sum(jt$charge$C[["C1"]], "vals")
       attr(jt, "probability_of_evidence") <- probability_of_evidence
-      jt$charge$C[["C1"]] <- normalize_root(jt$charge$C[["C1"]], probability_of_evidence)
+      jt$charge$C[["C1"]] <- sparta::normalize(jt$charge$C[["C1"]])
 
-      ## C1_normalized <- eapply(jt$charge$C[["C1"]], function(x) x / probability_of_evidence)
-      ## C1_normalized <- list2env(C1_normalized)
-      ## attr(C1_normalized, "vars") <- attr(jt$charge$C[["C1"]], "vars")
-      ## class(C1_normalized) <- class(jt$charge$C[["C1"]])
-      ## jt$charge$C[["C1"]] <- C1_normalized
-      # jt$charge$C[["C1"]] <- jt$charge$C[["C1"]] / probability_of_evidence
     } else {
       jt$schedule$distribute <- "full"
       attr(jt, "direction")  <- "full"
@@ -152,17 +141,23 @@ set_evidence_jt <- function(charge, cliques, evidence) {
   # into account when setting evidence.
   # for (k in seq_along(cliques)) {
   for (k in seq_along(charge$C)) {
-    Ck <- attr(charge$C[[k]], "vars")
+    Ck <- names(attr(charge$C[[k]], "dim_names"))
     for (i in seq_along(evidence)) {
       e     <- evidence[i]
       e_var <- names(e)
       e_val <- unname(e)
       if (e_var %in% Ck) {
-        # just match the names instead
-        e_pos_charge_k <- match(e_var, attr(charge$C[[k]], "vars"))
-        charge_k_by_e_pos <- .find_cond_configs(charge$C[[k]], e_pos_charge_k)
-        names_to_keep   <- names(charge$C[[k]])[which(charge_k_by_e_pos == e_val)]
-        charge$C[[k]] <- charge$C[[k]][names_to_keep]
+
+        row_idx  <- match(e_var, names(attr(charge$C[[k]], "dim_names")))
+        int_val  <- match(e_val, attr(charge$C[[k]], "dim_names")[[e_var]])
+        idx_keep <- which(int_val == charge$C[[k]][row_idx, ])
+
+        charge$C[[k]] <- sparta::sparta_struct(
+          charge$C[[k]][, idx_keep, drop = FALSE],
+          attr(charge$C[[k]], "vals")[idx_keep],
+          attr(charge$C[[k]], "dim_names")
+        )
+        
       }
     }
   }
@@ -177,11 +172,7 @@ new_jt <- function(x, evidence = NULL, flow = "sum") {
   charge  <- x$charge
   cliques <- x$cliques
 
-  if (!is.null(evidence)) {
-    le <- attr(x, "lookup")[names(evidence)]
-    evidence <- .map_chr(names(evidence), function(e) le[[e]][evidence[e]])
-    charge <- set_evidence_jt(charge, cliques, evidence)
-  }
+  if (!is.null(evidence)) charge <- set_evidence_jt(charge, cliques, evidence)
   
   schedule  <- new_schedule(cliques)
   jt <- list(
@@ -199,23 +190,14 @@ new_jt <- function(x, evidence = NULL, flow = "sum") {
   
   if (flow == "max") {
     # most probable explanation
-    all_vars <- unique(unlist(cliques))
+    all_vars <- names(attr(x, "dim_names"))
     attr(jt, "mpe") <- structure(
-      vector("character", length = length(all_vars)), names = all_vars
+      vector("character", length = length(all_vars)),
+      names = all_vars
     )
   }
   return(jt)
 }
-
-.get_max_info <- function(pot) {
-  # Helper function to locate the maximum configuration
-  max_idx    <- which_max(pot)
-  max_config <- pot[max_idx]
-  max_vars   <- attr(max_config, "vars")
-  max_vals   <- .split_chars(names(max_config))
-  return(structure(max_vals, names = max_vars, max_idx = max_idx))
-}
-
 
 send_messages <- function(jt, flow = "sum") {
 
@@ -230,14 +212,11 @@ send_messages <- function(jt, flow = "sum") {
   x   <- if (direction == "collect") jt$schedule$collect else jt$schedule$distribute
   lvs <- attr(x$tree, "leaves")
   par <- attr(x$tree, "parents")
-
+  
   for (k in seq_along(lvs)) {
 
     lvs_k <- lvs[k]
     par_k <- par[[k]]
-    
-    # Skip if the leave has no parents (can occur in distribute)    
-    # if (!neq_empt_int(par_k)) next
     
     for (pk in par_k) {
       
@@ -248,58 +227,43 @@ send_messages <- function(jt, flow = "sum") {
       C_par_k_name <- names(x$cliques)[pk]
 
       if (neq_empt_chr(Sk)) { # if empty, no messages should be sent unless flow = max, then we bookkeep the max config
-
         message_k_names <- setdiff(C_lvs_k, Sk)
-
         if (direction == "collect") {
-
-          message_k                   <- marginalize(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
-          jt$charge$C[[C_par_k_name]] <- merge(jt$charge$C[[C_par_k_name]], message_k, "*")
-          jt$charge$C[[C_lvs_k_name]] <- merge(jt$charge$C[[C_lvs_k_name]], message_k, "/")
-          
+          message_k                   <- sparta::marg(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
+          jt$charge$C[[C_par_k_name]] <- sparta::mult(jt$charge$C[[C_par_k_name]], message_k)
+          jt$charge$C[[C_lvs_k_name]] <- sparta::div(jt$charge$C[[C_lvs_k_name]], message_k)
         }
 
         if (direction == "distribute") {
-
           if (attr(jt, "flow") == "max") {
-            ## The child:
-            max_idx <- which_max(jt$charge$C[[C_lvs_k_name]])
-            # Here we must change the leave potential and send this new message to the parent
-            # - and so we can't use .get_max_info
-            jt$charge$C[[C_lvs_k_name]] <- jt$charge$C[[C_lvs_k_name]][max_idx]
-            max_vars <- attr(jt$charge$C[[C_lvs_k_name]], "vars")
-            max_vals <- .split_chars(names(jt$charge$C[[C_lvs_k_name]]))
-            attr(jt, "mpe")[max_vars] <- max_vals
+            ## Find the max cell and change the potential before sending the information:
+            max_idx  <- sparta::which_max_idx(jt$charge$C[[C_lvs_k_name]])
+            max_cell <- sparta::which_max_cell(jt$charge$C[[C_lvs_k_name]])
+            max_mat  <- jt$charge$C[[C_lvs_k_name]][, max_idx, drop = FALSE]
+            max_val  <- attr(jt$charge$C[[C_lvs_k_name]], "vals")[max_idx]
+            max_dn   <- attr(jt$charge$C[[C_lvs_k_name]], "dim_names")
+
+            jt$charge$C[[C_lvs_k_name]] <- sparta::sparta_struct(
+              max_mat,
+              max_val,
+              max_dn
+            )
+            attr(jt, "mpe")[names(max_cell)] <- max_cell
           }
 
-          message_k <- marginalize(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
-          jt$charge$C[[C_par_k_name]] <- merge(jt$charge$C[[C_par_k_name]], message_k, "*", validate = FALSE)
-
-          if (attr(jt, "flow") == "max") {
-            ## The parent:
-            max_info_par <- .get_max_info(jt$charge$C[[C_par_k_name]])
-            attr(jt, "mpe")[names(max_info_par)] <- unname(max_info_par)
-          }
+          # Send the message
+          message_k                   <- sparta::marg(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
+          jt$charge$C[[C_par_k_name]] <- sparta::mult(jt$charge$C[[C_par_k_name]], message_k)
+          jt$charge$S[[paste("S", pk, sep = "")]] <- message_k
           
-          S_k_name <- paste("S", pk, sep = "") # str_rem(C_par_k_name, 1L)
-          jt$charge$S[[S_k_name]] <- message_k
+          if (attr(jt, "flow") == "max") {
+            ## Record the max cell for the parent potential
+            max_cell <- sparta::which_max_cell(jt$charge$C[[C_par_k_name]])
+            attr(jt, "mpe")[names(max_cell)] <- max_cell
+          }
         }
-        
-      } else if (direction == "distribute") { # This else if clause, ensures that parents with no leaves are taken care of
-        # TODO: double "direction == 'distribute'" ? FIX: put the if (attr(jt, ..)) inside the above if clause!
-        if (attr(jt, "flow") == "max") {
-          ## The parent:
-          max_info_par <- .get_max_info(jt$charge$C[[C_par_k_name]])
-          attr(jt, "mpe")[names(max_info_par)] <- unname(max_info_par)
-
-          ## The child:
-          max_info_lvs <- .get_max_info(jt$charge$C[[C_lvs_k_name]])
-          attr(jt, "mpe")[names(max_info_lvs)] <- unname(max_info_lvs)
-        }
-      }      
+      }
     }
   }
   prune_jt(jt)
 }
-
-

@@ -48,9 +48,8 @@ construct_cliques_and_parents <- function(adj, root_node = "") {
 
 graph_from_cpt_list <- function(x) {
   pairs <- lapply(seq_along(x), function(i) {
-    el <- x[[i]]
     child <- names(x)[i]
-    parents <- setdiff(attr(el, "vars"), child)
+    parents <- setdiff(names(attr(x[[i]], "dim_names")), child)
     as.matrix(expand.grid(parents, child, stringsAsFactors = FALSE))
   })
   el <- do.call(rbind, pairs)

@@ -10,41 +10,29 @@
 #' @export
 cpt_list <- function(x) { 
   # x: list of cpts with dimnames
-
-  if (inherits(x, "sptable")) return(x)
-  
+    
   if (!is_named_list(x)) {
     stop("x must be a named list of cpts. A name should be the name of the corresponding child node.")
   }
 
-  lookup <- vector("list")
+  dim_names <- list()
   
   y <- lapply(seq_along(x), function(i) {
-
     l <- x[[i]]
-
-    class_allowed <- any(.map_lgl(.allowed_cpt_classes(), function(x) inherits(l, x)))
+    class_allowed <- any(.map_lgl(sparta::allowed_class_to_sparta(), function(x) inherits(l, x)))
     if (!class_allowed) stop("one ore more elements in x is not an array-like object")
-
-    cal  <- char_array(l)
-    sptl <- as_sptable(cal, validate = FALSE)
-    lu   <- lookup(cal) # used to populate/create empty/unity potentials in new_charge
-
-    for (k in seq_along(lu)) {
-      if (names(lu)[k] %ni% names(lookup)) {
-        lookup <<- push(lookup, lu[[k]], names(lu)[k])  
-      }
-    }
-    
-    return(sptl)
+    spar <- sparta::as_sparta(l)
+    dim_names <<- push(dim_names, attr(spar, "dim_names"))
+    spar
   })
 
-  class(lookup) <- c("lookup", class(lookup))
+  dim_names <- unlist(dim_names, FALSE)
+  dim_names <- dim_names[unique(names(dim_names))]
   
-  structure(y, names = names(x), lookup = lookup, class = c("cpt_list", class(x)))
+  structure(y, names = names(x), dim_names = dim_names, class = c("cpt_list", class(x)))
 }
 
-# TODO: Make a vanilla print method avoiding all the sptables
+# TODO: Make a vanilla print method avoiding all the sparta tables to print?
 
 #' Compile information
 #'
@@ -57,7 +45,8 @@ cpt_list <- function(x) {
 #' the neigbors of the element. If \code{x} is a \code{cpt_list},
 #' \code{g} must be \code{NULL}. The procdure then deduce the graph
 #' from the conditional probability tables that was inputtet in \code{cpt_list}
-#' @param root_node A node for which we require it to live in the root clique (the first clique).
+#' @param root_node A node for which we require it to live in the root
+#' clique (the first clique).
 #' @export
 compile <- function(x, g = NULL, root_node = "") UseMethod("compile")
 
@@ -71,11 +60,10 @@ compile.cpt_list <- function(x, g = NULL, root_node = "") {
   adj     <- adjacency_list_from_moralization_and_triangulation_igraph(g, parents)
   cliques <- construct_cliques_and_parents(adj, root_node)$cliques
   charge  <- new_charge(x, cliques, parents)
-  # TODO: Also output the lookup!
   structure(
     list(charge = charge, cliques = cliques),
-    lookup = attr(x, "lookup"),
     root_node = root_node,
+    dim_names = attr(x, "dim_names"),
     class = c("charge", "list")
   )
 }
@@ -85,8 +73,7 @@ compile.cpt_list <- function(x, g = NULL, root_node = "") {
 compile.data.frame <- function(x, g, root_node = "") {
 
   # TODO: Make a vanilla print method
-
-  x <- char_frame(x)
+  attr(x, "dim_names") <- lapply(x, unique)
 
   # Used to store parents in construct_cliques_and_parents if g != igraph.
   pe <- new.env()
@@ -99,8 +86,8 @@ compile.data.frame <- function(x, g, root_node = "") {
 
   structure(
     list(charge = charge, cliques = cp$cliques),
-    lookup = lookup(x),
     root_node = root_node,
+    dim_names = attr(x, "dim_names"),
     class = c("charge", "list")
   )
 }

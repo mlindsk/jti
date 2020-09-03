@@ -3,8 +3,6 @@ Makefile
 ^README\.Rmd$
 ^README.html$
 ^LICENSE.md$
-^appveyor\.yml$
 ^data-raw$
-R/sandbox.R
 TODO\.org
 ^\.github$

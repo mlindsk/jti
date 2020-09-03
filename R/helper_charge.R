@@ -1,8 +1,8 @@
 extract_or_make_cpt <- function(x, child, parents) {
   # x: data.frame or cpt_list
   if (inherits(x, "data.frame")) {
-    spt  <- sptable(as.matrix(x[, c(child, parents), drop = FALSE]))
-    return(to_cpt(spt, parents))
+    spt <- sparta::as_sparta(x[, c(child, parents), drop = FALSE])
+    return(sparta::as_cpt(spt, parents))
   } else {
     return(x[[child]])
   }
@@ -17,27 +17,17 @@ allocate_child_to_potential <- function(potC, x, cliques, child, parents) {
       if (is.null(potC$C[[k]])) {
         potC$C[[k]] <- cpt
       } else {
-        potC$C[[k]] <- merge(potC$C[[k]], cpt)
+        potC$C[[k]] <- sparta::mult(potC$C[[k]], cpt)
       }
       break # Must only live in one clique
     }
   }
+  NULL
 }
 
 make_clique_unity_sptable <- function(potC, k, x, clique) {
-
-  if (inherits(x, "data.frame")) {
-    xk   <- x[, clique, drop = FALSE]
-    vars <- colnames(xk)
-    # potC$C[[k]] <- make_unity_sptable(vars, lookup(xk))
-    potC$C[[k]] <- make_unity_sptable(lookup(xk))
-  } else {        
-    vars <- attr(x[[k]], "vars")
-    lu <- attr(x, "lookup")[vars]
-    # potC$C[[k]] <- make_unity_sptable(vars, lu)
-    potC$C[[k]] <- make_unity_sptable(lu)
-  }
-  
+  potC$C[[k]] <- sparta::sparta_unity(attr(x, "dim_names")[clique])
+  NULL
 }
 
 new_charge <- function(x, cliques, parents) {
@@ -46,7 +36,7 @@ new_charge <- function(x, cliques, parents) {
   potC[["C"]] <- vector("list", length(cliques))
 
   children <- names(parents)
-
+  
   for (child in children) {
     .parents <- parents[[child]]
     allocate_child_to_potential(potC, x, cliques, child, .parents)
@@ -63,8 +53,8 @@ new_charge <- function(x, cliques, parents) {
     }
   }
 
-  potS <- vector("list", length(cliques))
-  names(potS) <- paste("S", 1:length(potS), sep = "")
+  names_potS <- paste("S", 1:length(cliques), sep = "")
+  potS <- structure(vector("list", length(cliques)), names = names_potS)
   names(potC$C) <- names(cliques)
   pots <- list(C = potC$C, S = potS)
   return(pots)

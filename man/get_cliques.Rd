@@ -15,6 +15,9 @@ get_cliques(x)
 \description{
 Return the cliques of a junction tree
 }
+\examples{
+# See Example 5 of the 'jt' function 
+}
 \seealso{
 \code{\link{jt}}
 }

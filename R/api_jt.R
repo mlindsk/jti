@@ -24,7 +24,8 @@
 #' "E", "D",
 #' "B", "D"),
 #'  nc = 2,
-#'  byrow = TRUE)
+#'  byrow = TRUE
+#' )
 #' 
 #' g <- igraph::graph_from_edgelist(el)
 #' plot(g)
@@ -112,16 +113,18 @@
 #' @export
 jt <- function(x, evidence = NULL, flow = "sum", propagate = "full") UseMethod("jt")
 
-
 #' @rdname jt
 #' @export
 jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = "full") {
+
   if (!is.null(evidence)) {
-    if (!valid_evidence(attr(x, "lookup"), evidence)) {
+    if (!valid_evidence(attr(x, "dim_names"), evidence)) {
       stop("evidence is not on correct form", call. = FALSE)
     }
   }
+
   jt <- new_jt(x, evidence, flow)
+
   if (propagate == "no") {
     return(jt)
   } else if (propagate == "collect") {
@@ -133,7 +136,9 @@ jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = "full") {
     while (attr(m, "direction") != "full") m <- send_messages(m, flow)
     return(m)
   }
+  stop("propagte must be either 'no', 'collect' or full", call. = TRUE)
 }
+
 
 #' Most Probable Explanation
 #'
@@ -150,15 +155,7 @@ mpe <- function(x) UseMethod("mpe")
 #' @export
 mpe.jt <- function(x) {
   if(attr(x, "flow") != "max") stop("The flow of the junction tree is not 'max'.")
-
-  mpe_ <- attr(x, "mpe")
-  lu <- attr(x, "lookup")
-
-  for (name in names(mpe_)) {
-    mpe_[name] <- names(lu[[name]][match(mpe_[name], lu[[name]])])
-  }
-  
-  return(mpe_)
+  attr(x, "mpe")
 }
 
 
@@ -166,6 +163,8 @@ mpe.jt <- function(x) {
 #'
 #' @param x A junction tree object, \code{jt}.
 #' @seealso \code{\link{jt}}
+#' @examples
+#' # See Example 5 of the 'jt' function 
 #' @export
 get_cliques <- function(x) UseMethod("get_cliques")
 
@@ -230,11 +229,11 @@ query_belief.jt <- function(x, nodes, type = "marginal") {
 
   has_rn <- has_root_node(x)
 
-  if (has_rn) if (!all(nodes %in% attr(x$charge$C$C1, "vars"))) {
+  if (has_rn) if (!all(nodes %in% names(attr(x$charge$C$C1, "dim_names")))) {
     stop(
       "All nodes must be in the root node (clique 1) ",
       "since the junction tree has only collected! ",
-      "See get_cliques(x).",
+      "See get_cliques(x) to find the nodes in the root node.",
       call. = FALSE
     )
   }
@@ -247,13 +246,11 @@ query_belief.jt <- function(x, nodes, type = "marginal") {
   }
   
   .query <- lapply(node_lst, function(z) {
-    
+
     if (has_rn) {
-      
       sd <- setdiff(x$cliques$C1, z)
       if (!neq_empt_chr(sd)) return(x$charge$C$C1)
-      return(marginalize(x$charge$C$C1, sd))
-      
+      return(sparta::marg(x$charge$C$C1, sd))
     }
     
     # TODO: Also check the separators! They may be much smaller!!!
@@ -275,25 +272,15 @@ query_belief.jt <- function(x, nodes, type = "marginal") {
     length_of_possible_cliques <- .map_int(x$cliques[in_which_cliques], length)
     idx <- index_in_which_cliques[which.min(length_of_possible_cliques)]
     pot <- x$charge$C[[idx]]
-    rm_var <- setdiff(attr(pot, "vars"), z)
+    rm_var <- setdiff(names(attr(pot, "dim_names")), z)
     
-    return(marginalize(pot, rm_var))
+    return(sparta::marg(pot, rm_var))
   })
 
   if (type == "joint") {
-    
-    out <- .query[[1]]
-    lu  <- attr(x, "lookup")[attr(out, "vars")] # Correct order now
-    return(as_array(out, lu))
-    
+    return(sparta::as_array(.query[[1]]))
   } else {
-    
-    .query <- lapply(.query, function(z) {
-      lu   <- attr(x, "lookup")[attr(z, "vars")] # Correct order now
-      as_array(z, lu)
-    })
-    
-    return(structure(.query, names = nodes))
+    return(structure(lapply(.query, function(z) sparta::as_array(z)), names = nodes))
   }
 }
 
