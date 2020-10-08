@@ -2,62 +2,58 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 mcs <- function(adj, start_node = "", check = TRUE) {
-    .Call('_jti_mcs', PACKAGE = 'jti', adj, start_node, check)
+    .Call(`_jti_mcs`, adj, start_node, check)
 }
 
 perfect_cliques <- function(x) {
-    .Call('_jti_perfect_cliques', PACKAGE = 'jti', x)
+    .Call(`_jti_perfect_cliques`, x)
 }
 
 perfect_separators <- function(x) {
-    .Call('_jti_perfect_separators', PACKAGE = 'jti', x)
+    .Call(`_jti_perfect_separators`, x)
 }
 
 parents <- function(po, ps) {
-    .Call('_jti_parents', PACKAGE = 'jti', po, ps)
+    .Call(`_jti_parents`, po, ps)
 }
 
 rip <- function(adj, start_node = "", check = TRUE) {
-    .Call('_jti_rip', PACKAGE = 'jti', adj, start_node, check)
+    .Call(`_jti_rip`, adj, start_node, check)
+}
+
+rooted_junction_tree <- function(cliques, root = 0L) {
+    .Call(`_jti_rooted_junction_tree`, cliques, root)
+}
+
+int_set_intersect <- function(v1, v2) {
+    .Call(`_jti_int_set_intersect`, v1, v2)
 }
 
 set_intersect <- function(v1, v2) {
-    .Call('_jti_set_intersect', PACKAGE = 'jti', v1, v2)
+    .Call(`_jti_set_intersect`, v1, v2)
 }
 
 set_union <- function(v1, v2) {
-    .Call('_jti_set_union', PACKAGE = 'jti', v1, v2)
+    .Call(`_jti_set_union`, v1, v2)
 }
 
 set_diff <- function(v1, v2) {
-    .Call('_jti_set_diff', PACKAGE = 'jti', v1, v2)
+    .Call(`_jti_set_diff`, v1, v2)
 }
 
 set_eq <- function(v1, v2) {
-    .Call('_jti_set_eq', PACKAGE = 'jti', v1, v2)
+    .Call(`_jti_set_eq`, v1, v2)
 }
 
 set_in <- function(a, b) {
-    .Call('_jti_set_in', PACKAGE = 'jti', a, b)
+    .Call(`_jti_set_in`, a, b)
 }
 
 set_issubeq <- function(a, b) {
-    .Call('_jti_set_issubeq', PACKAGE = 'jti', a, b)
+    .Call(`_jti_set_issubeq`, a, b)
 }
 
 set_any <- function(v) {
-    .Call('_jti_set_any', PACKAGE = 'jti', v)
-}
-
-count_unique <- function(x) {
-    .Call('_jti_count_unique', PACKAGE = 'jti', x)
-}
-
-matpr <- function(A, validate = TRUE) {
-    .Call('_jti_matpr', PACKAGE = 'jti', A, validate)
-}
-
-sptab_ <- function(A, validate = TRUE) {
-    .Call('_jti_sptab_', PACKAGE = 'jti', A, validate)
+    .Call(`_jti_set_any`, v)
 }
 

@@ -6,3 +6,6 @@ Makefile
 ^data-raw$
 TODO\.org
 ^\.github$
+src/GTAGS
+src/GRTAGS
+src/GPATH

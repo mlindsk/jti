@@ -27,39 +27,60 @@ has_root_node <- function(x) UseMethod("has_root_node")
 
 has_root_node.jt <- function(x) attr(x, "root_node") != ""
 
-normalize_root <- function(root, norm_val) {
-  root_normalized <- eapply(root, function(x) x / norm_val)
-  root_normalized <- list2env(root_normalized)
-  attr(root_normalized, "vars") <- attr(root, "vars")
-  class(root_normalized) <- class(root)
-  return(root_normalized)
-}
+## new_schedule <- function(cliques) {
+##   nc <- length(cliques)
+##   clique_graph <- matrix(0L, nc, nc)
+##   coll_tree   <- clique_graph
+##   dist_tree   <- clique_graph
 
-new_schedule <- function(cliques) {
+##   # Alg. 4.8 - Probabilistic Expert Systems (p.55)
+##   for (i in seq_along(cliques)[-1L]) {
+##     for (j in 1:(i-1L)) {
+##       Ci   <- cliques[[i]]
+##       Cj   <- cliques[[j]]
+##       Hi_1 <- unlist(cliques[1:(i-1L)])
+##       Si   <- intersect(Ci, Hi_1)
+##       if (all(Si %in% Cj)) {
+##         clique_graph[i, j] <- 1L
+##         clique_graph[j, i] <- 1L
+##         is_new_directed_edge <- !neq_empt_int(which(coll_tree[i, ] == 1L))
+##         if (is_new_directed_edge) {
+##           coll_tree[i, j] <- 1L
+##           dist_tree[j, i] <- 1L
+##         }
+##       }
+##     }
+##   }
 
-  nc <- length(cliques)
-  clique_graph <- matrix(0L, nc, nc)
-  coll_tree   <- clique_graph
-  dist_tree   <- clique_graph
+##   coll_lvs <- leaves_jt(coll_tree)
+##   dist_lvs <- leaves_jt(dist_tree)
 
-  # Alg. 4.8 - Probabilistic Expert Systems (p.55)
-  for (i in seq_along(cliques)[-1L]) {
-    for (j in 1:(i-1L)) {
-      Ci   <- cliques[[i]]
-      Cj   <- cliques[[j]]
-      Hi_1 <- unlist(cliques[1:(i-1L)])
-      Si   <- intersect(Ci, Hi_1)
-      if (all(Si %in% Cj)) {
-        clique_graph[i, j] <- 1L
-        clique_graph[j, i] <- 1L
-        is_new_directed_edge <- !neq_empt_int(which(coll_tree[i, ] == 1L))
-        if (is_new_directed_edge) {
-          coll_tree[i, j] <- 1L
-          dist_tree[j, i] <- 1L
-        }
-      }
-    }
-  }
+##   attr(coll_tree, "leaves")  <- coll_lvs
+##   attr(dist_tree, "leaves")  <- dist_lvs
+
+##   attr(coll_tree, "parents") <- parents_jt(coll_tree, coll_lvs)
+##   attr(dist_tree, "parents") <- parents_jt(dist_tree, dist_lvs)
+
+##   collect    <- list(cliques = cliques, tree = coll_tree)
+##   distribute <- list(cliques = cliques, tree = dist_tree)
+  
+##   return(list(collect = collect , distribute = distribute, clique_graph = clique_graph))
+  
+## }
+
+
+new_schedule2 <- function(cliques_chr, cliques_int, root_node) {
+  
+  # mcs promise that the root_node lives in clique one
+  jrn <- if (root_node != "") 1L else 0L
+  
+  rjt <- rooted_junction_tree(cliques_int, jrn)
+
+  coll_tree    <- rjt$collect
+  dist_tree    <- rjt$distribute
+  clique_root  <- rjt$clique_root
+  clique_graph <- coll_tree + dist_tree
+
 
   coll_lvs <- leaves_jt(coll_tree)
   dist_lvs <- leaves_jt(dist_tree)
@@ -70,14 +91,17 @@ new_schedule <- function(cliques) {
   attr(coll_tree, "parents") <- parents_jt(coll_tree, coll_lvs)
   attr(dist_tree, "parents") <- parents_jt(dist_tree, dist_lvs)
 
-  collect    <- list(cliques = cliques, tree = coll_tree)
-  distribute <- list(cliques = cliques, tree = dist_tree)
-
-  # TODO: Should we return a schedule as an environment?
-  # - that would reduce the number of arguments to input/output everywhere?
+  collect    <- list(cliques = cliques_chr, tree = coll_tree)
+  distribute <- list(cliques = cliques_chr, tree = dist_tree)
   
-  return(list(collect = collect , distribute = distribute, clique_graph = clique_graph))
-  
+  return(
+    list(
+      collect      = collect ,
+      distribute   = distribute,
+      clique_graph = clique_graph,
+      clique_root  = paste("C", clique_root, sep = "")
+    )
+  )
 }
 
 
@@ -107,10 +131,11 @@ prune_jt <- function(jt) {
       jt$schedule$collect    <- "full"
       attr(jt, "direction")  <- "distribute"
 
-      # Normalize C1
-      probability_of_evidence <- sum(jt$charge$C[["C1"]], "vals")
+      # Normalize clique_root
+      cr <- attr(jt, "clique_root")
+      probability_of_evidence <- sum(jt$charge$C[[cr]], "vals")
       attr(jt, "probability_of_evidence") <- probability_of_evidence
-      jt$charge$C[["C1"]] <- sparta::normalize(jt$charge$C[["C1"]])
+      jt$charge$C[[cr]] <- sparta::normalize(jt$charge$C[[cr]])
 
     } else {
       jt$schedule$distribute <- "full"
@@ -148,15 +173,25 @@ set_evidence_jt <- function(charge, cliques, evidence) {
       e_val <- unname(e)
       if (e_var %in% Ck) {
 
-        row_idx  <- match(e_var, names(attr(charge$C[[k]], "dim_names")))
-        int_val  <- match(e_val, attr(charge$C[[k]], "dim_names")[[e_var]])
-        idx_keep <- which(int_val == charge$C[[k]][row_idx, ])
+        m <- try(sparta::slice(charge$C[[k]], e))
+        if (inherits(m, "try-error")) {
+          stop(
+            "the evidence leads to a degenerate distribution ",
+            "since the evidence was never observed"
+          )
+        }
+        charge$C[[k]] <- m
 
-        charge$C[[k]] <- sparta::sparta_struct(
-          charge$C[[k]][, idx_keep, drop = FALSE],
-          attr(charge$C[[k]], "vals")[idx_keep],
-          attr(charge$C[[k]], "dim_names")
-        )
+        ## Before slice was available:
+        ## row_idx  <- match(e_var, names(attr(charge$C[[k]], "dim_names")))
+        ## int_val  <- match(e_val, attr(charge$C[[k]], "dim_names")[[e_var]])
+        ## idx_keep <- which(int_val == charge$C[[k]][row_idx, ])
+
+        ## charge$C[[k]] <- sparta::sparta_struct(
+        ##   charge$C[[k]][, idx_keep, drop = FALSE],
+        ##   attr(charge$C[[k]], "vals")[idx_keep],
+        ##   attr(charge$C[[k]], "dim_names")
+        ## )
         
       }
     }
@@ -168,13 +203,16 @@ set_evidence_jt <- function(charge, cliques, evidence) {
 new_jt <- function(x, evidence = NULL, flow = "sum") {
   # x: a charge object returned from compile
   #  - a list with the charge and the cliques
-  
+
   charge  <- x$charge
   cliques <- x$cliques
 
   if (!is.null(evidence)) charge <- set_evidence_jt(charge, cliques, evidence)
-  
-  schedule  <- new_schedule(cliques)
+
+  # schedule  <- new_schedule(cliques)
+  schedule  <- new_schedule2(cliques, attr(x, "cliques_int"), attr(x, "root_node"))
+  attr(x, "cliques_int") <- NULL
+
   jt <- list(
     schedule = schedule[1:2], # collect and distribute
     charge   = charge,
@@ -182,11 +220,12 @@ new_jt <- function(x, evidence = NULL, flow = "sum") {
     clique_graph = schedule$clique_graph
   )
   
-  class(jt)             <- c("jt", class(jt))
-  attr(jt, "direction") <- "collect" # collect, distribute or full
-  attr(jt, "lookup")    <- attr(x, "lookup")
-  attr(jt, "flow")      <- flow
-  attr(jt, "root_node") <- attr(x, "root_node")
+  class(jt)               <- c("jt", class(jt))
+  attr(jt, "direction")   <- "collect" # collect, distribute or full
+  attr(jt, "lookup")      <- attr(x, "lookup")
+  attr(jt, "flow")        <- flow
+  attr(jt, "root_node")   <- attr(x, "root_node")
+  attr(jt, "clique_root") <- schedule$clique_root
   
   if (flow == "max") {
     # most probable explanation
@@ -200,8 +239,6 @@ new_jt <- function(x, evidence = NULL, flow = "sum") {
 }
 
 send_messages <- function(jt, flow = "sum") {
-
-  # TODO: wrap jt in an environment and make more small helper functions
 
   direction <- attr(jt, "direction")
   if (direction == "full") {
@@ -225,13 +262,13 @@ send_messages <- function(jt, flow = "sum") {
       Sk      <- intersect(C_lvs_k, C_par_k)
       C_lvs_k_name <- names(x$cliques)[lvs_k]
       C_par_k_name <- names(x$cliques)[pk]
-
+      
       if (neq_empt_chr(Sk)) { # if empty, no messages should be sent unless flow = max, then we bookkeep the max config
         message_k_names <- setdiff(C_lvs_k, Sk)
         if (direction == "collect") {
           message_k                   <- sparta::marg(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
           jt$charge$C[[C_par_k_name]] <- sparta::mult(jt$charge$C[[C_par_k_name]], message_k)
-          jt$charge$C[[C_lvs_k_name]] <- sparta::div(jt$charge$C[[C_lvs_k_name]], message_k)
+          jt$charge$C[[C_lvs_k_name]] <- sparta::div(jt$charge$C[[C_lvs_k_name]], message_k)  
         }
 
         if (direction == "distribute") {

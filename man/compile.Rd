@@ -6,11 +6,11 @@
 \alias{compile.data.frame}
 \title{Compile information}
 \usage{
-compile(x, g = NULL, root_node = "")
+compile(x, g = NULL, root_node = "", save_graph = FALSE)
 
-\method{compile}{cpt_list}(x, g = NULL, root_node = "")
+\method{compile}{cpt_list}(x, g = NULL, root_node = "", save_graph = FALSE)
 
-\method{compile}{data.frame}(x, g, root_node = "")
+\method{compile}{data.frame}(x, g, root_node = "", save_graph = FALSE)
 }
 \arguments{
 \item{x}{Either a \code{data.frame} or an object returned from \code{cpt_list}}
@@ -23,7 +23,11 @@ the neigbors of the element. If \code{x} is a \code{cpt_list},
 from the conditional probability tables that was inputtet in \code{cpt_list}}
 
 \item{root_node}{A node for which we require it to live in the root
-clique (the first clique).}
+clique (the first clique)}
+
+\item{save_graph}{Logical indicating if the graph induced by the cpts
+from the cpt_list should be saved. It has no effect when x is a
+\code{data.frame}. Use \code{dag} to obtain the graph}
 }
 \description{
 Compiled objects are used as building blocks for junction tree inference

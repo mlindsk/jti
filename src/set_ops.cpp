@@ -1,6 +1,17 @@
 #include "set_ops.h"
 
 // [[Rcpp::export]]
+VI int_set_intersect(VI &v1, VI &v2) {
+  VI v;
+  // std::sort(v1.begin(), v1.end());
+  // std::sort(v2.begin(), v2.end());
+  std::set_intersection(v1.begin(),v1.end(),
+			v2.begin(),v2.end(),
+			back_inserter(v));
+  return v;
+}
+
+// [[Rcpp::export]]
 VS set_intersect(VS &v1, VS &v2) {
   VS v;
   std::sort(v1.begin(), v1.end());

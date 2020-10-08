@@ -74,7 +74,7 @@ print(jt1)
 #>  ------------------------- 
 #>   Flow: sum 
 #>   Nodes: 5 
-#>   Edges: 5 / 10 
+#>   Edges: 4 / 10 
 #>   Cliques: 5 
 #>    - max: 4 
 #>    - min: 2 
@@ -84,32 +84,32 @@ print(jt1)
 query_belief(jt1, c("E", "L", "T"))
 #> $E
 #> E
-#>         n         y 
-#> 0.9257808 0.0742192 
+#>          n          y 
+#> 0.90810916 0.09189084 
 #> 
 #> $L
 #> L
-#>     n     y 
-#> 0.934 0.066 
+#>          n          y 
+#> 0.93431204 0.06568796 
 #> 
 #> $T
 #> T
-#>      n      y 
-#> 0.9912 0.0088
+#>         n         y 
+#> 0.9719549 0.0280451
 query_belief(jt1, c("B", "D", "E"), type = "joint")
-#> , , B = y
-#> 
-#>    E
-#> D            n           y
-#>   y 0.36261346 0.041523361
-#>   n 0.09856873 0.007094444
-#> 
 #> , , B = n
 #> 
 #>    E
 #> D            n           y
-#>   y 0.04637955 0.018500278
-#>   n 0.41821906 0.007101117
+#>   n 0.41125892 0.009593831
+#>   y 0.04560769 0.024994456
+#> 
+#> , , B = y
+#> 
+#>    E
+#> D            n           y
+#>   n 0.09644433 0.008361746
+#>   y 0.35479823 0.048940808
 ```
 
 Example 2: sum-flow with evidence
@@ -121,39 +121,39 @@ jt2 <- jt(cp, e2)
 query_belief(jt2, c("E", "L", "T"))
 #> $E
 #> E
-#>          n          y 
-#> 0.99929869 0.00070131 
+#>            n            y 
+#> 0.9993008086 0.0006991914 
 #> 
 #> $L
 #> L
-#>            n            y 
-#> 0.9995810278 0.0004189722 
+#>           n           y 
+#> 0.999583147 0.000416853 
 #> 
 #> $T
 #> T
 #>            n            y 
-#> 0.9996977112 0.0003022888
+#> 0.9996978115 0.0003021885
 query_belief(jt2, c("B", "D", "E"), type = "joint")
-#> , , B = y
-#> 
-#>    E
-#> D           n            y
-#>   y 0.3914092 3.615182e-04
-#>   n 0.1063963 6.176693e-05
-#> 
 #> , , B = n
 #> 
 #>    E
 #> D            n            y
-#>   y 0.05006263 2.009085e-04
-#>   n 0.45143057 7.711638e-05
+#>   n 0.45255724 7.707708e-05
+#>   y 0.05018758 2.008061e-04
+#> 
+#> , , B = y
+#> 
+#>    E
+#> D           n            y
+#>   n 0.1061292 6.147845e-05
+#>   y 0.3904268 3.598297e-04
 ```
 
 Notice that, the configuration `(D,E,B) = (y,y,n)` has changed dramatically as a consequence of the evidence. We can get the probability of the evidence:
 
 ``` r
 query_evidence(jt2)
-#> [1] 0.007152638
+#> [1] 0.8467623
 ```
 
 Example 3: max-flow without evidence
@@ -162,8 +162,8 @@ Example 3: max-flow without evidence
 ``` r
 jt3 <- jt(cp, flow = "max")
 mpe(jt3)
-#>   A   T   E   L   B   D   S   X 
-#> "n" "n" "n" "n" "n" "n" "n" "n"
+#>   A   S   T   L   B   E   X   D   x 
+#> "n" "y" "n" "n" "y" "n" "n" "n" "n"
 ```
 
 Example 4: max-flow with evidence
@@ -173,8 +173,8 @@ Example 4: max-flow with evidence
 e4  <- c(T = "y", X = "y", D = "y")
 jt4 <- jt(cp, e4, flow = "max")
 mpe(jt4)
-#>   A   T   E   L   B   D   S   X 
-#> "n" "y" "y" "n" "y" "y" "y" "y"
+#>   A   S   T   L   B   E   X   D   x 
+#> "y" "n" "y" "n" "n" "y" "y" "y" "n"
 ```
 
 Notice, that `S, B` and `E` has changed from `"n"` to `"y"` as a consequence of the new evidence `e4`.
@@ -191,10 +191,19 @@ We can only query from the root clique now (clique 1) but we have ensured that t
 
 ``` r
 query_belief(jt5, get_cliques(jt5)$C1, "joint")
+#> , , x = n
+#> 
 #>    E
-#> X            n            y
-#>   n 0.88559032 0.0004011849
-#>   y 0.04019048 0.0738180151
+#> X            n           y
+#>   n 0.86130154 0.000492485
+#>   y 0.03908819 0.090617234
+#> 
+#> , , x = y
+#> 
+#>    E
+#> X              n            y
+#>   n 0.0073843044 4.222283e-06
+#>   y 0.0003351197 7.769001e-04
 ```
 
 Example 6: Compiling from a list of conditional probabilities
@@ -241,22 +250,23 @@ We use the `ess` package (on CRAN), found at <https://github.com/mlindsk/ess>, t
 ``` r
 library(ess)
 
-g7  <- fit_graph(asia, trace = FALSE)
-cp7 <- compile(asia, g7)
-jt7  <- jt(cp7)
+g7  <- ess::fit_graph(asia, trace = FALSE)
+ig7 <- igraph::graph_from_adjacency_matrix(ess::adj_mat(g7), "undirected")
+cp7 <- compile(asia, ig7)
+jt7 <- jt(cp7)
 
 query_belief(jt7, get_cliques(jt7)$C4, type = "joint")
 #> , , T = n
 #> 
 #>    L
-#> E           n           y
-#>   n 0.4578983 0.000000000
-#>   y 0.0000000 0.005211839
+#> E           n          y
+#>   n 0.9263136 0.00000000
+#>   y 0.0000000 0.06489242
 #> 
 #> , , T = y
 #> 
 #>    L
-#> E           n           y
-#>   n 0.0000000 0.000000000
-#>   y 0.5288134 0.008076444
+#> E             n            y
+#>   n 0.000000000 0.0000000000
+#>   y 0.007998452 0.0007955451
 ```

@@ -7,15 +7,6 @@ neq_null     <- function(x) !is.null(x)
 '%ni%'       <- Negate('%in%')
 
 ## GRAPHS
-as_adj_lst <- function(A) {
-  Delta <- colnames(A)
-  out <- lapply(seq_along(Delta), function(r) {
-    Delta[as.logical(A[, r])]
-  })
-  names(out) <- Delta
-  out
-}
-
 is_decomposable <- function(adj) {
   m <- try(mcs(adj), silent = TRUE)
   if( inherits(m, "list") ) return(TRUE)

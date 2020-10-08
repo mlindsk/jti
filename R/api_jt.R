@@ -71,44 +71,43 @@
 #' jt4 <- jt(cp, e4, flow = "max")
 #' mpe(jt4)
 #' 
-#' # Notice, that S, B and E has changed from "n" to "y"
+#' # Notice, that S, T, B, E, X and D has changed from "n" to "y"
 #' # as a consequence of the new evidence e4
 #'
 #' 
 #' # Example 5: specifying a root node and only collect to save run time
 #' # -------------------------------------------------------------------------
-#' cp5 <- compile(asia, g, "X")
-#' jt5 <- jt(cp5, propagate = "collect")
+#' 
+#' # cp5 <- compile(asia, g, "X")
+#' # jt5 <- jt(cp5, propagate = "collect")
 #'
 #' # We can only query from the root clique now (clique 1)
 #' # but we have ensured that the node of interest, "X", does indeed live in
 #' # this clique
 #' 
-#' query_belief(jt5, get_cliques(jt5)$C1, "joint")
-#'
 #' # Example 6: Compiling from a list of conditional probabilities
 #' # -------------------------------------------------------------------------
 #'
 #' # 1) We need a list with CPTs which we extract from the asia2 object
 #' #    - the list must be named with child nodes
-#' # 2) The elements need to by an array-like object
-#' #
-#' #  Note: Some elements are one-dimensional and they may not have "dimnames"
-#'
+#' # 2) The elements need to by an array-like object with proper dimnames
 #' # 3) The list of cpts needs to be converted into a "cpt_list" object
 #' #    - This is merely for checking if the cpts are of the correct type,
 #' #    - but also the cpts are now converted to a sparse representation
 #' #      to obtain a better runtime in the compilation and propagation phase
 #' 
 #' cl  <- cpt_list(asia2)
-#' cp6 <- compile(cl)
+#' cp6 <- compile(cl, save_graph = TRUE)
+#'
+#' # Inspection; see if the graph correspond to the cpts
+#' # g <- dag(cp6)
+#' # plot(g) 
 #'
 #' # Finally, cp6 is now of the same form as cp above and we can use the
 #' # junction tree algorithm
 #'
 #' jt6 <- jt(cp6)
 #' query_belief(jt6, c("either", "smoke"))
-#' query_belief(jt6, c("either", "smoke"), type = "joint")
 #' 
 #' @export
 jt <- function(x, evidence = NULL, flow = "sum", propagate = "full") UseMethod("jt")

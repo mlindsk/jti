@@ -2,6 +2,7 @@
 // Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 #include "jti_types.h"
+#include <RcppArmadillo.h>
 #include <Rcpp.h>
 
 using namespace Rcpp;
@@ -63,6 +64,30 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::string >::type start_node(start_nodeSEXP);
     Rcpp::traits::input_parameter< bool >::type check(checkSEXP);
     rcpp_result_gen = Rcpp::wrap(rip(adj, start_node, check));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rooted_junction_tree
+Rcpp::List rooted_junction_tree(Rcpp::List cliques, int root);
+RcppExport SEXP _jti_rooted_junction_tree(SEXP cliquesSEXP, SEXP rootSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List >::type cliques(cliquesSEXP);
+    Rcpp::traits::input_parameter< int >::type root(rootSEXP);
+    rcpp_result_gen = Rcpp::wrap(rooted_junction_tree(cliques, root));
+    return rcpp_result_gen;
+END_RCPP
+}
+// int_set_intersect
+VI int_set_intersect(VI& v1, VI& v2);
+RcppExport SEXP _jti_int_set_intersect(SEXP v1SEXP, SEXP v2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< VI& >::type v1(v1SEXP);
+    Rcpp::traits::input_parameter< VI& >::type v2(v2SEXP);
+    rcpp_result_gen = Rcpp::wrap(int_set_intersect(v1, v2));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -149,41 +174,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// count_unique
-RE count_unique(VS x);
-RcppExport SEXP _jti_count_unique(SEXP xSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< VS >::type x(xSEXP);
-    rcpp_result_gen = Rcpp::wrap(count_unique(x));
-    return rcpp_result_gen;
-END_RCPP
-}
-// matpr
-VS matpr(Rcpp::CharacterMatrix A, bool validate);
-RcppExport SEXP _jti_matpr(SEXP ASEXP, SEXP validateSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::CharacterMatrix >::type A(ASEXP);
-    Rcpp::traits::input_parameter< bool >::type validate(validateSEXP);
-    rcpp_result_gen = Rcpp::wrap(matpr(A, validate));
-    return rcpp_result_gen;
-END_RCPP
-}
-// sptab_
-RE sptab_(RCM& A, bool validate);
-RcppExport SEXP _jti_sptab_(SEXP ASEXP, SEXP validateSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< RCM& >::type A(ASEXP);
-    Rcpp::traits::input_parameter< bool >::type validate(validateSEXP);
-    rcpp_result_gen = Rcpp::wrap(sptab_(A, validate));
-    return rcpp_result_gen;
-END_RCPP
-}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_jti_mcs", (DL_FUNC) &_jti_mcs, 3},
@@ -191,6 +181,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_jti_perfect_separators", (DL_FUNC) &_jti_perfect_separators, 1},
     {"_jti_parents", (DL_FUNC) &_jti_parents, 2},
     {"_jti_rip", (DL_FUNC) &_jti_rip, 3},
+    {"_jti_rooted_junction_tree", (DL_FUNC) &_jti_rooted_junction_tree, 2},
+    {"_jti_int_set_intersect", (DL_FUNC) &_jti_int_set_intersect, 2},
     {"_jti_set_intersect", (DL_FUNC) &_jti_set_intersect, 2},
     {"_jti_set_union", (DL_FUNC) &_jti_set_union, 2},
     {"_jti_set_diff", (DL_FUNC) &_jti_set_diff, 2},
@@ -198,9 +190,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_jti_set_in", (DL_FUNC) &_jti_set_in, 2},
     {"_jti_set_issubeq", (DL_FUNC) &_jti_set_issubeq, 2},
     {"_jti_set_any", (DL_FUNC) &_jti_set_any, 1},
-    {"_jti_count_unique", (DL_FUNC) &_jti_count_unique, 1},
-    {"_jti_matpr", (DL_FUNC) &_jti_matpr, 2},
-    {"_jti_sptab_", (DL_FUNC) &_jti_sptab_, 2},
     {NULL, NULL, 0}
 };
 

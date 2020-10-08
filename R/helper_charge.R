@@ -15,7 +15,8 @@ allocate_child_to_potential <- function(potC, x, cliques, child, parents) {
     family_in_Ck <- all(c(child, parents) %in% cliques[[k]])
     if (family_in_Ck) {
       if (is.null(potC$C[[k]])) {
-        potC$C[[k]] <- cpt
+        unity <- sparta::sparta_unity_struct(attr(x, "dim_names")[cliques[[k]]])
+        potC$C[[k]] <- sparta::mult(cpt, unity)
       } else {
         potC$C[[k]] <- sparta::mult(potC$C[[k]], cpt)
       }
@@ -25,31 +26,26 @@ allocate_child_to_potential <- function(potC, x, cliques, child, parents) {
   NULL
 }
 
-make_clique_sparta_unity <- function(potC, k, x, clique) {
-  potC$C[[k]] <- sparta::sparta_unity(attr(x, "dim_names")[clique])
-  NULL
-}
 
 new_charge <- function(x, cliques, parents) {
   # x: data.frame or cpt_list
   potC <- new.env()
   potC[["C"]] <- vector("list", length(cliques))
-
   children <- names(parents)
-  
+
   for (child in children) {
-    .parents <- parents[[child]]
-    allocate_child_to_potential(potC, x, cliques, child, .parents)
+    allocate_child_to_potential(potC, x, cliques, child, parents[[child]])
   }
 
   # Some clique potentials may be empty due to triangulation
   # We set these as the identity = 1 for all configurations
   is_null <- .map_lgl(potC[["C"]], is.null)
-
+  
   if (any(is_null)) {
     which_is_null <- which(is_null)
     for (k in which_is_null) {
-      make_clique_sparta_unity(potC, k, x, cliques[[k]])
+      pck <- sparta::sparta_unity_struct(attr(x, "dim_names")[cliques[[k]]])
+      potC$C[[k]] <- pck
     }
   }
 

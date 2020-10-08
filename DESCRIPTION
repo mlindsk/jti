@@ -1,6 +1,6 @@
 Package: jti
 Title: Junction Tree Inference
-Version: 1.0
+Version: 0.5
 Authors@R: 
     person(given = "Mads",
            family = "Lindskou",
@@ -18,7 +18,7 @@ Imports:
     igraph,
     glue,
     sparta
-LinkingTo: Rcpp
+LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 7.1.1
 SystemRequirements: C++11
 Suggests: tinytest

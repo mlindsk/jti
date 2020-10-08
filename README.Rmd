@@ -149,9 +149,10 @@ We use the `ess` package (on CRAN), found at https://github.com/mlindsk/ess, to 
 ```{r}
 library(ess)
 
-g7  <- fit_graph(asia, trace = FALSE)
-cp7 <- compile(asia, g7)
-jt7  <- jt(cp7)
+g7  <- ess::fit_graph(asia, trace = FALSE)
+ig7 <- igraph::graph_from_adjacency_matrix(ess::adj_mat(g7), "undirected")
+cp7 <- compile(asia, ig7)
+jt7 <- jt(cp7)
 
 query_belief(jt7, get_cliques(jt7)$C4, type = "joint")
 ```
