@@ -13,7 +13,8 @@ mpe(x)
 \item{x}{A junction tree object, \code{jt}, with max-flow.}
 }
 \description{
-Returns the most probable configuration given the evidence entered in the junction tree
+Returns the most probable explanation given the evidence entered in the
+junction tree
 }
 \examples{
 # See the 'jt' function

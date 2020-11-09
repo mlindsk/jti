@@ -1,11 +1,10 @@
 Makefile
-.yaml$
 ^README\.Rmd$
 ^README.html$
 ^LICENSE.md$
 ^data-raw$
 TODO\.org
 ^\.github$
-src/GTAGS
-src/GRTAGS
 src/GPATH
+src/GRTAGS
+src/GTAGS

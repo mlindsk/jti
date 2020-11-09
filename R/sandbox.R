@@ -54,27 +54,28 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                         MUNIN: 1041-1397-80592
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-## l <- readRDS("../../../../sandbox/r/bns/munin.rds")
-## cpts <- bnlearn_to_cpts(l)
+## library(gRain)
+## library(gRbase)
+## library(pryr)
+
+## size_mb <- function(x) {
+##   format(object.size(x), units = "Mb", standard = "auto", digits = 1L)
+## }
+
+## l <- readRDS("../../../sandbox/r/bns/munin.rds")
+## cpts <- munin # bnlearn_to_cpts(munin)
 ## cl   <- cpt_list(cpts)
-## cp   <- compile2.cpt_list(cl, save_graph = TRUE)
 
-## tictoc::tic()
-## j  <- jt(cp, propagate = "no") # This includes finding the junction tree which is slow!
-## tictoc::toc()
+## plist <- gRain::compileCPT(munin)
+## grn   <- grain(plist)
+## jt_gr <- gRbase::compile(grn)
+## prop  <- propagate(jt_gr)
+## size_mb(jt_gr)
+## size_mb(munin)
+## mem_used()
 
-## cs  <- get_cliques(j)
-## qnodes <- cs$C1
-## query_belief(j, qnodes[1:2], "joint")
 
-## gr <- bnlearn::as.grain(l)
-
-## tictoc::tic()
-## jt_gr <- gRbase::compile(gr, propagate = TRUE)
-## tictoc::toc()
-
-## gRain::querygrain(jt_gr, nodes = c("DIFFN_SENS_SEV", "DIFFN_TYPE"), type = "joint")
-
+# gRain::querygrain(jt_gr, nodes = c("DIFFN_SENS_SEV", "DIFFN_TYPE"), type = "joint")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                         LINK: 724-1125-14211
@@ -98,67 +99,109 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                        DIABETES: 413-602-429409
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## library(gRain)
+## library(gRbase)
+## library(pryr)
+
+## size_mb <- function(x) {
+##   format(object.size(x), units = "Mb", standard = "auto", digits = 1L)
+## }
+
 ## l <- readRDS("../../../../sandbox/r/bns/diabetes.rds")
 ## cpts <- bnlearn_to_cpts(l)
-## cl   <- cpt_list(cpts)
-## cp   <- compile(cl, save_graph = TRUE)
-## cp2  <- compile2.cpt_list(cl, save_graph = TRUE)
-## j    <- jt(cp, propagate = "full")
 
-## .map_int(cp$charge$C, function(x) length(sparta::vals(x)))
-## .map_int(cp2$charge$C, function(x) length(sparta::vals(x)))
+## ## # jti:
+## cl <- cpt_list(cpts)
+## cp <- compile_grbase(cl)
+## j <- jt(cp)
 
-## microbenchmark::microbenchmark(
-##   j  <- jt(cp, propagate = "full"),
-##   j2 <- jt(cp2, propagate = "full"),
-##   times = 1
-## )
+## query_belief(j, "straaling_4")
 
-## cs  <- get_cliques(j)
-## cs2 <- get_cliques(j2)
+## size_mb(cl)
+## size_mb(j$charge)
 
-## par(mfrow = c(1, 2))
-## plot(j)
-## plot(j2)
+## ## # gRain:
+## plist <- gRain::compileCPT(cpts)
+## size_mb(plist)
+## grn   <- gRain::grain(plist)
+## jt_gr <- gRbase::compile(grn)
+## prop  <- gRbase::propagate(jt_gr)
+## gRain::querygrain(prop, "straaling_4")
 
-## qnodes <- cs$C1
-## query_belief(j, qnodes, "joint")
-## query_belief(j2, qnodes)
 
-## gr <- bnlearn::as.grain(l)
-## jt_gr <- gRbase::compile(gr, propagate = TRUE)
-## gRain::querygrain(jt_gr, nodes = qnodes, type = "joint")
+## size_mb(prop$potential$pot_equi)
+## size_mb(prop$potential$pot_orig)
+## size_mb(prop$potential$pot_temp)
+
+## mapply(function(x,y) setequal(x,y), prop$rip$cliques, j$cliques)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                      MILDEW: 35-46-540150
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-## l <- readRDS("../../../sandbox/r/bns/mildew.rds")
-## cpts <- bnlearn_to_cpts(l)
-## cl   <- cpt_list(cpts)
-## cp   <- compile(cl, save_graph = TRUE)
-## cp2  <- compile2.cpt_list(cl, save_graph = TRUE)
+## library(gRain)
+## library(gRbase)
+## library(pryr)
+## library(jti)
+## library(dplyr)
+## library(sparta)
 
-## .map_int(cp$charge$C, function(x) length(sparta::vals(x)))
-## .map_int(cp2$charge$C, function(x) length(sparta::vals(x)))
-
-## microbenchmark::microbenchmark(
-##   j  <- jt(cp, propagate = "full"),
-##   j2 <- jt(cp2, propagate = "full"),
-##   times = 1
+## nodes <- c(
+##   "meldug_1",
+##   "meldug_2",
+##   "middel_1",
+##   "lai_0",
+##   "lai_1",
+##   "nedboer_1",
+##   "mikro_1",
+##   "temp_1",
+##   "foto_1",
+##   "straaling_1",
+##   "dm_1",
+##   "dm_2", # From here it fucks up!
+##   "foto_2",
+##   "straaling_2",
+##   "temp_2",
+##   "lai_2"
 ## )
 
-## cs  <- get_cliques(j)
-## cs2 <- get_cliques(j2)
+## l <- readRDS("../../../../sandbox/r/bns/mildew.rds")
+## cpts <- bnlearn_to_cpts(l)
+## ## cpts <- cpts[nodes]
+## cl <- cpt_list(cpts)
+## plot(attr(cl, "graph"), vertex.size = 10)
+## cp <- compile(cl, save_graph = TRUE, "")
+## j <- jt(cp)
+## sapply(seq_along(nodes), function(i) sum(query_belief(j, nodes[i])[[1]]))
+## query_belief(j, nodes[12])[[1]]
 
-## par(mfrow = c(1, 2))
-## plot(j)
-## plot(j2)
 
-## qnodes <- cs$C1[1]
+## plist <- gRain::compileCPT(cpts)
+## gr    <- gRain::grain(plist)
+## gr    <- gRbase::propagate(gr)
+## gRain::querygrain(gr, nodes[12])[[1]]
 
-## query_belief(j, qnodes)
-## query_belief(j2, qnodes)
 
+## ## ## ## # Now use gRain's cliques!
+## gr <- bnlearn::as.grain(l)
+## jt_gr <- gRbase::compile(gr, propagate = TRUE)
+## cp   <- compile.cpt_list(cl, jt_gr$rip$cliques)
+## gRain::querygrain(jt_gr, nodes)
+
+## gRain::querygrain(jt_gr, "straaling_4")
+
+## ## # Now use gRain's junction tree!
+## j <- jt(cp, jt_gr$rip)
+
+## grain_to_junction_tree <- function(x) {
+
+##   # 1) We must change the cliques already before new_charge
+##   # in the compile function!!!
+
+##   # 2) Make collect and distribute matrices
+##   # and extract cliques
+  
+##   # return(list(collect = collect, ...))
+## }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                      HAILFINDER: 56-66-2656
@@ -166,65 +209,42 @@
 ## l <- readRDS("../../../../sandbox/r/bns/hailfinder.rds")
 ## cpts <- bnlearn_to_cpts(l)
 ## cl   <- cpt_list(cpts)
-## cp   <- compile(cl, save_graph = TRUE)
-## cp2  <- compile2.cpt_list(cl, save_graph = TRUE)
-
-## .map_int(cp$charge$C, function(x) length(sparta::vals(x)))
-## .map_int(cp2$charge$C, function(x) length(sparta::vals(x)))
-
-## microbenchmark::microbenchmark(
-##   j  <- jt(cp, propagate = "full"),
-##   j2 <- jt(cp2, propagate = "full"),
-##   times = 10
-## )
-
-## cs  <- get_cliques(j)
-## cs2 <- get_cliques(j2)
-
-## par(mfrow = c(1, 2))
+## cp   <- jti::compile(cl)
+## lapply(cp$charge$C, function(x) inherits(x, "sparta_unity"))
+## j <- jt(cp)
 ## plot(j)
-## plot(j2)
 
-## qnodes <- cs$C1
-
-## query_belief(j, qnodes, "joint")
-## query_belief(j2, qnodes)
-
-
+## ## # gr
 ## gr <- bnlearn::as.grain(l)
 ## jt_gr <- gRbase::compile(gr, propagate = TRUE)
-## gRain::querygrain(jt_gr, nodes = qnodes, type = "joint")
+
+## for (k in 1:56) {
+##   qnodes <- names(attr(cp, "dim_names"))[k]
+##   print(query_belief(j, qnodes, "joint"))
+##   print(gRain::querygrain(jt_gr, nodes = qnodes, type = "joint"))
+## }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                      BARLEY: 48-84-114005
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 ## l <- readRDS("../../../../sandbox/r/bns/barley.rds")
 ## cpts <- bnlearn_to_cpts(l)
+
+## # jti
 ## cl   <- cpt_list(cpts)
-## cp   <- compile(cl, save_graph = TRUE)
-## cp2  <- compile2.cpt_list(cl, save_graph = TRUE)
-
-## .map_int(cp$charge$C, function(x) length(sparta::vals(x)))
-## .map_int(cp2$charge$C, function(x) length(sparta::vals(x)))
-
-## microbenchmark::microbenchmark(
-##   j  <- jt(cp, propagate = "full"), # Error: cannot allocate vector of size 2.5 Gb
-##   j2 <- jt(cp2, propagate = "full"), # Process R killed at Thu Sep 24 10:16:29 2020
-##   times = 1
-## )
-
-## cs  <- get_cliques(j)
-## cs2 <- get_cliques(j2)
-
-## par(mfrow = c(1, 2))
+## cp   <- jti::compile(cl)
+## j <- jt(cp)
 ## plot(j)
-## plot(j2)
 
-## qnodes <- cs$C1[1]
+## # gr
+## gr <- bnlearn::as.grain(l)
+## jt_gr <- gRbase::compile(gr, propagate = TRUE)
 
-## query_belief(j, qnodes)
-## query_belief(j2, qnodes)
+## for (k in 1:48) {
+##   qnodes <- names(attr(cp, "dim_names"))[k]
+##   print(query_belief(j, qnodes, "joint"))
+##   print(gRain::querygrain(jt_gr, nodes = qnodes, type = "joint"))
+## }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                      CHILD: 20-25-230
@@ -232,35 +252,12 @@
 ## l <- readRDS("../../../../sandbox/r/bns/child.rds")
 ## cpts <- bnlearn_to_cpts(l)
 ## cl   <- cpt_list(cpts)
-
-## cp   <- compile(cl, save_graph = TRUE)
-## cp2  <- compile2.cpt_list(cl, save_graph = TRUE)
-
-## cp2$charge$C$C2 <- sparta:::sparta_unity(sparta::dim_names(cp2$charge$C$C2))
-
-## .map_int(cp$charge$C, function(x) length(sparta::vals(x)))
-## .map_int(cp2$charge$C, function(x) length(sparta::vals(x)))
-
-## microbenchmark::microbenchmark(
-##   j  <- jt(cp, propagate = "full"), 
-##   j2 <- jt(cp2, propagate = "full"),
-##   times = 1
-## )
-
-## cs  <- get_cliques(j)
-## cs2 <- get_cliques(j2)
-
-## ## ## par(mfrow = c(1, 2))
-## ## ## plot(j)
-## ## ## plot(j2)
+## cp   <- jti::compile(cl)
+## j <- jt(cp)
+## plot(j)
 
 ## qnodes <- c("Disease", "LungFlow")
-
-## # TODO: Different results?
-## # - only reasonable explanation is the idenity tables?
-## # - try reverting again?
 ## query_belief(j, qnodes, "joint")
-## query_belief(j2, qnodes, "joint")
 
 ## gr <- bnlearn::as.grain(l)
 ## jt_gr <- gRbase::compile(gr, propagate = TRUE)
@@ -271,77 +268,48 @@
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## l <- readRDS("../../../../sandbox/r/bns/hepar2.rds")
 ## cpts <- bnlearn_to_cpts(l)
+
+## # jti
 ## cl   <- cpt_list(cpts)
-## cp   <- compile(cl, save_graph = TRUE)
-## cp2  <- compile2.cpt_list(cl, save_graph = TRUE)
-
-## j  <- jt(cp, propagate = "no")
-## plot(j, vertex.size = 5, vertex.label = NA)
-## .map_int(cp$charge$C, function(x) length(sparta::vals(x)))
-## .map_int(cp2$charge$C, function(x) length(sparta::vals(x)))
-
-## cp2$charge$C[[2]]
-
-## microbenchmark::microbenchmark(
-##   j  <- jt(cp, propagate = "full"), 
-##   j2 <- jt(cp2, propagate = "full"),
-##   times = 1
-## )
-
-## cs  <- get_cliques(j)
-## cs2 <- get_cliques(j2)
-
-## par(mfrow = c(1, 2))
+## cp   <- jti::compile(cl)
+## j <- jt(cp)
 ## plot(j)
-## plot(j2)
 
-## qnodes <- cs$C1
-
-## query_belief(j, qnodes, "joint")
-## query_belief(j2, qnodes)
-
-
-## library(igraph)
-## library(gRbase)
-## library(bnlearn)
-## library(gRain)
-## library(dplyr)
-
-## gr <- as.grain(l)
+## # gr
+## gr <- bnlearn::as.grain(l)
 ## jt_gr <- gRbase::compile(gr, propagate = TRUE)
-## querygrain(jt_gr, nodes = qnodes, type = "joint")
+
+## for (k in 1:70) {
+##   qnodes <- names(attr(cp, "dim_names"))[k]
+##   print(query_belief(j, qnodes, "joint"))
+##   print(gRain::querygrain(jt_gr, nodes = qnodes, type = "joint"))
+## }
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                      INSURANCE: 27-52-984
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 ## l <- readRDS("../../../../sandbox/r/bns/insurance.rds")
 ## cpts <- bnlearn_to_cpts(l)
+
+## # jti
 ## cl   <- cpt_list(cpts)
-## cp   <- compile(cl, save_graph = TRUE)
-## cp2  <- compile2.cpt_list(cl, save_graph = TRUE)
+## cp   <- jti::compile(cl)
+## j <- jt(cp)
+## plot(j)
 
-## .map_int(cp$charge$C, function(x) length(sparta::vals(x)))
-## .map_int(cp2$charge$C, function(x) length(sparta::vals(x)))
+## # gr
+## gr <- bnlearn::as.grain(l)
+## jt_gr <- gRbase::compile(gr, propagate = TRUE)
 
-## microbenchmark::microbenchmark(
-##   j  <- jt(cp, propagate = "full"), 
-##   j2 <- jt(cp2, propagate = "full"),
-##   times = 5
-## )
+## for (k in 1:27) {
+##   qnodes <- names(attr(cp, "dim_names"))[k]
+##   print(query_belief(j, qnodes, "joint"))
+##   print(gRain::querygrain(jt_gr, nodes = qnodes, type = "joint"))
+## }
 
-## cs  <- get_cliques(j)
-## cs2 <- get_cliques(j2)
 
-## ## par(mfrow = c(1, 2))
-## ## plot(j)
-## ## plot(j2)
 
-## qnodes <- cs$C1[1]
-
-## query_belief(j, qnodes)
-## query_belief(j2, qnodes)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                      ASIA: 8-8-17
@@ -499,56 +467,18 @@
 ## l <- readRDS("../../../../sandbox/r/bns/alarm.rds")
 ## cpts <- bnlearn_to_cpts(l)
 ## cl   <- cpt_list(cpts)
-## cp   <- compile(cl, save_graph = TRUE)
-## cp2  <- compile2.cpt_list(cl, save_graph = TRUE)
-## plot(jti::dag(cp), vertex.size = 0.2, arrow.size = 0.5)
-
-## ##  <dim_names>
-## ## CATECHOL: NORMAL, HIGH 
-## ## CO: LOW, NORMAL, HIGH 
-## ## TPR: LOW, NORMAL, HIGH 
-
-
-## ## .map_int(cp$charge$C, function(x) length(sparta::vals(x)))
-## ## .map_int(cp2$charge$C, function(x) length(sparta::vals(x)))
-
-## microbenchmark::microbenchmark(
-##   j  <- jt(cp, propagate = "full"), 
-##   j2 <- jt(cp2, propagate = "full"),
-##   times = 1
-## )
-
-
-## j <- jt(cp, propagate = "full")
-## j <- send_messages(j)
-
-## cs  <- get_cliques(j)
-## cs2 <- get_cliques(j2)
-
-## par(mfrow = c(1, 2))
+## cp   <- jti::compile(cl)
+## j <- jt(cp)
 ## plot(j)
-## plot(j2)
 
-## qnodes <- c("FIO2", "PVSAT") # cs$C1
 
-## query_belief(j, qnodes, "joint")
-## query_belief(j2, qnodes, "joint")
-
-## gr <- gR(l, qnodes)
-
-## gr    <- bnlearn::as.grain(l)
+## gr <- bnlearn::as.grain(l)
 ## jt_gr <- gRbase::compile(gr, propagate = TRUE)
+
+## qnodes <- names(attr(cp, "dim_names"))[37]
+## query_belief(j, qnodes, "joint")
 ## gRain::querygrain(jt_gr, nodes = qnodes, type = "joint")
 
-## gRain::querygrain(jt_gr, nodes = names(sparta::dim_names(j$charge$C$C15)), "joint")
-## query_belief(j, names(sparta::dim_names(j$charge$C$C15)), "joint")
-## j$charge$C$C15
-
-# FIO2: normal
-# VENTALV: normal
-# PVSAT: low
-
-## unlist(j$cliques)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                         gRain
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -723,6 +653,7 @@
 ## library(sparta)
 ## set.seed(300718)
 ## sprob <- function() {p <- runif(1); c(p, 1-p)}
+
 ## s <- c(0,1)
 ## b_a <- array(c(sprob(), sprob()), dim = c(2L, 2L), dimnames = list(b = s, a = s))
 ## c_b <- array(c(sprob(), sprob()), dim = c(2L, 2L), dimnames = list(c = s, b = s))
@@ -755,3 +686,218 @@
 ## sum(jt6$charge$C$C3)
 ## attr(jt6, "clique_root")
 ## attr(jt6, "root_node")
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#                       SIM DATA
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+## library(sparta)
+## library(igraph)
+## library(dplyr)
+
+## sim_data <- function(N = 15000,
+##                      lvlsB = 3,
+##                      lvlsE = 3,
+##                      k = 2L,
+##                      l = 2L,
+##                      sig = 1L,
+##                      s1  = 2,
+##                      s2  = 3) {
+##   set.seed(1)
+##   N <- 15000
+##   A <- rmultinom(N, size = 1, prob = c(0.1,0.2,0.7))
+##   m <- c(-3, 0, 3)
+##   B <- sapply(1:N, function(i) rnorm(1, sum(A[, i]*m), sig))
+
+##   k <- 2L
+##   D <- sapply(B, function(b) rpois(1, abs(b) / k))
+##   E <- rbeta(N, s1, s2)
+
+##   l <- 2
+##   C <- sapply(1:N, function(i) {
+##     rpois(1, (abs(B[i] + D[i] + E[i])) / l)
+##   }) %>% as.character()
+
+##   A <- apply(A, 2, function(a) which(a == 1L)) %>% as.character(A)
+##   D <- as.character(D)
+##   d <- data.frame(A, B, C, D, E)
+##   d$B <- as.character(cut(B, lvlsB, labels = paste("b", 1:lvlsB, sep = "")))
+##   d$E <- as.character(cut(E, lvlsE, labels = paste("e", 1:lvlsE, sep = "")))
+##   d
+## }
+
+## g <- igraph::make_graph(c("A", "B", "B", "D", "B", "C", "D", "C", "E", "C"))
+## plot(g)
+
+## predict_jt <- function(train, test, g) {
+##   class_int <- 3
+##   cp <- jti::compile(jti::cpt_list(train, g))
+
+##   score <- vapply(1:nrow(test), function(i) {
+##     cls <- test[i, class_int]
+##     j  <- jti::jt(cp, test[i, setdiff(1:ncol(test), class_int)] %>% unlist(), "max")
+##     pred_cls <- unname(jti::mpe(j)[colnames(test)[class_int]])
+##     pred_cls == cls
+##   }, 1) %>% mean()
+
+##   sparsity <- lapply(cp$charge$C, function(x) {
+##     ncol(x) / prod(vapply(sparta::dim_names(x), length, 1L))
+##   })
+
+##   list(score = score, sparsity = c(C1 = sparsity[[1]], C2 = sparsity[[2]]))
+## }
+
+
+## validate_performance <- function(d, g, nfold = 5) {
+##   kf <- modelr::crossv_kfold(d, k = nfold)
+
+##   scores <- vector("double", length = nrow(kf))
+##   sparsity <- structure(vector("double", length = 2), names = c("C1", "C2"))
+##   for (i in 1:nrow(kf)) {
+##     train_idx <- kf$train[[i]] %>% as.integer()
+##     test_idx <- kf$test[[i]] %>% as.integer()
+##     pjt <- predict_jt(d[train_idx, ], d[test_idx, ], g)
+##     scores[i] <- pjt$score
+##     sparsity[1] <- sparsity[1] + pjt$sparsity[1]
+##     sparsity[2] <- sparsity[2] + pjt$sparsity[2]
+##   }
+##   sparsity[1] <- sparsity[1] / nrow(kf)
+##   sparsity[2] <- sparsity[2] / nrow(kf)
+##   list(cv_score = mean(scores), sparsity = sparsity)
+## }
+
+
+## d <- sim_data(lvlsB = 15, lvlsE = 15)
+## vp <- validate_performance(d, g)
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#        FIXING MILDEW
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+## get_ <- function(cell, charge) {
+##   structure(sapply(
+##     seq_along(dim_names(charge)),
+##     function(i) (dim_names(charge)[[i]])[cell[i]]
+##   ), names = names(charge))
+## }
+
+
+## library(dplyr)
+## library(sparta)
+
+## nodes <- c(
+##   "meldug_1",
+##   "meldug_2",
+##   "middel_1",
+##   "lai_0",
+##   "lai_1",
+##   "nedboer_1",
+##   "mikro_1",
+##   "temp_1",
+##   "foto_1",
+##   "straaling_1",
+##   "dm_1",
+##   "dm_2", # From here it fucks up!
+##   "foto_2",
+##   "straaling_2",
+##   "temp_2",
+##   "lai_2"
+## )
+
+## l    <- readRDS("../../../../sandbox/r/bns/mildew.rds")
+## cpts <- bnlearn_to_cpts(l)
+## cpts <- cpts[nodes]
+## cl   <- cpt_list(cpts)
+## par(mfrow = c(1, 1))
+## plot(attr(cl, "graph"), vertex.size = 10)
+
+
+## cp <- compile(cl)
+## j <- jt(cp, propagate = "no")
+## plot(j)
+
+## plist <- gRain::compileCPT(cpts)
+## gr <- gRain::grain(plist)
+
+## R_given_S_correct <- function(charge, R, S, gr) {
+##   for (i in 1:ncol(charge)) {
+##     for (r in R) {
+##       print(i)
+##       cell <- charge[, i]
+##       e <- get_(cell, charge)
+##       sp <- sparta::slice(charge, e[S])
+##       xx <- marg(sp, setdiff(names(sp), r)) %>% as_array()
+##       grp <- gRbase::propagate(gr)
+##       grp <- gRain::setEvidence(gr, S, e[S])
+##       yy <- gRain::querygrain(grp, r, "joint")[names(xx)]
+##       ae <- try(all.equal(as.vector(xx), as.vector(yy)))
+##       # if (inherits(ae, "try-error")) browser()
+##       if (!ae) return(FALSE)
+##     }
+##   }
+##   return(TRUE)
+## }
+
+
+## ## # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## ## # C10 ~ C8       
+## ## # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## R <- setdiff(names(j$charge$C$C10), names(j$charge$C$C8))
+## S <- intersect(names(j$charge$C$C10), names(j$charge$C$C8))
+## m_10_8 <- marg(j$charge$C$C10, R)
+## j$charge$C$C8  <- mult(j$charge$C$C8, m_10_8)
+## j$charge$C$C10 <- div(j$charge$C$C10, m_10_8)
+
+## ## R_given_S_correct(j$charge$C$C10, R, S, gr)
+
+## ## # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## ## # C9 ~ C8       
+## ## # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## R <- setdiff(names(j$charge$C$C9), names(j$charge$C$C8))
+## S <- intersect(names(j$charge$C$C9), names(j$charge$C$C8))
+## m_9_8 <- marg(j$charge$C$C9, R)
+## j$charge$C$C8 <- mult(j$charge$C$C8, m_9_8)
+## j$charge$C$C9 <- div(j$charge$C$C9, m_9_8)
+
+## R_given_S_correct(j$charge$C$C9, R, S, gr)
+## ## get_(c(21, 12, 9), j$charge$C$C9)
+
+## ## dm_2   21 22 23 24 25 26
+## ## foto_2 12 12 12 12 12 12
+## ## dm_1    9  9  9  9  9  9
+## ## "dm_2" | "foto_2" "dm_1"  
+## uni <- sparta::sparta_unity_struct(dim_names(j$charge$C[[9]]))
+## ss <- mult(cl$dm_2, uni)
+
+
+## sapply(1:ncol(j$charge$C$C9), function(i) {
+##   sparta::slice(j$charge$C$C9, get_(j$charge$C$C9[, i], j$charge$C$C9)[S]) %>% sum()
+## })
+
+
+## cpts$dm_2 %>% as_sparta() %>% sum()
+
+## e <- get_(j$charge$C$C9[, 2382], j$charge$C$C9)[S]
+
+
+## # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## ## TODO: SLICE IS WRONG!!!!!!!!!???
+
+## s <- c(foto_2 = "0_55_kg_m2", dm_1 = "0_16_kg_m2")
+## sparta::slice(j$charge$C$C9, e)
+## sparta::slice(cl$dm_2, e[1:2])
+## sparta::slice(cl$dm_2, e[2:1])
+## gRbase::tabSlice(
+##   cpts$dm_2,
+##   slice = list(foto_2 = "0_55_kg_m2", dm_1 = "0_16_kg_m2")
+## )[21:26]
+## # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+## grp <- gRbase::propagate(gr)
+## grp <- gRain::setEvidence(gr, S, e[S])
+## gRain::querygrain(grp, R)
+
+## gRbase::tabDiv(cpts$dm_2, gRbase::tabMarg(cpts$dm_2, R)) %>% sparta::as_sparta() %>% sum()
+## gRbase::tabDiv(cpts$dm_2, gRbase::tabMarg(cpts$dm_2, R))

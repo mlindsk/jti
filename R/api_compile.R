@@ -2,18 +2,47 @@
 #'
 #' A check and conversion of cpts to be used in the junction tree algorithm
 #'
-#' @param x A named list with cpts in form of array-like object(s).
-#' The name must be the child.
+#' @param x Either a named list with cpts in form of array-like object(s)
+#' where names must be the child node or a \code{data.frame}
+#' @param g Either a directed acyclic graph (DAG) as an igraph object or a
+#' decomposable graph as an igraph object. If \code{x} is a list,
+#' \code{g} must be \code{NULL}. The procdure then deduce the graph
+#' from the conditional probability tables.
 #' @examples
-#' print(asia2)
-#' cpt_list(asia2)
+#'
+#' library(igraph)
+#' el <- matrix(c(
+#' "A", "T",
+#' "T", "E",
+#' "S", "L",
+#' "S", "B",
+#' "L", "E",
+#' "E", "X",
+#' "E", "D",
+#' "B", "D"),
+#'  nc = 2,
+#'  byrow = TRUE
+#' )
+#' 
+#' g <- igraph::graph_from_edgelist(el) 
+#' cpt_list(asia, g)
 #' @export
-cpt_list <- function(x) { 
+cpt_list <- function(x, g = NULL) UseMethod("cpt_list")
+
+
+#' @rdname cpt_list
+#' @export
+cpt_list.list <- function(x, g = NULL) { 
   # x: list of cpts with dimnames
     
   if (!is_named_list(x)) {
-    stop("x must be a named list of cpts. A name should be the name of the corresponding child node.")
+    stop(
+      "x must be a named list of cpts. ",
+      "A name should be the name of the corresponding child node."
+    )
   }
+
+  if (!is.null(g)) stop("g must be 'NULL'")
 
   dim_names <- list()
   
@@ -22,48 +51,94 @@ cpt_list <- function(x) {
     class_allowed <- any(.map_lgl(sparta::allowed_class_to_sparta(), function(x) inherits(l, x)))
     if (!class_allowed) stop("one ore more elements in x is not an array-like object")
     spar <- sparta::as_sparta(l)
+    # This ensures, that the CPTs and dim_names have the same ordering of the lvls!
     dim_names <<- push(dim_names, attr(spar, "dim_names"))
     spar
   })
 
+  names(y)  <- names(x)
   dim_names <- unlist(dim_names, FALSE)
   dim_names <- dim_names[unique(names(dim_names))]
-  
-  structure(y, names = names(x), dim_names = dim_names, class = c("cpt_list", class(x)))
+
+  g <- graph_from_cpt_list(y)
+  if (!igraph::is_dag(g)) stop("The cpts does not induce an acyclic graph.")
+
+  structure(y,
+    names = names(x),
+    dim_names = dim_names,
+    parents = parents_cpt_list(y),
+    graph = g,
+    class = c("cpt_list", "list")
+  )
 }
 
+
+#' @rdname cpt_list
+#' @export
+cpt_list.data.frame <- function(x, g) {
+
+  if (!igraph::is.igraph(g)) stop("g must be an igraph object")
+
+  is_dag <- igraph::is_dag(g)
+  if (!is_dag) {
+    if (!igraph::is_chordal(g)$chordal) {
+      stop("undirected graphs must be be decomposable")
+    }
+  }
+
+  parents <- if (is_dag) {
+    parents_igraph(g)
+  } else {
+    rip(as_adj_lst(igraph::as_adjacency_matrix(g)), check = FALSE)$P 
+  }
+  
+  dns <- list()
+
+  y <- lapply(seq_along(parents), function(i) {
+    child <- names(parents)[i]
+    pars  <- parents[[i]]
+    spar  <- sparta::as_sparta(x[, c(child, pars), drop = FALSE])
+    spar  <- sparta::as_cpt(spar, pars)
+    # This ensures, that the CPTs and dim_names have the same ordering of the lvls!
+    dns   <<- push(dns, sparta::dim_names(spar))
+    spar
+  })
+
+  dns <- unlist(dns, FALSE)
+  dns <- dns[unique(names(dns))]
+
+  structure(
+    y,
+    names = names(parents),
+    dim_names = dns,
+    parents = parents,
+    graph = g,
+    class = c("cpt_list", "list")
+  )
+
+}
 
 #' Compile information
 #'
 #' Compiled objects are used as building blocks for junction tree inference
 #'
-#' @param x Either a \code{data.frame} or an object returned from \code{cpt_list}
-#' @param g Either a directed acyclic graph (DAG) as an igraph object or a
-#' decomposable graph obtained from \code{ess::fit_graph} or an
-#' adjacency list - a named list where an element is a character vector defining
-#' the neigbors of the element. If \code{x} is a \code{cpt_list},
-#' \code{g} must be \code{NULL}. The procdure then deduce the graph
-#' from the conditional probability tables that was inputtet in \code{cpt_list}
+#' @param x An object returned from \code{cpt_list}
 #' @param root_node A node for which we require it to live in the root
 #' clique (the first clique)
-#' @param save_graph Logical indicating if the graph induced by the cpts
-#' from the cpt_list should be saved. It has no effect when x is a
-#' \code{data.frame}. Use \code{dag} to obtain the graph
+#' @param save_graph Logical.
+#' @examples
+#' cptl <- cpt_list(asia2)
+#' compile(cptl)
 #' @export
-compile <- function(x, g = NULL, root_node = "", save_graph = FALSE) UseMethod("compile")
+compile <- function(x, root_node = "", save_graph = FALSE) UseMethod("compile")
 
 #' @rdname compile
 #' @export
-compile.cpt_list <- function(x, g = NULL, root_node = "", save_graph = FALSE) {
-  # x is validated in cpt_list
+compile.cpt_list <- function(x, root_node = "", save_graph = FALSE) {
 
-  if (!is.null(g)) stop("g must be 'NULL'")
+  g       <- attr(x, "graph")
+  parents <- attr(x, "parents")
 
-  g <- graph_from_cpt_list(x)
-  if (!igraph::is_dag(g)) stop("The cpts does not induce an acyclic graph.")
-
-  parents <- parents_cpt_list(x)
-    
   gmt     <- moralize_and_triangulate_igraph(g, parents)
   adj_mat <- igraph::as_adjacency_matrix(gmt)
   adj_lst <- as_adj_lst(adj_mat)
@@ -71,10 +146,11 @@ compile.cpt_list <- function(x, g = NULL, root_node = "", save_graph = FALSE) {
   # cliques_int is needed to construct the junction tree in new_jt -> new_schedule
   dimnames(adj_mat) <- lapply(dimnames(adj_mat), function(x) 1:nrow(adj_mat))
   adj_lst_int       <- as_adj_lst(adj_mat)
-  cliques_int       <- rip(adj_lst_int)$C
-  cliques_int       <- lapply(cliques_int, as.integer)
 
-  cliques <- construct_cliques_and_parents(adj_lst, root_node)$cliques
+  root_node_int <- ifelse(root_node != "", as.character(match(root_node, names(adj_lst))), "")
+  cliques_int <- lapply(rip(adj_lst_int, root_node_int)$C, as.integer)
+
+  cliques <- construct_cliques(adj_lst, root_node)
   charge  <- new_charge(x, cliques, parents)
   out     <- structure(
     list(charge = charge, cliques = cliques),
@@ -83,45 +159,11 @@ compile.cpt_list <- function(x, g = NULL, root_node = "", save_graph = FALSE) {
     cliques_int = cliques_int,
     class       = c("charge", "list")
   )
-  if (save_graph) attr(out, "graph") <- g
-  out
-}
-
-#' @rdname compile
-#' @export
-compile.data.frame <- function(x, g, root_node = "", save_graph = FALSE) {
-
-  # TODO: Make a vanilla print method
-
-  if (!igraph::is.igraph(g)) stop("g must be an igraph object")
-
-  is_dag <- igraph::is_dag(g)
-  
-  if (!is_dag) {
-    if (!igraph::is_chordal(g)$chordal) {
-      stop("undirected graphs must be be decomposable")
-    }
-  }
-
-  pc <- new.env()
-  moralize_triangulate_and_get_parents_and_cliques(g, is_dag, root_node, pc)
-
-  dim_names <- lapply(x, unique)
-  attr(x, "dim_names") <- dim_names
-
-  charge  <- new_charge(x, pc[["cliques"]], pc[["parents"]])
-
-  out <- structure(
-    list(charge = charge, cliques = pc[["cliques"]]),
-    root_node   = root_node,
-    dim_names   = dim_names,
-    cliques_int = pc[["cliques_int"]],
-    class       = c("charge", "list")
-  )
 
   if (save_graph) attr(out, "graph") <- g
   out
 }
+
 
 #' DAG
 #'
@@ -129,6 +171,9 @@ compile.data.frame <- function(x, g, root_node = "", save_graph = FALSE) {
 #'
 #' @param x A compiled object
 #' 
+#' @export
+dag <- function(x) UseMethod("dag")
+
 #' @export
 dag.charge <- function(x) attr(x, "graph")
 
@@ -139,21 +184,96 @@ dag.charge <- function(x) attr(x, "graph")
 ## moralize.igraph <- function(g) moralize_igraph(g, parents_igraph(g))
 
 
+#' A print method for cpt lists
+#'
+#' @param x A \code{cpt_list} object
+#' @param ... For S3 compatability. Not used.
+#' @seealso \code{\link{compile}}
+#' @export
+print.cpt_list <- function(x, ...) {
+  cls <- paste0("<", paste0(class(x), collapse = ", "), ">")
+  nn  <- length(names(x))
+  cat(" List of CPTs",
+    "\n -------------------------\n")
 
-## compile2.cpt_list <- function(x, g = NULL, root_node = "", save_graph = FALSE) {
-##   # x is validated in cpt_list
-##   if (!is.null(g)) stop("g must be 'NULL'")
-##   g       <- graph_from_cpt_list(x)
-##   parents <- parents_igraph(g)
-##   nlvls   <- .map_int(attr(x, "dim_names"), length)
-##   adj     <- adjacency_list_from_moralization_and_triangulation_igraph2(g, parents, nlvls)
-##   cliques <- construct_cliques_and_parents(adj, root_node)$cliques
-##   charge  <- new_charge(x, cliques, parents)
+  for (child in names(x)) {
+    parents <- setdiff(names(sparta::dim_names(x[[child]])), child)
+    if (neq_empt_chr(parents)) {
+      cat("  P(", child, "|" , paste(parents, collapse = ", "), ")\n")      
+    } else {
+      cat("  P(", child, ")\n")
+    }
+  }
+  
+  cat(paste0("\n  ", cls),
+    "\n -------------------------\n"
+  )
+  
+}
+
+
+#' A print method for compiled objects
+#'
+#' @param x A compiled object
+#' @param ... For S3 compatability. Not used.
+#' @seealso \code{\link{jt}}
+#' @export
+print.charge <- function(x, ...) {
+  cls <- paste0("<", paste0(class(x), collapse = ", "), ">")
+  nn  <- length(names(attr(x, "dim_names")))
+  clique_sizes <- .map_int(x$cliques, length)
+  max_C <- max(clique_sizes)
+  min_C <- min(clique_sizes)
+  avg_C <- mean(clique_sizes)
+  cat(" Compiled network",
+    "\n -------------------------",
+    "\n  Nodes:", nn,
+    "\n  Cliques:", length(x$cliques),
+    "\n   - max:", max_C,
+    "\n   - min:", min_C,
+    "\n   - avg:", round(avg_C, 2), 
+    paste0("\n  ", cls),
+    "\n -------------------------\n"
+  )
+  
+}
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#               gRain TRIANGULATION
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+## triangulate_grbase <- function(g, nlvls) {
+##   gu    <- igraph::as_adjacency_matrix(igraph::as.undirected(g))
+##   nlvls <- nlvls[dimnames(gu)[[2]]]
+##   tg    <- gRbase::triang(gu, control = list(method="mcwh", nLevels = nlvls))
+##   igraph::graph_from_adjacency_matrix(tg, "undirected")
+## }
+
+
+## compile_grbase <- function(x, root_node = "", save_graph = FALSE) {
+##   g       <- attr(x, "graph")
+##   parents <- attr(x, "parents")
+
+##   nlvls   <- jti:::.map_int(attr(x, "dim_names"), length)
+##   gmt     <- triangulate_grbase(jti:::moralize_igraph(g, parents), nlvls)
+##   adj_mat <- igraph::as_adjacency_matrix(gmt)
+##   adj_lst <- jti:::as_adj_lst(adj_mat)
+
+##   # cliques_int is needed to construct the junction tree in new_jt -> new_schedule
+##   dimnames(adj_mat) <- lapply(dimnames(adj_mat), function(x) 1:nrow(adj_mat))
+##   adj_lst_int       <- jti:::as_adj_lst(adj_mat)
+##   cliques_int       <- jti:::rip(adj_lst_int)$C
+##   cliques_int       <- lapply(cliques_int, as.integer)
+
+##   cliques <- jti:::construct_cliques(adj_lst, root_node)
+##   charge  <- jti:::new_charge(x, cliques, parents)
 ##   out     <- structure(
 ##     list(charge = charge, cliques = cliques),
-##     root_node = root_node,
-##     dim_names = attr(x, "dim_names"),
-##     class = c("charge", "list")
+##     root_node   = root_node,
+##     dim_names   = attr(x, "dim_names"),
+##     cliques_int = cliques_int,
+##     class       = c("charge", "list")
 ##   )
 ##   if (save_graph) attr(out, "graph") <- g
 ##   out

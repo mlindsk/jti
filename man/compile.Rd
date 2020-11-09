@@ -3,32 +3,24 @@
 \name{compile}
 \alias{compile}
 \alias{compile.cpt_list}
-\alias{compile.data.frame}
 \title{Compile information}
 \usage{
-compile(x, g = NULL, root_node = "", save_graph = FALSE)
+compile(x, root_node = "", save_graph = FALSE)
 
-\method{compile}{cpt_list}(x, g = NULL, root_node = "", save_graph = FALSE)
-
-\method{compile}{data.frame}(x, g, root_node = "", save_graph = FALSE)
+\method{compile}{cpt_list}(x, root_node = "", save_graph = FALSE)
 }
 \arguments{
-\item{x}{Either a \code{data.frame} or an object returned from \code{cpt_list}}
-
-\item{g}{Either a directed acyclic graph (DAG) as an igraph object or a
-decomposable graph obtained from \code{ess::fit_graph} or an
-adjacency list - a named list where an element is a character vector defining
-the neigbors of the element. If \code{x} is a \code{cpt_list},
-\code{g} must be \code{NULL}. The procdure then deduce the graph
-from the conditional probability tables that was inputtet in \code{cpt_list}}
+\item{x}{An object returned from \code{cpt_list}}
 
 \item{root_node}{A node for which we require it to live in the root
 clique (the first clique)}
 
-\item{save_graph}{Logical indicating if the graph induced by the cpts
-from the cpt_list should be saved. It has no effect when x is a
-\code{data.frame}. Use \code{dag} to obtain the graph}
+\item{save_graph}{Logical.}
 }
 \description{
 Compiled objects are used as building blocks for junction tree inference
+}
+\examples{
+cptl <- cpt_list(asia2)
+compile(cptl)
 }

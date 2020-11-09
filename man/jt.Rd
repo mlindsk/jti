@@ -12,7 +12,8 @@ jt(x, evidence = NULL, flow = "sum", propagate = "full")
 \arguments{
 \item{x}{An object return from \code{compile}}
 
-\item{evidence}{A named vector. The names are the variabes and the elements are the evidence}
+\item{evidence}{A named vector. The names are the variabes and the elements
+are the evidence}
 
 \item{flow}{Either "sum" or "max"}
 
@@ -53,7 +54,12 @@ plot(g)
 
 # Compilation
 # -----------
-cp <- compile(asia, g)
+cl <- cpt_list(asia, g) # Checking and conversion
+cp <- compile(cl)
+
+# After the network has been compiled, the graph has been triangulated and
+# moralized. Furthermore, all conditional probability tables (CPTs) has been
+# designated one of the cliques (in the triangulated and moralized graph).
 
 # Example 1: sum-flow without evidence
 # ------------------------------------
@@ -63,11 +69,16 @@ print(jt1)
 query_belief(jt1, c("E", "L", "T"))
 query_belief(jt1, c("B", "D", "E"), type = "joint")
 
+
+# Notice, that jt1 is equivalent to:
+# jt1 <- jt(cp, propagate = "no")
+# jt1 <- propagate(jt1, prop = "full")
+# That is; it is possible to postpone the actual propagation
+
 # Example 2: sum-flow with evidence
 # ---------------------------------
 e2  <- c(A = "y", X = "n")
 jt2 <- jt(cp, e2) 
-query_belief(jt2, c("E", "L", "T"))
 query_belief(jt2, c("B", "D", "E"), type = "joint")
 
 # Notice that, the configuration (D,E,B) = (y,y,n) has changed
@@ -81,21 +92,23 @@ query_evidence(jt2)
 jt3 <- jt(cp, flow = "max")
 mpe(jt3)
 
+
 # Example 4: max-flow with evidence
 # ---------------------------------
 e4  <- c(T = "y", X = "y", D = "y")
 jt4 <- jt(cp, e4, flow = "max")
 mpe(jt4)
 
-# Notice, that S, T, B, E, X and D has changed from "n" to "y"
+# Notice, that T, E, S, B, X and D has changed from "n" to "y"
 # as a consequence of the new evidence e4
 
 
 # Example 5: specifying a root node and only collect to save run time
 # -------------------------------------------------------------------------
 
-# cp5 <- compile(asia, g, "X")
+# cp5 <- compile(cpt_list(asia, g), "X")
 # jt5 <- jt(cp5, propagate = "collect")
+# query_belief(jt5, get_cliques(jt5)$C1, "joint")
 
 # We can only query from the root clique now (clique 1)
 # but we have ensured that the node of interest, "X", does indeed live in
@@ -104,13 +117,9 @@ mpe(jt4)
 # Example 6: Compiling from a list of conditional probabilities
 # -------------------------------------------------------------------------
 
-# 1) We need a list with CPTs which we extract from the asia2 object
+# * We need a list with CPTs which we extract from the asia2 object
 #    - the list must be named with child nodes
-# 2) The elements need to by an array-like object with proper dimnames
-# 3) The list of cpts needs to be converted into a "cpt_list" object
-#    - This is merely for checking if the cpts are of the correct type,
-#    - but also the cpts are now converted to a sparse representation
-#      to obtain a better runtime in the compilation and propagation phase
+#    - The elements need to be array-like objects
 
 cl  <- cpt_list(asia2)
 cp6 <- compile(cl, save_graph = TRUE)
@@ -119,13 +128,12 @@ cp6 <- compile(cl, save_graph = TRUE)
 # g <- dag(cp6)
 # plot(g) 
 
-# Finally, cp6 is now of the same form as cp above and we can use the
-# junction tree algorithm
-
 jt6 <- jt(cp6)
 query_belief(jt6, c("either", "smoke"))
 
 }
 \seealso{
-\code{\link{query_belief}}, \code{\link{mpe}}, \code{\link{get_cliques}}
+\code{\link{query_belief}}, \code{\link{mpe}},
+\code{\link{get_cliques}}, \code{\link{get_clique_root}},
+\code{\link{propagate}}
 }

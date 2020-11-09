@@ -12,7 +12,7 @@ el <- matrix(c(
 )
 
 g  <- igraph::graph_from_edgelist(el)
-cp <- compile(asia, g)
+cp <- compile(cpt_list(asia, g))
 j  <- jt(cp)
 
 ## ---------------------------------------------------------

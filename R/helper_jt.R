@@ -64,10 +64,16 @@ has_root_node.jt <- function(x) attr(x, "root_node") != ""
 ##   collect    <- list(cliques = cliques, tree = coll_tree)
 ##   distribute <- list(cliques = cliques, tree = dist_tree)
   
-##   return(list(collect = collect , distribute = distribute, clique_graph = clique_graph))
+##   return(
+##     list(
+##       collect = collect ,
+##       distribute = distribute,
+##       clique_graph = clique_graph,
+##       clique_root = "C1"
+##     )
+##   )
   
 ## }
-
 
 new_schedule2 <- function(cliques_chr, cliques_int, root_node) {
   
@@ -99,7 +105,7 @@ new_schedule2 <- function(cliques_chr, cliques_int, root_node) {
       collect      = collect ,
       distribute   = distribute,
       clique_graph = clique_graph,
-      clique_root  = paste("C", clique_root, sep = "")
+      clique_root  = paste("C", clique_root, sep = "") # TODO: Just return the index
     )
   )
 }
@@ -133,7 +139,7 @@ prune_jt <- function(jt) {
 
       # Normalize clique_root
       cr <- attr(jt, "clique_root")
-      probability_of_evidence <- sum(jt$charge$C[[cr]], "vals")
+      probability_of_evidence <- sum(sparta::vals(jt$charge$C[[cr]]))
       attr(jt, "probability_of_evidence") <- probability_of_evidence
       jt$charge$C[[cr]] <- sparta::normalize(jt$charge$C[[cr]])
 
@@ -157,47 +163,70 @@ prune_jt <- function(jt) {
 }
 
 set_evidence_jt <- function(charge, cliques, evidence) {
-  # We dont loop over the cliques now, since some clique
-  # potentials may not have as many variables as the
-  # corresponding clique in the triangulated graph.
-  # Say, C = {a,b,c}, then potC may be {b,c} if a is
-  # already put in another clique. But {b,c} is still
-  # "implicitly a function" of {a}. But we must take this
-  # into account when setting evidence.
-  # for (k in seq_along(cliques)) {
   for (k in seq_along(charge$C)) {
-    Ck <- names(attr(charge$C[[k]], "dim_names"))
+    Ck <- names(charge$C[[k]])
     for (i in seq_along(evidence)) {
       e     <- evidence[i]
       e_var <- names(e)
       e_val <- unname(e)
       if (e_var %in% Ck) {
-
-        m <- try(sparta::slice(charge$C[[k]], e))
+        m <- try(sparta::slice(charge$C[[k]], e), silent = TRUE)
         if (inherits(m, "try-error")) {
           stop(
-            "the evidence leads to a degenerate distribution ",
-            "since the evidence was never observed"
+            "The evidence leads to a degenerate distribution ",
+            "since the evidence was never observed in one or ",
+            "more of the clique potentials.",
+            call. = FALSE
           )
         }
         charge$C[[k]] <- m
-
-        ## Before slice was available:
-        ## row_idx  <- match(e_var, names(attr(charge$C[[k]], "dim_names")))
-        ## int_val  <- match(e_val, attr(charge$C[[k]], "dim_names")[[e_var]])
-        ## idx_keep <- which(int_val == charge$C[[k]][row_idx, ])
-
-        ## charge$C[[k]] <- sparta::sparta_struct(
-        ##   charge$C[[k]][, idx_keep, drop = FALSE],
-        ##   attr(charge$C[[k]], "vals")[idx_keep],
-        ##   attr(charge$C[[k]], "dim_names")
-        ## )
-        
       }
     }
   }
   return(charge)
 }
+
+
+## new_schedule_grain <- function(grain_obj) {
+##   # grain_obj = jt_gr$rip
+
+##   cliques <- grain_obj$cliques
+  
+##   nc <- length(cliques)
+##   clique_graph <- matrix(0L, nc, nc)
+##   coll_tree   <- clique_graph
+##   dist_tree   <- clique_graph
+
+##   for (k in seq_along(grain_obj$childList)) {
+##     # parent = k
+##     for (i in grain_obj$childList[[k]]) {
+##       # i = child
+##       coll_tree[i, k] <- 1L
+##       dist_tree[k, i] <- 1L
+##     }
+##   }
+
+##   coll_lvs <- leaves_jt(coll_tree)
+##   dist_lvs <- leaves_jt(dist_tree)
+
+##   attr(coll_tree, "leaves")  <- coll_lvs
+##   attr(dist_tree, "leaves")  <- dist_lvs
+
+##   attr(coll_tree, "parents") <- parents_jt(coll_tree, coll_lvs)
+##   attr(dist_tree, "parents") <- parents_jt(dist_tree, dist_lvs)
+
+##   collect    <- list(cliques = cliques, tree = coll_tree)
+##   distribute <- list(cliques = cliques, tree = dist_tree)
+  
+##   return(
+##     list(
+##       collect = collect ,
+##       distribute = distribute,
+##       clique_graph = clique_graph,
+##       clique_root = "C1"
+##     )
+##   )
+## }
 
 
 new_jt <- function(x, evidence = NULL, flow = "sum") {
@@ -209,6 +238,7 @@ new_jt <- function(x, evidence = NULL, flow = "sum") {
 
   if (!is.null(evidence)) charge <- set_evidence_jt(charge, cliques, evidence)
 
+  # schedule  <- new_schedule_grain(grain_obj)
   # schedule  <- new_schedule(cliques)
   schedule  <- new_schedule2(cliques, attr(x, "cliques_int"), attr(x, "root_node"))
   attr(x, "cliques_int") <- NULL
@@ -245,7 +275,7 @@ send_messages <- function(jt, flow = "sum") {
     message("The junction tree is already propagated fully. jt is returned")
     return(jt)
   }
-  
+
   x   <- if (direction == "collect") jt$schedule$collect else jt$schedule$distribute
   lvs <- attr(x$tree, "leaves")
   par <- attr(x$tree, "parents")
@@ -260,44 +290,46 @@ send_messages <- function(jt, flow = "sum") {
       C_lvs_k <- x$cliques[[lvs_k]]
       C_par_k <- x$cliques[[pk]]
       Sk      <- intersect(C_lvs_k, C_par_k)
+
+      # TODO: Whats the point in naming them Ck etc.? Just use the index?
       C_lvs_k_name <- names(x$cliques)[lvs_k]
       C_par_k_name <- names(x$cliques)[pk]
       
-      if (neq_empt_chr(Sk)) { # if empty, no messages should be sent unless flow = max, then we bookkeep the max config
-        message_k_names <- setdiff(C_lvs_k, Sk)
-        if (direction == "collect") {
-          message_k                   <- sparta::marg(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
-          jt$charge$C[[C_par_k_name]] <- sparta::mult(jt$charge$C[[C_par_k_name]], message_k)
-          jt$charge$C[[C_lvs_k_name]] <- sparta::div(jt$charge$C[[C_lvs_k_name]], message_k)  
+      message_k_names <- setdiff(C_lvs_k, Sk)
+      
+      if (direction == "collect") {
+        message_k <- sparta::marg(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
+        jt$charge$C[[C_par_k_name]] <- sparta::mult(jt$charge$C[[C_par_k_name]], message_k)
+        jt$charge$C[[C_lvs_k_name]] <- sparta::div(jt$charge$C[[C_lvs_k_name]], message_k)  
+      }
+
+      if (direction == "distribute") {
+        if (attr(jt, "flow") == "max") {
+
+          ## Find the max cell and change the potential before sending the information:
+          max_idx  <- sparta::which_max_idx(jt$charge$C[[C_lvs_k_name]])
+          max_cell <- sparta::which_max_cell(jt$charge$C[[C_lvs_k_name]])
+          max_mat  <- jt$charge$C[[C_lvs_k_name]][, max_idx, drop = FALSE]
+          max_val  <- attr(jt$charge$C[[C_lvs_k_name]], "vals")[max_idx]
+          max_dn   <- attr(jt$charge$C[[C_lvs_k_name]], "dim_names")
+
+          jt$charge$C[[C_lvs_k_name]] <- sparta::sparta_struct(
+            max_mat,
+            max_val,
+            max_dn
+          )
+          attr(jt, "mpe")[names(max_cell)] <- max_cell
         }
 
-        if (direction == "distribute") {
-          if (attr(jt, "flow") == "max") {
-            ## Find the max cell and change the potential before sending the information:
-            max_idx  <- sparta::which_max_idx(jt$charge$C[[C_lvs_k_name]])
-            max_cell <- sparta::which_max_cell(jt$charge$C[[C_lvs_k_name]])
-            max_mat  <- jt$charge$C[[C_lvs_k_name]][, max_idx, drop = FALSE]
-            max_val  <- attr(jt$charge$C[[C_lvs_k_name]], "vals")[max_idx]
-            max_dn   <- attr(jt$charge$C[[C_lvs_k_name]], "dim_names")
-
-            jt$charge$C[[C_lvs_k_name]] <- sparta::sparta_struct(
-              max_mat,
-              max_val,
-              max_dn
-            )
-            attr(jt, "mpe")[names(max_cell)] <- max_cell
-          }
-
-          # Send the message
-          message_k                   <- sparta::marg(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
-          jt$charge$C[[C_par_k_name]] <- sparta::mult(jt$charge$C[[C_par_k_name]], message_k)
-          jt$charge$S[[paste("S", pk, sep = "")]] <- message_k
-          
-          if (attr(jt, "flow") == "max") {
-            ## Record the max cell for the parent potential
-            max_cell <- sparta::which_max_cell(jt$charge$C[[C_par_k_name]])
-            attr(jt, "mpe")[names(max_cell)] <- max_cell
-          }
+        # Send the message
+        message_k <- sparta::marg(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
+        jt$charge$C[[C_par_k_name]] <- sparta::mult(jt$charge$C[[C_par_k_name]], message_k)
+        jt$charge$S[[paste("S", pk, sep = "")]] <- message_k
+        
+        if (attr(jt, "flow") == "max") {
+          ## Record the max cell for the parent potential
+          max_cell <- sparta::which_max_cell(jt$charge$C[[C_par_k_name]])
+          attr(jt, "mpe")[names(max_cell)] <- max_cell
         }
       }
     }

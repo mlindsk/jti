@@ -1,9 +1,10 @@
 #' Asia
 #'
-#' Small synthetic data set from Lauritzen and Spiegelhalter (1988) about lung diseases
-#' (tuberculosis, lung cancer or bronchitis) and visits to Asia. This copy of the data
-#' was taken from the R package "bnlearn" where all values "yes" have been converted to
-#' "y" and all values "no" have been converted to "n".
+#' Small synthetic data set from Lauritzen and Spiegelhalter (1988) about lung
+#' diseases (tuberculosis, lung cancer or bronchitis) and visits to Asia. This
+#' copy of the data was taken from the R package "bnlearn" where all values
+#' "yes" have been converted to "y" and all values "no" have been converted
+#' to "n".
 #'
 #' \describe{
 #'   \item{\code{D} (dysponea)}{}
@@ -30,13 +31,3 @@
 #' 
 #' @references \href{https://www.bnlearn.com/bnrepository/discrete-small.html#asia}{bnlearn-asia}
 "asia2"
-
-
-#' Munin
-#'
-#' A massive bayesian network 
-#'
-#' @docType data
-#' 
-#' @references \href{https://www.bnlearn.com/bnrepository/discrete-massive.html#munin}{bnlearn-munin}
-"munin"

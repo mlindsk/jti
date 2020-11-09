@@ -2,18 +2,44 @@
 % Please edit documentation in R/api_compile.R
 \name{cpt_list}
 \alias{cpt_list}
+\alias{cpt_list.list}
+\alias{cpt_list.data.frame}
 \title{Conditional probability list}
 \usage{
-cpt_list(x)
+cpt_list(x, g = NULL)
+
+\method{cpt_list}{list}(x, g = NULL)
+
+\method{cpt_list}{data.frame}(x, g)
 }
 \arguments{
-\item{x}{A named list with cpts in form of array-like object(s).
-The name must be the child.}
+\item{x}{Either a named list with cpts in form of array-like object(s)
+where names must be the child node or a \code{data.frame}}
+
+\item{g}{Either a directed acyclic graph (DAG) as an igraph object or a
+decomposable graph as an igraph object. If \code{x} is a list,
+\code{g} must be \code{NULL}. The procdure then deduce the graph
+from the conditional probability tables.}
 }
 \description{
 A check and conversion of cpts to be used in the junction tree algorithm
 }
 \examples{
-print(asia2)
-cpt_list(asia2)
+
+library(igraph)
+el <- matrix(c(
+"A", "T",
+"T", "E",
+"S", "L",
+"S", "B",
+"L", "E",
+"E", "X",
+"E", "D",
+"B", "D"),
+ nc = 2,
+ byrow = TRUE
+)
+
+g <- igraph::graph_from_edgelist(el) 
+cpt_list(asia, g)
 }

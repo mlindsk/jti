@@ -3,11 +3,17 @@
 \name{get_cliques}
 \alias{get_cliques}
 \alias{get_cliques.jt}
+\alias{get_clique_root}
+\alias{get_clique_root.jt}
 \title{Return the cliques of a junction tree}
 \usage{
 get_cliques(x)
 
 \method{get_cliques}{jt}(x)
+
+get_clique_root(x)
+
+\method{get_clique_root}{jt}(x)
 }
 \arguments{
 \item{x}{A junction tree object, \code{jt}.}
@@ -17,6 +23,7 @@ Return the cliques of a junction tree
 }
 \examples{
 # See Example 5 of the 'jt' function 
+
 }
 \seealso{
 \code{\link{jt}}

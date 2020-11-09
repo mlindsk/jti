@@ -21,7 +21,7 @@ knitr::opts_chunk$set(
 
 ## About
 
-The **jti** package (pronounced 'yeti') is a fast implementaion of the junction tree algorithm (JTA) using the Lauritzen-Spiegelhalter scheme. Why is it fast? Because we use a sparse representation for the potentials which enable us to handle large and complex graphs where the variables can have an arbitrary large number of levels.
+The **jti** package (pronounced 'yeti') is a memory efficient and fast implementaion of the junction tree algorithm (JTA) using the Lauritzen-Spiegelhalter scheme. Why is it memory efficient and fast? Because we use a sparse representation for the potentials which enable us to handle large and complex graphs where the variables can have an arbitrary large number of levels.
 
 ## Installation
 
@@ -59,29 +59,50 @@ plot(g)
 
 ## Compilation
 
-After the network has been compiled, the graph has been triangulated and moralized. Furthermore, all conditional probability tables (CPTs) has been designated one of the cliques (in the triangulated and moralized graph).
+Checking and conversion
 
 ```{r}
-cp <- compile(asia, g)
+cl <- cpt_list(asia, g)
+cl
 ```
+
+Compilation
+
+```{r}
+cp <- compile(cl, save_graph = TRUE)
+cp
+# plot(dag(cp)) # Should give the same as plot(g)
+```
+
+After the network has been compiled, the graph has been triangulated and moralized. Furthermore, all conditional probability tables (CPTs) has been designated to one of the cliques (in the triangulated and moralized graph).
 
 ## Example 1: sum-flow without evidence
 
 ```{r}
 jt1 <- jt(cp)
+jt1
 plot(jt1)
-print(jt1)
+```
+Query probabilities
+
+```{r}
 query_belief(jt1, c("E", "L", "T"))
 query_belief(jt1, c("B", "D", "E"), type = "joint")
 ```
 
+It should be noticed, that the above could also have been achieved by
+
+```{r, eval = FALSE}
+jt1 <- jt(cp, propagate = "no")
+jt1 <- propagate(jt1, prop = "full")
+```
+That is; it is possible to postpone the actual propagation.
 
 ## Example 2: sum-flow with evidence
 
 ```{r}
 e2  <- c(A = "y", X = "n")
 jt2 <- jt(cp, e2) 
-query_belief(jt2, c("E", "L", "T"))
 query_belief(jt2, c("B", "D", "E"), type = "joint")
 ```
 
@@ -106,12 +127,12 @@ jt4 <- jt(cp, e4, flow = "max")
 mpe(jt4)
 
 ```
-Notice, that `S, B` and `E` has changed from `"n"` to `"y"` as a consequence of the new evidence `e4`.
+Notice, that `T`, `E`, `S`, `B`, `X` and `D` has changed from `"n"` to `"y"` as a consequence of the new evidence `e4`.
 
 ##  Example 5: specifying a root node and only collect to save run time
 
 ```{r}
-cp5 <- compile(asia, g, "X")
+cp5 <- compile(cpt_list(asia, g) , "X")
 jt5 <- jt(cp5, propagate = "collect")
 ```
 We can only query from the root clique now (clique 1) but we have ensured that the node of interest, `"X"`, does indeed live in this clique.
@@ -122,23 +143,22 @@ query_belief(jt5, get_cliques(jt5)$C1, "joint")
 
 ##  Example 6: Compiling from a list of conditional probabilities
 
-1) We need a list with CPTs which we extract from the asia2 object
+ * We need a list with CPTs which we extract from the asia2 object
     - the list must be named with child nodes
- 2) The elements need to by an array-like object
- 3) The list of cpts needs to be converted into a `cpt_list` object
-    - This is merely for checking if the cpts are of the correct type,
-    - but also the cpts are now converted to a sparse representation
-      to obtain a better runtime in the compilation and propagation phase
+    - The elements need to be array-like objects
 
 ```{r}
 cl  <- cpt_list(asia2)
-cp6 <- compile(cl)
+cp6 <- compile(cl, save_graph = TRUE)
 ```
-Finally, `cp6` is now of the same form as cp above and we can use the junction tree algorithm
+Inspection; see if the graph correspond to the cpts
+
+```{r}
+plot(dag(cp6)) 
+```
 
 ```{r}
 jt6 <- jt(cp6)
-query_belief(jt6, c("either", "smoke"))
 query_belief(jt6, c("either", "smoke"), type = "joint")
 ```
 
@@ -151,8 +171,8 @@ library(ess)
 
 g7  <- ess::fit_graph(asia, trace = FALSE)
 ig7 <- igraph::graph_from_adjacency_matrix(ess::adj_mat(g7), "undirected")
-cp7 <- compile(asia, ig7)
+cp7 <- compile(cpt_list(asia, ig7))
 jt7 <- jt(cp7)
 
-query_belief(jt7, get_cliques(jt7)$C4, type = "joint")
+query_belief(jt7, get_cliques(jt7)[[1]], type = "joint")
 ```

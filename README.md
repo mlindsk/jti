@@ -2,32 +2,37 @@ jti: Junction Tree Inference
 ================
 
 <!-- badges: start -->
-[![R buildstatus](https://github.com/mlindsk/jti/workflows/R-CMD-check/badge.svg)](https://github.com/mlindsk/jti/actions) <!-- badges: end -->
 
-About
------
+[![R
+buildstatus](https://github.com/mlindsk/jti/workflows/R-CMD-check/badge.svg)](https://github.com/mlindsk/jti/actions)
+<!-- badges: end -->
 
-The **jti** package (pronounced 'yeti') is a fast implementaion of the junction tree algorithm (JTA) using the Lauritzen-Spiegelhalter scheme. Why is it fast? Because we use a sparse representation for the potentials which enable us to handle large and complex graphs where the variables can have an arbitrary large number of levels.
+## About
 
-Installation
-------------
+The **jti** package (pronounced ‘yeti’) is a memory efficient and fast
+implementaion of the junction tree algorithm (JTA) using the
+Lauritzen-Spiegelhalter scheme. Why is it memory efficient and fast?
+Because we use a sparse representation for the potentials which enable
+us to handle large and complex graphs where the variables can have an
+arbitrary large number of levels.
 
-You can install the current stable release of the package by using the `devtools` package:
+## Installation
+
+You can install the current stable release of the package by using the
+`devtools` package:
 
 ``` r
 devtools::install_github("mlindsk/jti", build_vignettes = FALSE)
 ```
 
-Libraries
----------
+## Libraries
 
 ``` r
 library(jti)
 library(igraph)
 ```
 
-Setting up the network
-----------------------
+## Setting up the network
 
 ``` r
 el <- matrix(c(
@@ -49,29 +54,58 @@ plot(g)
 
 <img src="man/figures/README-unnamed-chunk-4-1.png" width="100%" />
 
-Compilation
------------
+## Compilation
 
-After the network has been compiled, the graph has been triangulated and moralized. Furthermore, all conditional probability tables (CPTs) has been designated one of the cliques (in the triangulated and moralized graph).
+Checking and conversion
 
 ``` r
-cp <- compile(asia, g)
+cl <- cpt_list(asia, g)
+cl
+#>  List of CPTs 
+#>  -------------------------
+#>   P( A )
+#>   P( T | A )
+#>   P( E | T, L )
+#>   P( S )
+#>   P( L | S )
+#>   P( B | S )
+#>   P( X | E )
+#>   P( D | E, B )
+#> 
+#>   <cpt_list, list> 
+#>  -------------------------
 ```
 
-Example 1: sum-flow without evidence
-------------------------------------
+Compilation
+
+``` r
+cp <- compile(cl, save_graph = TRUE)
+cp
+#>  Compiled network 
+#>  ------------------------- 
+#>   Nodes: 8 
+#>   Cliques: 5 
+#>    - max: 4 
+#>    - min: 2 
+#>    - avg: 2.8 
+#>   <charge, list> 
+#>  -------------------------
+# plot(dag(cp)) # Should give the same as plot(g)
+```
+
+After the network has been compiled, the graph has been triangulated and
+moralized. Furthermore, all conditional probability tables (CPTs) has
+been designated to one of the cliques (in the triangulated and moralized
+graph).
+
+## Example 1: sum-flow without evidence
 
 ``` r
 jt1 <- jt(cp)
-plot(jt1)
-```
-
-<img src="man/figures/README-unnamed-chunk-6-1.png" width="100%" />
-
-``` r
-print(jt1)
-#>  A Junction Tree With 
+jt1
+#>  Junction Tree 
 #>  ------------------------- 
+#>   Propagated: full 
 #>   Flow: sum 
 #>   Nodes: 5 
 #>   Edges: 4 / 10 
@@ -81,160 +115,147 @@ print(jt1)
 #>    - avg: 2.8 
 #>   <jt, list> 
 #>  -------------------------
+plot(jt1)
+```
+
+<img src="man/figures/README-unnamed-chunk-7-1.png" width="100%" />
+Query probabilities
+
+``` r
 query_belief(jt1, c("E", "L", "T"))
 #> $E
 #> E
-#>          n          y 
-#> 0.90810916 0.09189084 
+#>         n         y 
+#> 0.9257808 0.0742192 
 #> 
 #> $L
 #> L
-#>          n          y 
-#> 0.93431204 0.06568796 
+#>     n     y 
+#> 0.934 0.066 
 #> 
 #> $T
 #> T
-#>         n         y 
-#> 0.9719549 0.0280451
+#>      n      y 
+#> 0.9912 0.0088
 query_belief(jt1, c("B", "D", "E"), type = "joint")
 #> , , B = n
 #> 
 #>    E
 #> D            n           y
-#>   n 0.41125892 0.009593831
-#>   y 0.04560769 0.024994456
+#>   n 0.41821906 0.007101117
+#>   y 0.04637955 0.018500278
 #> 
 #> , , B = y
 #> 
 #>    E
 #> D            n           y
-#>   n 0.09644433 0.008361746
-#>   y 0.35479823 0.048940808
+#>   n 0.09856873 0.007094444
+#>   y 0.36261346 0.041523361
 ```
 
-Example 2: sum-flow with evidence
----------------------------------
+It should be noticed, that the above could also have been achieved by
+
+``` r
+jt1 <- jt(cp, propagate = "no")
+jt1 <- propagate(jt1, prop = "full")
+```
+
+That is; it is possible to postpone the actual propagation.
+
+## Example 2: sum-flow with evidence
 
 ``` r
 e2  <- c(A = "y", X = "n")
 jt2 <- jt(cp, e2) 
-query_belief(jt2, c("E", "L", "T"))
-#> $E
-#> E
-#>            n            y 
-#> 0.9993008086 0.0006991914 
-#> 
-#> $L
-#> L
-#>           n           y 
-#> 0.999583147 0.000416853 
-#> 
-#> $T
-#> T
-#>            n            y 
-#> 0.9996978115 0.0003021885
 query_belief(jt2, c("B", "D", "E"), type = "joint")
 #> , , B = n
 #> 
 #>    E
 #> D            n            y
-#>   n 0.45255724 7.707708e-05
-#>   y 0.05018758 2.008061e-04
+#>   n 0.45143057 7.711638e-05
+#>   y 0.05006263 2.009085e-04
 #> 
 #> , , B = y
 #> 
 #>    E
 #> D           n            y
-#>   n 0.1061292 6.147845e-05
-#>   y 0.3904268 3.598297e-04
+#>   n 0.1063963 6.176693e-05
+#>   y 0.3914092 3.615182e-04
 ```
 
-Notice that, the configuration `(D,E,B) = (y,y,n)` has changed dramatically as a consequence of the evidence. We can get the probability of the evidence:
+Notice that, the configuration `(D,E,B) = (y,y,n)` has changed
+dramatically as a consequence of the evidence. We can get the
+probability of the evidence:
 
 ``` r
 query_evidence(jt2)
-#> [1] 0.8467623
+#> [1] 0.007152638
 ```
 
-Example 3: max-flow without evidence
-------------------------------------
+## Example 3: max-flow without evidence
 
 ``` r
 jt3 <- jt(cp, flow = "max")
 mpe(jt3)
-#>   A   S   T   L   B   E   X   D   x 
-#> "n" "y" "n" "n" "y" "n" "n" "n" "n"
+#>   A   T   E   L   S   B   X   D 
+#> "n" "n" "n" "n" "n" "n" "n" "n"
 ```
 
-Example 4: max-flow with evidence
----------------------------------
+## Example 4: max-flow with evidence
 
 ``` r
 e4  <- c(T = "y", X = "y", D = "y")
 jt4 <- jt(cp, e4, flow = "max")
 mpe(jt4)
-#>   A   S   T   L   B   E   X   D   x 
-#> "y" "n" "y" "n" "n" "y" "y" "y" "n"
+#>   A   T   E   L   S   B   X   D 
+#> "n" "y" "y" "n" "y" "y" "y" "y"
 ```
 
-Notice, that `S, B` and `E` has changed from `"n"` to `"y"` as a consequence of the new evidence `e4`.
+Notice, that `T`, `E`, `S`, `B`, `X` and `D` has changed from `"n"` to
+`"y"` as a consequence of the new evidence `e4`.
 
-Example 5: specifying a root node and only collect to save run time
--------------------------------------------------------------------
+## Example 5: specifying a root node and only collect to save run time
 
 ``` r
-cp5 <- compile(asia, g, "X")
+cp5 <- compile(cpt_list(asia, g) , "X")
 jt5 <- jt(cp5, propagate = "collect")
 ```
 
-We can only query from the root clique now (clique 1) but we have ensured that the node of interest, `"X"`, does indeed live in this clique.
+We can only query from the root clique now (clique 1) but we have
+ensured that the node of interest, `"X"`, does indeed live in this
+clique.
 
 ``` r
 query_belief(jt5, get_cliques(jt5)$C1, "joint")
-#> , , x = n
-#> 
 #>    E
-#> X            n           y
-#>   n 0.86130154 0.000492485
-#>   y 0.03908819 0.090617234
-#> 
-#> , , x = y
-#> 
-#>    E
-#> X              n            y
-#>   n 0.0073843044 4.222283e-06
-#>   y 0.0003351197 7.769001e-04
+#> X            n            y
+#>   n 0.88559032 0.0004011849
+#>   y 0.04019048 0.0738180151
 ```
 
-Example 6: Compiling from a list of conditional probabilities
--------------------------------------------------------------
+## Example 6: Compiling from a list of conditional probabilities
 
-1.  We need a list with CPTs which we extract from the asia2 object
-    -   the list must be named with child nodes
-2.  The elements need to by an array-like object
-3.  The list of cpts needs to be converted into a `cpt_list` object
-    -   This is merely for checking if the cpts are of the correct type,
-    -   but also the cpts are now converted to a sparse representation to obtain a better runtime in the compilation and propagation phase
+  - We need a list with CPTs which we extract from the asia2 object
+      - the list must be named with child nodes
+      - The elements need to be array-like objects
+
+<!-- end list -->
 
 ``` r
 cl  <- cpt_list(asia2)
-cp6 <- compile(cl)
+cp6 <- compile(cl, save_graph = TRUE)
 ```
 
-Finally, `cp6` is now of the same form as cp above and we can use the junction tree algorithm
+Inspection; see if the graph correspond to the cpts
+
+``` r
+plot(dag(cp6)) 
+```
+
+<img src="man/figures/README-unnamed-chunk-17-1.png" width="100%" />
 
 ``` r
 jt6 <- jt(cp6)
-query_belief(jt6, c("either", "smoke"))
-#> $either
-#> either
-#>      yes       no 
-#> 0.064828 0.935172 
-#> 
-#> $smoke
-#> smoke
-#> yes  no 
-#> 0.5 0.5
 query_belief(jt6, c("either", "smoke"), type = "joint")
 #>      either
 #> smoke      yes       no
@@ -242,31 +263,22 @@ query_belief(jt6, c("either", "smoke"), type = "joint")
 #>   no  0.010148 0.489852
 ```
 
-Example 7: Fitting a decomposable model and apply JTA
------------------------------------------------------
+## Example 7: Fitting a decomposable model and apply JTA
 
-We use the `ess` package (on CRAN), found at <https://github.com/mlindsk/ess>, to fit an undirected decomposable graph to data.
+We use the `ess` package (on CRAN), found at
+<https://github.com/mlindsk/ess>, to fit an undirected decomposable
+graph to data.
 
 ``` r
 library(ess)
 
 g7  <- ess::fit_graph(asia, trace = FALSE)
 ig7 <- igraph::graph_from_adjacency_matrix(ess::adj_mat(g7), "undirected")
-cp7 <- compile(asia, ig7)
+cp7 <- compile(cpt_list(asia, ig7))
 jt7 <- jt(cp7)
 
-query_belief(jt7, get_cliques(jt7)$C4, type = "joint")
-#> , , T = n
-#> 
-#>    L
-#> E           n          y
-#>   n 0.9263136 0.00000000
-#>   y 0.0000000 0.06489242
-#> 
-#> , , T = y
-#> 
-#>    L
-#> E             n            y
-#>   n 0.000000000 0.0000000000
-#>   y 0.007998452 0.0007955451
+query_belief(jt7, get_cliques(jt7)[[1]], type = "joint")
+#> A
+#>      n      y 
+#> 0.9916 0.0084
 ```

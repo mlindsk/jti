@@ -1,20 +1,11 @@
-extract_or_make_cpt <- function(x, child, parents) {
-  # x: data.frame or cpt_list
-  if (inherits(x, "data.frame")) {
-    spt <- sparta::as_sparta(x[, c(child, parents), drop = FALSE])
-    return(sparta::as_cpt(spt, parents))
-  } else {
-    return(x[[child]])
-  }
-}
-
 allocate_child_to_potential <- function(potC, x, cliques, child, parents) {
   # potC: environment with clique potentials
-  cpt <- extract_or_make_cpt(x, child, parents)
+  cpt <- x[[child]] # extract_or_make_cpt(x, child, parents)
   for (k in seq_along(cliques)) {
     family_in_Ck <- all(c(child, parents) %in% cliques[[k]])
     if (family_in_Ck) {
       if (is.null(potC$C[[k]])) {
+        # unity <- sparta::sparta_ones(attr(x, "dim_names")[cliques[[k]]])!
         unity <- sparta::sparta_unity_struct(attr(x, "dim_names")[cliques[[k]]])
         potC$C[[k]] <- sparta::mult(cpt, unity)
       } else {
@@ -26,9 +17,9 @@ allocate_child_to_potential <- function(potC, x, cliques, child, parents) {
   NULL
 }
 
-
+# TODO: parents no longer needed!
 new_charge <- function(x, cliques, parents) {
-  # x: data.frame or cpt_list
+  # x: cpt_list
   potC <- new.env()
   potC[["C"]] <- vector("list", length(cliques))
   children <- names(parents)

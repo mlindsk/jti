@@ -1,6 +1,7 @@
 #' jti: Junction Tree Inference
 #'
-#' This package is a fast implementation of the junction tree algorithm using the LS-updating scheme.
+#' Minimal and memory efficient implementaion of the junction tree
+#' algorithm using the Laurtizen-Spiegelhalter scheme.	    
 #' 
 #' @importFrom Rcpp sourceCpp
 #' @useDynLib jti, .registration = TRUE

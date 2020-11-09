@@ -3,11 +3,14 @@
 #' Construction of a junction tree and message passing
 #' 
 #' @param x An object return from \code{compile}
-#' @param evidence A named vector. The names are the variabes and the elements are the evidence
+#' @param evidence A named vector. The names are the variabes and the elements
+#' are the evidence
 #' @param flow Either "sum" or "max"
 #' @param propagate Either "no", "collect" or "full".
 #' @return A \code{jt} object
-#' @seealso \code{\link{query_belief}}, \code{\link{mpe}}, \code{\link{get_cliques}}
+#' @seealso \code{\link{query_belief}}, \code{\link{mpe}},
+#' \code{\link{get_cliques}}, \code{\link{get_clique_root}},
+#' \code{\link{propagate}}
 #' @examples
 #'
 #' # Setting up the network
@@ -37,7 +40,12 @@
 #'
 #' # Compilation
 #' # -----------
-#' cp <- compile(asia, g)
+#' cl <- cpt_list(asia, g) # Checking and conversion
+#' cp <- compile(cl)
+#'
+#' # After the network has been compiled, the graph has been triangulated and
+#' # moralized. Furthermore, all conditional probability tables (CPTs) has been
+#' # designated one of the cliques (in the triangulated and moralized graph).
 #'
 #' # Example 1: sum-flow without evidence
 #' # ------------------------------------
@@ -47,11 +55,16 @@
 #' query_belief(jt1, c("E", "L", "T"))
 #' query_belief(jt1, c("B", "D", "E"), type = "joint")
 #'
+#'
+#' # Notice, that jt1 is equivalent to:
+#' # jt1 <- jt(cp, propagate = "no")
+#' # jt1 <- propagate(jt1, prop = "full")
+#' # That is; it is possible to postpone the actual propagation
+#' 
 #' # Example 2: sum-flow with evidence
 #' # ---------------------------------
 #' e2  <- c(A = "y", X = "n")
 #' jt2 <- jt(cp, e2) 
-#' query_belief(jt2, c("E", "L", "T"))
 #' query_belief(jt2, c("B", "D", "E"), type = "joint")
 #'
 #' # Notice that, the configuration (D,E,B) = (y,y,n) has changed
@@ -64,6 +77,7 @@
 #' # ------------------------------------
 #' jt3 <- jt(cp, flow = "max")
 #' mpe(jt3)
+#'
 #' 
 #' # Example 4: max-flow with evidence
 #' # ---------------------------------
@@ -71,15 +85,16 @@
 #' jt4 <- jt(cp, e4, flow = "max")
 #' mpe(jt4)
 #' 
-#' # Notice, that S, T, B, E, X and D has changed from "n" to "y"
+#' # Notice, that T, E, S, B, X and D has changed from "n" to "y"
 #' # as a consequence of the new evidence e4
 #'
 #' 
 #' # Example 5: specifying a root node and only collect to save run time
 #' # -------------------------------------------------------------------------
 #' 
-#' # cp5 <- compile(asia, g, "X")
+#' # cp5 <- compile(cpt_list(asia, g), "X")
 #' # jt5 <- jt(cp5, propagate = "collect")
+#' # query_belief(jt5, get_cliques(jt5)$C1, "joint")
 #'
 #' # We can only query from the root clique now (clique 1)
 #' # but we have ensured that the node of interest, "X", does indeed live in
@@ -88,23 +103,16 @@
 #' # Example 6: Compiling from a list of conditional probabilities
 #' # -------------------------------------------------------------------------
 #'
-#' # 1) We need a list with CPTs which we extract from the asia2 object
+#' # * We need a list with CPTs which we extract from the asia2 object
 #' #    - the list must be named with child nodes
-#' # 2) The elements need to by an array-like object with proper dimnames
-#' # 3) The list of cpts needs to be converted into a "cpt_list" object
-#' #    - This is merely for checking if the cpts are of the correct type,
-#' #    - but also the cpts are now converted to a sparse representation
-#' #      to obtain a better runtime in the compilation and propagation phase
-#' 
+#' #    - The elements need to be array-like objects
+#'
 #' cl  <- cpt_list(asia2)
 #' cp6 <- compile(cl, save_graph = TRUE)
 #'
 #' # Inspection; see if the graph correspond to the cpts
 #' # g <- dag(cp6)
 #' # plot(g) 
-#'
-#' # Finally, cp6 is now of the same form as cp above and we can use the
-#' # junction tree algorithm
 #'
 #' jt6 <- jt(cp6)
 #' query_belief(jt6, c("either", "smoke"))
@@ -122,26 +130,75 @@ jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = "full") {
     }
   }
 
-  jt <- new_jt(x, evidence, flow)
+  j <- new_jt(x, evidence, flow)
+  attr(j, "propagated") <- "no"
 
   if (propagate == "no") {
-    return(jt)
+    return(j)
   } else if (propagate == "collect") {
-    m <- send_messages(jt, flow)    
+    m <- send_messages(j, flow)    
     while (attr(m, "direction") != "distribute") m <- send_messages(m, flow)
+    attr(m, "propagated") <- "collect"
     return(m)
   } else {
-    m <- send_messages(jt, flow)
+    m <- send_messages(j, flow)
     while (attr(m, "direction") != "full") m <- send_messages(m, flow)
+    attr(m, "propagated") <- "full"
     return(m)
   }
-  stop("propagte must be either 'no', 'collect' or full", call. = TRUE)
+  stop("propagate must be either 'no', 'collect' or full", call. = TRUE)
 }
+
+#' Propagation of junction trees
+#'
+#' Given a junction tree object, propagation is conducted
+#' 
+#' @param x A junction tree object \code{jt}
+#' @param prop Either "collect" or "full".
+#' @seealso \code{\link{jt}}
+#' @examples
+#' # See Example 1 in the 'jt' function
+#' @export
+propagate <- function(x, prop = "full") UseMethod("propagate")
+
+#' @rdname propagate
+#' @export
+propagate.jt <- function(x, prop = "full") {
+
+  if (prop == "collect") {
+
+    if (attr(x, "propagated") == "collect") return(x)
+
+    if (attr(x, "propagated") == "full") {
+      stop("the junction tree is already propageted fully", call. = FALSE)
+    }
+    
+    m <- send_messages(x, attr(x, "flow"))    
+    while (attr(m, "direction") != "distribute") m <- send_messages(m, attr(x, "flow"))
+
+    attr(m, "propagated") <- "collect"
+    return(m)
+    
+  } else if (prop == "full"){
+
+    if (attr(x, "propagated") == "full") return(x)
+    m <- send_messages(x, attr(x, "flow"))
+
+    while (attr(m, "direction") != "full") m <- send_messages(m, attr(x, "flow"))
+    attr(m, "propagated") <- "full"
+    return(m)
+  } else {
+    
+    stop("propagate must be either 'collect' or full", call. = TRUE)  
+  }
+}
+
 
 
 #' Most Probable Explanation
 #'
-#' Returns the most probable configuration given the evidence entered in the junction tree
+#' Returns the most probable explanation given the evidence entered in the
+#' junction tree
 #' 
 #' @param x A junction tree object, \code{jt}, with max-flow.
 #' @seealso \code{\link{jt}}
@@ -153,7 +210,7 @@ mpe <- function(x) UseMethod("mpe")
 #' @rdname mpe
 #' @export
 mpe.jt <- function(x) {
-  if(attr(x, "flow") != "max") stop("The flow of the junction tree is not 'max'.")
+  if (attr(x, "flow") != "max") stop("The flow of the junction tree is not 'max'.")
   attr(x, "mpe")
 }
 
@@ -164,12 +221,22 @@ mpe.jt <- function(x) {
 #' @seealso \code{\link{jt}}
 #' @examples
 #' # See Example 5 of the 'jt' function 
+#'
+#' @rdname get_cliques
 #' @export
 get_cliques <- function(x) UseMethod("get_cliques")
 
 #' @rdname get_cliques
 #' @export
 get_cliques.jt <- function(x) x$cliques
+
+#' @rdname get_cliques
+#' @export
+get_clique_root <- function(x) UseMethod("get_clique_root")
+
+#' @rdname get_cliques
+#' @export
+get_clique_root.jt <- function(x) attr(x, "clique_root")
 
 
 #' Query Evidence 
@@ -186,11 +253,10 @@ query_evidence <- function(x) UseMethod("query_evidence")
 #' @rdname query_evidence
 #' @export
 query_evidence.jt <- function(x) {
-
   if(attr(x, "flow") != "sum") {
     stop("The flow of the junction tree must be 'sum'.")
   }
-  if (attr(x, "direction") == "collect") {
+  if (attr(x, "propagated") == "no") {
     stop("In order to query the probabilty of evidence, ",
       "the junction tree must at least be propagted to ",
       "the root node.")
@@ -236,8 +302,7 @@ query_belief.jt <- function(x, nodes, type = "marginal") {
       call. = FALSE
     )
   }
-
-
+  
   node_lst <- if (type == "joint") {
     list(nodes)
   } else {
@@ -245,7 +310,7 @@ query_belief.jt <- function(x, nodes, type = "marginal") {
   }
   
   .query <- lapply(node_lst, function(z) {
-
+    
     if (has_rn) {
       sd <- setdiff(x$cliques$C1, z)
       if (!neq_empt_chr(sd)) return(x$charge$C$C1)
@@ -300,8 +365,9 @@ print.jt <- function(x, ...) {
   min_C <- min(clique_sizes)
   avg_C <- mean(clique_sizes)
 
-  cat(" A Junction Tree With",
+  cat(" Junction Tree",
     "\n -------------------------",
+    "\n  Propagated:", attr(x, "propagated"),
     "\n  Flow:", flow,
     "\n  Nodes:", nv,
     "\n  Edges:", ne, "/", nv*(nv-1)/2,

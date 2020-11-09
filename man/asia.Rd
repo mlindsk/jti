@@ -11,10 +11,11 @@ An object of class \code{tbl_df} (inherits from \code{tbl}, \code{data.frame}) w
 asia
 }
 \description{
-Small synthetic data set from Lauritzen and Spiegelhalter (1988) about lung diseases
-(tuberculosis, lung cancer or bronchitis) and visits to Asia. This copy of the data
-was taken from the R package "bnlearn" where all values "yes" have been converted to
-"y" and all values "no" have been converted to "n".
+Small synthetic data set from Lauritzen and Spiegelhalter (1988) about lung
+diseases (tuberculosis, lung cancer or bronchitis) and visits to Asia. This
+copy of the data was taken from the R package "bnlearn" where all values
+"yes" have been converted to "y" and all values "no" have been converted
+to "n".
 }
 \details{
 \describe{
