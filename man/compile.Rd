@@ -5,9 +5,9 @@
 \alias{compile.cpt_list}
 \title{Compile information}
 \usage{
-compile(x, root_node = "", save_graph = FALSE)
+compile(x, root_node = "", save_graph = FALSE, opt = "min_fill")
 
-\method{compile}{cpt_list}(x, root_node = "", save_graph = FALSE)
+\method{compile}{cpt_list}(x, root_node = "", save_graph = FALSE, opt = "min_fill")
 }
 \arguments{
 \item{x}{An object returned from \code{cpt_list}}
@@ -16,6 +16,9 @@ compile(x, root_node = "", save_graph = FALSE)
 clique (the first clique)}
 
 \item{save_graph}{Logical.}
+
+\item{opt}{The optimization strategy used for triangulation. Either
+'min_fill' or 'min_sp'}
 }
 \description{
 Compiled objects are used as building blocks for junction tree inference

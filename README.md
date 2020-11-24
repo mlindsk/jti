@@ -5,6 +5,7 @@ jti: Junction Tree Inference
 
 [![R
 buildstatus](https://github.com/mlindsk/jti/workflows/R-CMD-check/badge.svg)](https://github.com/mlindsk/jti/actions)
+[![](https://www.r-pkg.org/badges/version/jti?color=green)](https://cran.r-project.org/package=jti)
 <!-- badges: end -->
 
 ## About
@@ -84,10 +85,10 @@ cp
 #>  Compiled network 
 #>  ------------------------- 
 #>   Nodes: 8 
-#>   Cliques: 5 
-#>    - max: 4 
+#>   Cliques: 6 
+#>    - max: 3 
 #>    - min: 2 
-#>    - avg: 2.8 
+#>    - avg: 2.67 
 #>   <charge, list> 
 #>  -------------------------
 # plot(dag(cp)) # Should give the same as plot(g)
@@ -107,12 +108,12 @@ jt1
 #>  ------------------------- 
 #>   Propagated: full 
 #>   Flow: sum 
-#>   Nodes: 5 
-#>   Edges: 4 / 10 
-#>   Cliques: 5 
-#>    - max: 4 
+#>   Nodes: 6 
+#>   Edges: 5 / 15 
+#>   Cliques: 6 
+#>    - max: 3 
 #>    - min: 2 
-#>    - avg: 2.8 
+#>    - avg: 2.67 
 #>   <jt, list> 
 #>  -------------------------
 plot(jt1)
@@ -256,11 +257,16 @@ plot(dag(cp6))
 
 ``` r
 jt6 <- jt(cp6)
-query_belief(jt6, c("either", "smoke"), type = "joint")
-#>      either
-#> smoke      yes       no
-#>   yes 0.054680 0.445320
-#>   no  0.010148 0.489852
+query_belief(jt6, c("either", "smoke"))
+#> $either
+#> either
+#>      yes       no 
+#> 0.064828 0.935172 
+#> 
+#> $smoke
+#> smoke
+#> yes  no 
+#> 0.5 0.5
 ```
 
 ## Example 7: Fitting a decomposable model and apply JTA

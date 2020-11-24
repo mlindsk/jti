@@ -6,8 +6,9 @@
 \alias{jti-package}
 \title{jti: Junction Tree Inference}
 \description{
-Minimal and memory efficient implementaion of the junction tree
-algorithm using the Laurtizen-Spiegelhalter scheme.
+Minimal and memory efficient implementation of the junction tree
+algorithm using the Lauritzen-Spiegelhalter scheme. S. L. Lauritzen
+and D. J. Spiegelhalter (1988).
 }
 \seealso{
 Useful links:

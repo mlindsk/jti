@@ -106,9 +106,11 @@ mpe(jt4)
 # Example 5: specifying a root node and only collect to save run time
 # -------------------------------------------------------------------------
 
-# cp5 <- compile(cpt_list(asia, g), "X")
-# jt5 <- jt(cp5, propagate = "collect")
-# query_belief(jt5, get_cliques(jt5)$C1, "joint")
+\donttest{
+  cp5 <- compile(cpt_list(asia, g), "X")
+  jt5 <- jt(cp5, propagate = "collect")
+  query_belief(jt5, get_cliques(jt5)$C1, "joint")
+}
 
 # We can only query from the root clique now (clique 1)
 # but we have ensured that the node of interest, "X", does indeed live in

@@ -51,10 +51,6 @@ triangulate_igraph <- function(g) {
 }
 
 
-moralize_and_triangulate_igraph <- function(g, par) {
-  triangulate_igraph(moralize_igraph(g, par))
-}
-
 ## construct_cliques_and_parents <- function(adj, root_node = "") {
 ##   rip_ <- rip(adj, start_node = root_node, check = FALSE)
 ##   cliques <- rip_$C

@@ -33,8 +33,7 @@ cpt_list <- function(x, g = NULL) UseMethod("cpt_list")
 #' @rdname cpt_list
 #' @export
 cpt_list.list <- function(x, g = NULL) { 
-  # x: list of cpts with dimnames
-    
+
   if (!is_named_list(x)) {
     stop(
       "x must be a named list of cpts. ",
@@ -126,26 +125,35 @@ cpt_list.data.frame <- function(x, g) {
 #' @param root_node A node for which we require it to live in the root
 #' clique (the first clique)
 #' @param save_graph Logical.
+#' @param opt The optimization strategy used for triangulation. Either
+#' 'min_fill' or 'min_sp'
 #' @examples
 #' cptl <- cpt_list(asia2)
 #' compile(cptl)
 #' @export
-compile <- function(x, root_node = "", save_graph = FALSE) UseMethod("compile")
+compile <- function(x, root_node = "", save_graph = FALSE, opt = "min_fill") UseMethod("compile")
 
 #' @rdname compile
 #' @export
-compile.cpt_list <- function(x, root_node = "", save_graph = FALSE) {
+compile.cpt_list <- function(x, root_node = "", save_graph = FALSE, opt = "min_fill") {
 
   g       <- attr(x, "graph")
   parents <- attr(x, "parents")
 
-  gmt     <- moralize_and_triangulate_igraph(g, parents)
-  adj_mat <- igraph::as_adjacency_matrix(gmt)
-  adj_lst <- as_adj_lst(adj_mat)
+  gm      <- moralize_igraph(g, parents)
+  gmt     <- triangulate_adjacency_matrix(
+   igraph::as_adjacency_matrix(gm),
+   .map_int(attr(x, "dim_names"), length),
+   opt
+  )
+
+  # gmt <- igraph::as_adjacency_matrix(triangulate_igraph(moralize_igraph(g, parents)))
+
+  adj_lst <- as_adj_lst(gmt)
 
   # cliques_int is needed to construct the junction tree in new_jt -> new_schedule
-  dimnames(adj_mat) <- lapply(dimnames(adj_mat), function(x) 1:nrow(adj_mat))
-  adj_lst_int       <- as_adj_lst(adj_mat)
+  dimnames(gmt) <- lapply(dimnames(gmt), function(x) 1:nrow(gmt))
+  adj_lst_int       <- as_adj_lst(gmt)
 
   root_node_int <- ifelse(root_node != "", as.character(match(root_node, names(adj_lst))), "")
   cliques_int <- lapply(rip(adj_lst_int, root_node_int)$C, as.integer)
@@ -170,12 +178,19 @@ compile.cpt_list <- function(x, root_node = "", save_graph = FALSE) {
 #' Retrieve the DAG from a compiled object
 #'
 #' @param x A compiled object
-#' 
+#' @return A dag as an \code{igraph} object
+
+#' @rdname dag
 #' @export
 dag <- function(x) UseMethod("dag")
 
+#' @rdname dag
 #' @export
 dag.charge <- function(x) attr(x, "graph")
+
+#' @rdname dag
+#' @export
+dag.cpt_list <- function(x) attr(x, "graph")
 
 ## #' @export
 ## triangulate.igraph <- function(g) triangulate_igraph(g)

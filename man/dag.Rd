@@ -2,12 +2,21 @@
 % Please edit documentation in R/api_compile.R
 \name{dag}
 \alias{dag}
+\alias{dag.charge}
+\alias{dag.cpt_list}
 \title{DAG}
 \usage{
 dag(x)
+
+\method{dag}{charge}(x)
+
+\method{dag}{cpt_list}(x)
 }
 \arguments{
 \item{x}{A compiled object}
+}
+\value{
+A dag as an \code{igraph} object
 }
 \description{
 Retrieve the DAG from a compiled object
