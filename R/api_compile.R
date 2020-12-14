@@ -124,30 +124,47 @@ cpt_list.data.frame <- function(x, g) {
 #' @param x An object returned from \code{cpt_list}
 #' @param root_node A node for which we require it to live in the root
 #' clique (the first clique)
+#' @param joint_vars A vector of variables for which we require to be in
+#' the same clique
 #' @param save_graph Logical.
 #' @param opt The optimization strategy used for triangulation. Either
 #' 'min_fill' or 'min_sp'
+#' @details The Junction Tree Algorithm performs both a forward and inward
+#' message passsing (collect and distribute). However, when the forward
+#' phase is finish, the root clique potential is guaranteed to be the
+#' joint pmf over the variables involved in the root clique. Thus, if
+#' it is known in advance that a specific variable is of interest, the
+#' algortihm can be terminated after the forward phase. Use the \code{root_node}
+#' to specify such a variable.
+#'
+#' Moreover, if interest is in some joint pmf for variables that end up
+#' being in different cliques these variables must be specified in advance
+#' using the \code{joint_vars} argument. The compilation step then
+#' adds edges between all of these variables to ensure that at least one
+#' clique contains all of them.
 #' @examples
 #' cptl <- cpt_list(asia2)
-#' compile(cptl)
+#' compile(cptl, joint_vars = c("bronc", "tub"))
 #' @export
-compile <- function(x, root_node = "", save_graph = FALSE, opt = "min_fill") UseMethod("compile")
+compile <- function(x, root_node = "", joint_vars = NULL, save_graph = FALSE, opt = "min_fill") {
+  UseMethod("compile")
+}
 
 #' @rdname compile
 #' @export
-compile.cpt_list <- function(x, root_node = "", save_graph = FALSE, opt = "min_fill") {
+compile.cpt_list <- function(x, root_node = "", joint_vars = NULL, save_graph = FALSE, opt = "min_fill") {
 
   g       <- attr(x, "graph")
   parents <- attr(x, "parents")
 
   gm      <- moralize_igraph(g, parents)
+  if (!is.null(joint_vars)) gm <- add_joint_vars_igraph(gm, joint_vars)
+
   gmt     <- triangulate_adjacency_matrix(
    igraph::as_adjacency_matrix(gm),
    .map_int(attr(x, "dim_names"), length),
    opt
   )
-
-  # gmt <- igraph::as_adjacency_matrix(triangulate_igraph(moralize_igraph(g, parents)))
 
   adj_lst <- as_adj_lst(gmt)
 
@@ -171,6 +188,7 @@ compile.cpt_list <- function(x, root_node = "", save_graph = FALSE, opt = "min_f
   if (save_graph) attr(out, "graph") <- g
   out
 }
+
 
 
 #' DAG

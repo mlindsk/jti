@@ -46,6 +46,17 @@ moralize_igraph <- function(g, parents) {
   g
 }
 
+add_joint_vars_igraph <- function(g, joint_vars) {
+  if (length(joint_vars) < 1) return(g)
+  pairs <- utils::combn(joint_vars, 2,  simplify = FALSE)
+  for (ps in pairs) {
+    if (!igraph::are_adjacent(g, ps[1], ps[2])) {
+      g <- g + igraph::edge(ps[1], ps[2]) 
+    }
+  }
+  g
+}
+
 triangulate_igraph <- function(g) {
   igraph::is.chordal(g, fillin = FALSE, newgraph = TRUE)$newgraph
 }

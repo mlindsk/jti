@@ -58,8 +58,30 @@ struct hypergraph {
   void dfs_detect_cycle(int src);
   void dfs_root_clique_tree(int src); 
   void kruskal();
+
+  // For debugging
+  // void show_clique_tree();
+  // void show_edges();
   
 };
+
+// void hypergraph::show_edges() {
+//   for (auto & e : edges) {
+//     auto p = e.second;
+//     auto w = e.first;
+//     std::cout << "(" << p.first << ", " << p.second << ") : " << w << "\n";
+//   }
+// }
+
+// void hypergraph::show_clique_tree() {
+//   for (auto & e : clique_tree) {
+//     std::cout << e.first << " : ";
+//     for (auto & u : e.second) {
+//       std::cout << u << ", ";
+//     }
+//     std::cout << "\n";
+//   }
+// }
 
 void hypergraph::reset_dfs_variable() {
   parent.clear();
@@ -110,11 +132,11 @@ void hypergraph::kruskal() {
     dfs_detect_cycle(node);
     if (has_cycle) {
       clique_tree = tmp_clique_tree;
-    } else {
-      n_edges_added += 1;
+    } else { 
+     n_edges_added += 1;
     }
     reset_dfs_variable();
-    if (n_edges_added == n_edges - 1) return;
+    if (n_edges_added == nodes.size() - 1) return;
   }
 }
 
