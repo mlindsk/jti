@@ -1,8 +1,12 @@
-## jti v0.5.2.9999 (xxxx-yy-zz)
+## jti v0.6.0 (2020-12-16)
 
  * There was a bug in the creation of the junction tree when calling Kruskals algorithm.
+ 
  * It is now possible to specify variables of interest in advance, such that we are 
  guaranteed to be able to query the joint pmf of these variables.
+ * Some refactoring making compilation much faster. When potentials is assigned to
+ a clique we no longer start by creating a unity table and then multiply. This was killing
+ the advantage of the sparsity.
  
 ## jti v0.5.2 (2020-11-24)
 

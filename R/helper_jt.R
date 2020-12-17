@@ -247,7 +247,6 @@ new_jt <- function(x, evidence = NULL, flow = "sum") {
   
   class(jt)               <- c("jt", class(jt))
   attr(jt, "direction")   <- "collect" # collect, distribute or full
-  attr(jt, "lookup")      <- attr(x, "lookup")
   attr(jt, "flow")        <- flow
   attr(jt, "root_node")   <- attr(x, "root_node")
   attr(jt, "clique_root") <- schedule$clique_root
@@ -267,46 +266,54 @@ send_messages <- function(jt, flow = "sum") {
 
   direction <- attr(jt, "direction")
   if (direction == "full") {
-    message("The junction tree is already propagated fully. jt is returned")
+    message("The junction tree is already fully propagated. jt is returned")
     return(jt)
   }
 
   x   <- if (direction == "collect") jt$schedule$collect else jt$schedule$distribute
   lvs <- attr(x$tree, "leaves")
   par <- attr(x$tree, "parents")
-  
+
   for (k in seq_along(lvs)) {
 
     lvs_k <- lvs[k]
     par_k <- par[[k]]
     
     for (pk in par_k) {
-      
-      C_lvs_k <- x$cliques[[lvs_k]]
-      C_par_k <- x$cliques[[pk]]
-      Sk      <- intersect(C_lvs_k, C_par_k)
 
-      # TODO: Whats the point in naming them Ck etc.? Just use the index?
+      ## C_lvs_k <- x$cliques[[lvs_k]]
+      C_par_k      <- x$cliques[[pk]]
       C_lvs_k_name <- names(x$cliques)[lvs_k]
       C_par_k_name <- names(x$cliques)[pk]
-      
-      message_k_names <- setdiff(C_lvs_k, Sk)
+
+      pot_lvs_k <- jt$charge$C[[C_lvs_k_name]]
+      pot_par_k <- jt$charge$C[[C_par_k_name]]
+      message_k_names <- setdiff(names(pot_lvs_k), C_par_k)
       
       if (direction == "collect") {
-        message_k <- sparta::marg(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
-        jt$charge$C[[C_par_k_name]] <- sparta::mult(jt$charge$C[[C_par_k_name]], message_k)
-        jt$charge$C[[C_lvs_k_name]] <- sparta::div(jt$charge$C[[C_lvs_k_name]], message_k)  
+        if (inherits(pot_lvs_k, "sparta_unity")) {
+          # TODO: Implement marginalization of unities!
+          #       Should be easy with the rank attr now.
+          pot_lvs_k <- sparta::mult(
+            sparta::sparta_ones(sparta::dim_names(pot_lvs_k)),
+            attr(pot_lvs_k, "rank")
+          )
+        }
+        message_k <- sparta::marg(pot_lvs_k, message_k_names, attr(jt, "flow"))
+        jt$charge$C[[C_par_k_name]] <- sparta::mult(pot_par_k, message_k)
+        jt$charge$C[[C_lvs_k_name]] <- sparta::div(pot_lvs_k, message_k)
       }
 
       if (direction == "distribute") {
         if (attr(jt, "flow") == "max") {
 
-          ## Find the max cell and change the potential before sending the information:
-          max_idx  <- sparta::which_max_idx(jt$charge$C[[C_lvs_k_name]])
-          max_cell <- sparta::which_max_cell(jt$charge$C[[C_lvs_k_name]])
+          # Find the max cell and change the potential
+          # before sending the information:
+          max_idx  <- sparta::which_max_idx(pot_lvs_k)
+          max_cell <- sparta::which_max_cell(pot_lvs_k)
           max_mat  <- jt$charge$C[[C_lvs_k_name]][, max_idx, drop = FALSE]
-          max_val  <- attr(jt$charge$C[[C_lvs_k_name]], "vals")[max_idx]
-          max_dn   <- attr(jt$charge$C[[C_lvs_k_name]], "dim_names")
+          max_val  <- attr(pot_lvs_k, "vals")[max_idx]
+          max_dn   <- attr(pot_lvs_k, "dim_names")
 
           jt$charge$C[[C_lvs_k_name]] <- sparta::sparta_struct(
             max_mat,
@@ -317,13 +324,13 @@ send_messages <- function(jt, flow = "sum") {
         }
 
         # Send the message
-        message_k <- sparta::marg(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
-        jt$charge$C[[C_par_k_name]] <- sparta::mult(jt$charge$C[[C_par_k_name]], message_k)
+        message_k <- sparta::marg(pot_lvs_k, message_k_names, attr(jt, "flow"))
+        jt$charge$C[[C_par_k_name]] <- sparta::mult(pot_par_k, message_k)
         jt$charge$S[[paste("S", pk, sep = "")]] <- message_k
         
         if (attr(jt, "flow") == "max") {
-          ## Record the max cell for the parent potential
-          max_cell <- sparta::which_max_cell(jt$charge$C[[C_par_k_name]])
+          # Record the max cell for the parent potential
+          max_cell <- sparta::which_max_cell(pot_par_k)
           attr(jt, "mpe")[names(max_cell)] <- max_cell
         }
       }
