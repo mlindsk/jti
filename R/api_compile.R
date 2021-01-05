@@ -160,6 +160,23 @@ compile.cpt_list <- function(x, root_node = "", joint_vars = NULL, save_graph = 
   gm      <- moralize_igraph(g, parents)
   if (!is.null(joint_vars)) gm <- add_joint_vars_igraph(gm, joint_vars)
 
+  ## browser()
+  ## M   <- igraph::as_adjacency_matrix(gm)
+  ## eg  <- elim_game(M)
+  ## mm  <- mint(eg[[1]], eg[[3]])
+
+  ## is_minimal(eg[[1]], eg$new_graph)
+  ## is_minimal(mm[[1]], mm[[2]])
+
+  ## length(eg[[1]])
+  ## length(mm[[1]])
+
+  ## identical(unname(eg[[1]]), mm[[1]])
+  
+  ## plot(igraph::graph_from_adjacency_matrix(eg[[3]], "undirected"), vertex.label = NA, vertex.size = 1)
+  ## plot(igraph::graph_from_adjacency_matrix(mm[[2]], "undirected"), vertex.label = NA, vertex.size = 1)
+  ## plot(gm)
+  
   gmt     <- triangulate_adjacency_matrix(
    igraph::as_adjacency_matrix(gm),
    .map_int(attr(x, "dim_names"), length),
