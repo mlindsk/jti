@@ -1,0 +1,102 @@
+new_mpd <- function(graph) {
+  # graph: undirected adjacency matrix
+
+  # Find minimal triangulation and construct junction tree
+  eg  <- elim_game(new_min_fill_triang(graph))
+  gmt <- thin_triang(eg[[1]], eg[[2]])[[1]]
+  ## dimnames(gmt) <- lapply(dimnames(gmt), function(x) 1:nrow(gmt))
+  ## adj_lst_int   <- as_adj_lst(gmt)
+  ## cliques_int   <- lapply(rip(adj_lst_int, "")$C, as.integer)
+  cliques_int <- cliques_mat_int_(gmt, NULL)
+  n_cliques   <- length(cliques_int)
+
+  # Vector of flags that indicate if a prime is flawed or not
+  flawed <- rep(FALSE, n_cliques)
+
+  # TODO: Make a rip_int to put directly in here
+  rjt_minimal <- rooted_junction_tree(cliques_int)
+  jt_minimal  <- rjt_minimal[[1]] + rjt_minimal[[2]]
+  jt_inwards  <- rjt_minimal[[1]]
+  jt_collect  <- jt_inwards
+
+  index_vector_jt    <- 1:n_cliques
+  index_vector_prune <- 1:n_cliques
+
+  # Note: jt_inwards is the inwards junction tree used for pruning/merging
+  #       That is, jt_inwards is the 1x1 matrix of 0L at the end.
+  #       jt_collect is the resulting MPD junction tree for collecting.
+  #
+  #       The index vectors are used to align true indices between
+  #       jt_inwards and jt_collect.
+
+  # Propagate through the mpd tree to find incomplete separators
+  while (n_cliques > 1L) {
+
+    lvs <- leaves_jt(jt_inwards)
+    par <- parents_jt(jt_inwards, lvs)
+    to_merge <- list()
+
+    for (k in seq_along(lvs)) {
+
+      # Convert index in jt_inwards to true index in jt_collect
+      i <- index_vector_prune[lvs[k]]
+      j <- index_vector_prune[par[[k]]]
+
+      # Find the true clique index in jt_collect
+      ci_idx <- match(i, index_vector_jt)
+      cj_idx <- match(j, index_vector_jt)
+      
+      ci <- cliques_int[[ci_idx]]
+      cj <- cliques_int[[cj_idx]]
+      sep <- intersect(ci, cj)
+      sep_sub_mat <- try(graph[sep, sep, drop = FALSE])
+      
+      N <- ncol(sep_sub_mat)
+      is_complete <- sum(sep_sub_mat) == N * (N - 1)
+
+      # Is the separator complete in the (moral) graph
+      if (!is_complete) {
+        to_merge <- push(to_merge, c(ci_idx, cj_idx))
+      }
+    }
+
+    # Merge those cliques for which their separator
+    # is incomplete in the moral graph. The new clique
+    # index is j and i gets deleted
+    for (pair in to_merge) {
+      i <- pair[1] 
+      j <- pair[2]
+      
+      col_i    <- jt_collect[, i]
+      col_j    <- jt_collect[, j]
+      col_j[i] <- 0L
+      col_i[j] <- 0L
+
+      jt_collect[, j]  <- col_j + col_i
+      cliques_int[[j]] <- union(cliques_int[[j]], cliques_int[[i]])
+      flawed[j] <- TRUE
+    }
+
+    # Delete those leaves that are merged
+    del_idx <- .map_int(to_merge, "[", 1)
+    if (neq_empt_int(del_idx)) {
+      jt_collect           <- jt_collect[-del_idx, -del_idx, drop = FALSE]
+      cliques_int[del_idx] <- NULL
+      index_vector_jt      <- index_vector_jt[-del_idx]
+      flawed               <- flawed[-del_idx] 
+    }
+
+    # Prune: delete the leave nodes
+    jt_inwards          <- jt_inwards[-lvs, -lvs, drop = FALSE]
+    n_cliques           <- ncol(jt_inwards)
+    index_vector_prune  <- index_vector_prune[-lvs]
+  }
+
+  list(
+    primes_int   = cliques_int,
+    flawed       = flawed,
+    jt_collect   = jt_collect
+  )
+}
+
+

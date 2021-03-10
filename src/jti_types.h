@@ -8,6 +8,8 @@
 #include <math.h>        // For: log
 #include <map>           // For: count_unique
 #include <unordered_map> // For: dfs, mcs, count_unique
+#include <stack>         // For: dfs procedure
+#include <queue>         // For; bfs procedure
 #include <RcppArmadillo.h>
 
 // [[Rcpp::plugins(cpp11)]]

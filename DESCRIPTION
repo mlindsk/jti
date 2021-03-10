@@ -1,6 +1,6 @@
 Package: jti
 Title: Junction Tree Inference
-Version: 0.6.0
+Version: 0.6.0.9999
 Date: 2020-11-24
 Authors@R: 
     person(given = "Mads",

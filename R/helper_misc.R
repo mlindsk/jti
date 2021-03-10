@@ -19,14 +19,17 @@
 ## }
 
 ## GRAPHS
-as_adj_lst <- function(A) {
-  names_ <- colnames(A)
+as_adj_lst <- function(A, indices = FALSE) {
+  # indices: If true, elements are vectors or indices
+  #          else the names provided in dimnames
+  names_ <- if (!indices) colnames(A) else 1:ncol(A)
   out <- lapply(seq_along(names_), function(r) {
     names_[as.logical(A[, r])]
   })
   names(out) <- names_
   out
 }
+
 
 as_adj_mat <- function(adj) {
   # TODO: Convert to c++ function using arma::Mat
@@ -40,6 +43,35 @@ as_adj_mat <- function(adj) {
     A[d, idx] <- 1L
   }
   A
+}
+
+subgraph <- function(x, g) {
+  # x: vector of nodes to delete - either character or indices
+  if (inherits(g, "matrix")) {
+    keepers <- if (inherits(x, "character")) {
+      setdiff(dimnames(g)[[1]], x)
+    } else {
+      setdiff(1:ncol(g), x)
+    }
+    g <- g[keepers, keepers]
+    return(g)
+  }
+  else if (inherits(g, "list")) {
+    g <- if (inherits(x, "character")) {
+      g[-match(x, names(g))]
+    } else {
+      g[-x]
+    }
+    g <- lapply(g, function(e) {
+      rm_idx <- as.vector(stats::na.omit(match(x, e)))
+      if (neq_empt_int(rm_idx)) return(e[-rm_idx])
+      return(e)
+    })
+    return(g)
+  }
+  else {
+    stop("g must either be a matrix of an adjacency list.", call. = FALSE)
+  }
 }
 
 ## MISC

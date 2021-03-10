@@ -1,3 +1,8 @@
+## jti 0.6.0.9999 (2021-xx-yy)
+
+ * New triangulation method exploiting sparsity
+ * Optimized propagation by avoiding all those unity tables. That is, when a message is sent to a unity table no multiplication is performed; the updated potential just becomes the message.
+
 ## jti v0.6.0 (2020-12-16)
 
  * There was a bug in the creation of the junction tree when calling Kruskals algorithm.

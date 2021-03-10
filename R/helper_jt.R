@@ -139,8 +139,7 @@ prune_jt <- function(jt) {
 
       # Normalize clique_root
       cr <- attr(jt, "clique_root")
-      probability_of_evidence <- sum(sparta::vals(jt$charge$C[[cr]]))
-      attr(jt, "probability_of_evidence") <- probability_of_evidence
+      attr(jt, "probability_of_evidence") <- sum(sparta::vals(jt$charge$C[[cr]]))
       jt$charge$C[[cr]] <- sparta::normalize(jt$charge$C[[cr]])
 
     } else {
@@ -291,17 +290,13 @@ send_messages <- function(jt, flow = "sum") {
       message_k_names <- setdiff(names(pot_lvs_k), C_par_k)
       
       if (direction == "collect") {
-        if (inherits(pot_lvs_k, "sparta_unity")) {
-          # TODO: Implement marginalization of unities!
-          #       Should be easy with the rank attr now.
-          pot_lvs_k <- sparta::mult(
-            sparta::sparta_ones(sparta::dim_names(pot_lvs_k)),
-            attr(pot_lvs_k, "rank")
-          )
-        }
+
+        par_is_unity <- inherits(pot_par_k, "sparta_unity")
         message_k <- sparta::marg(pot_lvs_k, message_k_names, attr(jt, "flow"))
-        jt$charge$C[[C_par_k_name]] <- sparta::mult(pot_par_k, message_k)
+
+        jt$charge$C[[C_par_k_name]] <- if (par_is_unity) message_k else sparta::mult(pot_par_k, message_k)
         jt$charge$C[[C_lvs_k_name]] <- sparta::div(pot_lvs_k, message_k)
+        
       }
 
       if (direction == "distribute") {

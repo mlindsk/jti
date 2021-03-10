@@ -42,15 +42,17 @@ struct hypergraph {
 	std::vector<int> ci  = cliques[i];
 	std::vector<int> cj  = cliques[j];
 	std::vector<int> sij = int_set_intersect(ci, cj);
-	if (!sij.empty()) {
-	  edge_pair new_edge = std::make_pair(-sij.size(), std::make_pair(i,j));
-	  edges.push_back(new_edge);
-	}
+	// if (!sij.empty()) {
+	// std::cout << sij.size() << "\n";
+	edge_pair new_edge = std::make_pair(-sij.size(), std::make_pair(i,j));
+	edges.push_back(new_edge);
+	//}
       }
     }
 
     // Sort the edges in decending order to prepare for kruskal
-    std::sort(edges.begin(), edges.end()); 
+    std::sort(edges.begin(), edges.end());
+    // show_edges();
   }
 
   // Member funcs
@@ -164,6 +166,9 @@ Rcpp::List rooted_junction_tree(Rcpp::List cliques, int root = 0) {
   
   hypergraph g(cliques); // - 1 to compensate for the R side
   g.kruskal();
+  // Debugging:
+  // g.show_clique_tree();
+  
   g.dfs_root_clique_tree(root - 1);
   return Rcpp::List::create(_["collect"]     = g.rooted_junction_tree,
 			    _["distribute"]  = g.rooted_junction_tree.t(),

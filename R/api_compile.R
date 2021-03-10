@@ -114,7 +114,6 @@ cpt_list.data.frame <- function(x, g) {
     graph = g,
     class = c("cpt_list", "list")
   )
-
 }
 
 #' Compile information
@@ -127,8 +126,10 @@ cpt_list.data.frame <- function(x, g) {
 #' @param joint_vars A vector of variables for which we require to be in
 #' the same clique
 #' @param save_graph Logical.
-#' @param opt The optimization strategy used for triangulation. Either
-#' 'min_fill' or 'min_sp'
+#' @param tri The optimization strategy used for triangulation. Either
+#' one of 'min_nei', 'min_fill', 'min_sp', 'sparse', 'ord', 'minimal'
+#' @param alpha If tri equals 'ord' one must supply an ordering for use
+#' during triangulation 
 #' @details The Junction Tree Algorithm performs both a forward and inward
 #' message passsing (collect and distribute). However, when the forward
 #' phase is finish, the root clique potential is guaranteed to be the
@@ -146,51 +147,62 @@ cpt_list.data.frame <- function(x, g) {
 #' cptl <- cpt_list(asia2)
 #' compile(cptl, joint_vars = c("bronc", "tub"))
 #' @export
-compile <- function(x, root_node = "", joint_vars = NULL, save_graph = FALSE, opt = "min_fill") {
+compile <- function(x,
+                    root_node  = "",
+                    joint_vars = NULL,
+                    save_graph = FALSE,
+                    tri        = "minimal",
+                    alpha      = NULL
+                    ) {
   UseMethod("compile")
 }
 
 #' @rdname compile
 #' @export
-compile.cpt_list <- function(x, root_node = "", joint_vars = NULL, save_graph = FALSE, opt = "min_fill") {
+compile.cpt_list <- function(x,
+                             root_node = "",
+                             joint_vars = NULL,
+                             save_graph = FALSE,
+                             tri = "minimal",
+                             alpha = NULL) {
 
+  if (tri %ni% c("min_nei", "min_fill", "min_sp", "sparse", "alpha", "minimal")) {
+    stop(
+      "tri must be one of min_nei, min_fill, min_sp, sparse, alpha, minimal",
+      call. = FALSE
+    )
+  }
+
+  # TODO:
+  # if (tri == "alpha") check_alpha(alpha)
+  
   g       <- attr(x, "graph")
   parents <- attr(x, "parents")
 
   gm      <- moralize_igraph(g, parents)
   if (!is.null(joint_vars)) gm <- add_joint_vars_igraph(gm, joint_vars)
 
-  ## browser()
-  ## M   <- igraph::as_adjacency_matrix(gm)
-  ## eg  <- elim_game(M)
-  ## mm  <- mint(eg[[1]], eg[[3]])
+  # Note here: if sparse = TRUE, the run time explodes! Wonder why..
+  M       <- igraph::as_adjacency_matrix(gm, sparse = FALSE)
 
-  ## is_minimal(eg[[1]], eg$new_graph)
-  ## is_minimal(mm[[1]], mm[[2]])
-
-  ## length(eg[[1]])
-  ## length(mm[[1]])
-
-  ## identical(unname(eg[[1]]), mm[[1]])
-  
-  ## plot(igraph::graph_from_adjacency_matrix(eg[[3]], "undirected"), vertex.label = NA, vertex.size = 1)
-  ## plot(igraph::graph_from_adjacency_matrix(mm[[2]], "undirected"), vertex.label = NA, vertex.size = 1)
-  ## plot(gm)
-  
-  gmt     <- triangulate_adjacency_matrix(
-   igraph::as_adjacency_matrix(gm),
-   .map_int(attr(x, "dim_names"), length),
-   opt
+  tri_obj <- switch(tri,
+    "min_nei"  = new_min_nei_triang(M),
+    "min_fill" = new_min_fill_triang(M),
+    "min_sp"   = new_min_sp_triang(M, .map_int(attr(x, "dim_names"), length)),
+    "sparse"   = new_sparse_triang(M, x),
+    "alpha"    = new_alpha_triang(M, alpha),
+    "minimal"  = new_minimal_triang(M)
   )
 
+  gmt     <- triang(tri_obj)
   adj_lst <- as_adj_lst(gmt)
 
   # cliques_int is needed to construct the junction tree in new_jt -> new_schedule
   dimnames(gmt) <- lapply(dimnames(gmt), function(x) 1:nrow(gmt))
-  adj_lst_int       <- as_adj_lst(gmt)
+  adj_lst_int   <- as_adj_lst(gmt)
 
   root_node_int <- ifelse(root_node != "", as.character(match(root_node, names(adj_lst))), "")
-  cliques_int <- lapply(rip(adj_lst_int, root_node_int)$C, as.integer)
+  cliques_int   <- lapply(rip(adj_lst_int, root_node_int)$C, as.integer)
 
   cliques <- construct_cliques(adj_lst, root_node)
   charge  <- new_charge(x, cliques, parents)
@@ -284,47 +296,5 @@ print.charge <- function(x, ...) {
     "\n   - avg:", round(avg_C, 2), 
     paste0("\n  ", cls),
     "\n -------------------------\n"
-  )
-  
+  ) 
 }
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#               gRain TRIANGULATION
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-## triangulate_grbase <- function(g, nlvls) {
-##   gu    <- igraph::as_adjacency_matrix(igraph::as.undirected(g))
-##   nlvls <- nlvls[dimnames(gu)[[2]]]
-##   tg    <- gRbase::triang(gu, control = list(method="mcwh", nLevels = nlvls))
-##   igraph::graph_from_adjacency_matrix(tg, "undirected")
-## }
-
-
-## compile_grbase <- function(x, root_node = "", save_graph = FALSE) {
-##   g       <- attr(x, "graph")
-##   parents <- attr(x, "parents")
-
-##   nlvls   <- jti:::.map_int(attr(x, "dim_names"), length)
-##   gmt     <- triangulate_grbase(jti:::moralize_igraph(g, parents), nlvls)
-##   adj_mat <- igraph::as_adjacency_matrix(gmt)
-##   adj_lst <- jti:::as_adj_lst(adj_mat)
-
-##   # cliques_int is needed to construct the junction tree in new_jt -> new_schedule
-##   dimnames(adj_mat) <- lapply(dimnames(adj_mat), function(x) 1:nrow(adj_mat))
-##   adj_lst_int       <- jti:::as_adj_lst(adj_mat)
-##   cliques_int       <- jti:::rip(adj_lst_int)$C
-##   cliques_int       <- lapply(cliques_int, as.integer)
-
-##   cliques <- jti:::construct_cliques(adj_lst, root_node)
-##   charge  <- jti:::new_charge(x, cliques, parents)
-##   out     <- structure(
-##     list(charge = charge, cliques = cliques),
-##     root_node   = root_node,
-##     dim_names   = attr(x, "dim_names"),
-##     cliques_int = cliques_int,
-##     class       = c("charge", "list")
-##   )
-##   if (save_graph) attr(out, "graph") <- g
-##   out
-## }

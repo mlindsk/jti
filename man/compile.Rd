@@ -10,7 +10,7 @@ compile(
   root_node = "",
   joint_vars = NULL,
   save_graph = FALSE,
-  opt = "min_fill"
+  opt = "minimal"
 )
 
 \method{compile}{cpt_list}(
@@ -18,7 +18,7 @@ compile(
   root_node = "",
   joint_vars = NULL,
   save_graph = FALSE,
-  opt = "min_fill"
+  opt = "minimal"
 )
 }
 \arguments{
@@ -33,7 +33,7 @@ the same clique}
 \item{save_graph}{Logical.}
 
 \item{opt}{The optimization strategy used for triangulation. Either
-'min_fill' or 'min_sp'}
+'min_fill', 'min_sp' or 'minimal'}
 }
 \description{
 Compiled objects are used as building blocks for junction tree inference

@@ -132,6 +132,7 @@ jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = "full") {
     }
   }
 
+  # TODO: move to compile?
   j <- new_jt(x, evidence, flow)
   attr(j, "propagated") <- "no"
 

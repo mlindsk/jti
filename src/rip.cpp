@@ -13,7 +13,7 @@
 // //' @export
 // [[Rcpp::export]]
 Rcpp::List mcs(Rcpp::List & adj, std::string start_node = "", bool check = true) {
-
+  // TODO: Make an "int" version for the rooted_junction_tree
   VS  nodes = adj.names();
   int N = nodes.size();
   if (start_node == "") start_node = nodes[0];
