@@ -25,6 +25,10 @@ rooted_junction_tree <- function(cliques, root = 0L) {
     .Call(`_jti_rooted_junction_tree`, cliques, root)
 }
 
+root_clique_tree <- function(clique_tree, root) {
+    .Call(`_jti_root_clique_tree`, clique_tree, root)
+}
+
 int_set_intersect <- function(v1, v2) {
     .Call(`_jti_int_set_intersect`, v1, v2)
 }

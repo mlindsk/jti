@@ -33,7 +33,6 @@ new_sparse_triang <- function(graph, cl) {
   spt[["vars"]]                 <- vars
 
   spt[["flawed"]]               <- flawed
-  # spt[["flawed_idx"]]           <- flawed_idx # NOTE: not used?
   spt[["flawed_graphs"]]        <- flawed_graphs
   spt[["flawed_root_idx"]]      <- flawed_root_idx
   spt[["flawed_root_graph"]]    <- flawed_root_graph
@@ -46,13 +45,14 @@ new_sparse_triang <- function(graph, cl) {
 
   spt[["fill_edges"]]           <- list() # The final fill in the triangulation
   spt[["potentials"]]           <- list() # Final version - only altered in the root.
+  spt[["tmpd"]]                 <- mpd_[["jt_collect"]] + mpd_[["jt_distribute"]]
 
   # MEMBER FUNCTIONS
   # ----------------
   # update_partial_structure.sparse_triang
   # update_prime_pots.sparse_triang
+  # update_tmp_prime_pots.sparse.triang
   # propagate_perfect_primes
-  # update_root... ..?
   # root_triang.sparse_triang
   
   structure(spt, class = c("sparse_triang", "environment"))

@@ -79,6 +79,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// root_clique_tree
+arma::Mat<int> root_clique_tree(arma::Mat<int> clique_tree, int root);
+RcppExport SEXP _jti_root_clique_tree(SEXP clique_treeSEXP, SEXP rootSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::Mat<int> >::type clique_tree(clique_treeSEXP);
+    Rcpp::traits::input_parameter< int >::type root(rootSEXP);
+    rcpp_result_gen = Rcpp::wrap(root_clique_tree(clique_tree, root));
+    return rcpp_result_gen;
+END_RCPP
+}
 // int_set_intersect
 VI int_set_intersect(VI& v1, VI& v2);
 RcppExport SEXP _jti_int_set_intersect(SEXP v1SEXP, SEXP v2SEXP) {
@@ -182,6 +194,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_jti_parents", (DL_FUNC) &_jti_parents, 2},
     {"_jti_rip", (DL_FUNC) &_jti_rip, 3},
     {"_jti_rooted_junction_tree", (DL_FUNC) &_jti_rooted_junction_tree, 2},
+    {"_jti_root_clique_tree", (DL_FUNC) &_jti_root_clique_tree, 2},
     {"_jti_int_set_intersect", (DL_FUNC) &_jti_int_set_intersect, 2},
     {"_jti_set_intersect", (DL_FUNC) &_jti_set_intersect, 2},
     {"_jti_set_union", (DL_FUNC) &_jti_set_union, 2},

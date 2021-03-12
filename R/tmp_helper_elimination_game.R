@@ -29,14 +29,6 @@ new_minimal_triang <- function(x) {
 #          HELPERS TO FIND NEXT ELIMINATION NODE 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-number_of_non_zero_cells <- function(cpts) {
-  sparsity_  <- .map_dbl(cpts, function(x) {
-    sparta::sparsity(x)
-  })
-  statespace <- .map_int(cpts, function(x) length(sparta::dim_names(x)))
-  prod(sparsity_) * prod(statespace)
-}
-
 new_node_to_eliminate_sparse <- function(spt, x) {
   # x: The submatrix during elimination
   nnzc <- .map_dbl(1:ncol(x), function(k) {
@@ -61,7 +53,18 @@ new_node_to_eliminate_sparse <- function(spt, x) {
     msg_cpts <- spt$tmp_potentials$flawed_root_msg[msg_cpts_idx]
     all_cpts <- c(na_cpts, msg_cpts)
 
-    number_of_non_zero_cells(all_cpts)
+    statespace_vars <- spt$dns[unique(unlist(lapply(all_cpts, names)))]
+    statespace <- prod(.map_int(statespace_vars, length))
+    sparsity_  <- prod(.map_dbl(all_cpts, function(x) {
+      sparta::sparsity(x)
+    }))
+
+    # TODO: TRY TO MULTIPLY THE NUMBER OF VARIABLES IN THE NEW CLIQUE!
+    # Estimate of number of non-zero elements in the product
+    sparsity_ * statespace # * length(statespace_vars)^7
+
+    # Sanity check
+    # Reduce(sparta::mult, all_cpts)
   })
 
   new_node     <- which.min(nnzc)

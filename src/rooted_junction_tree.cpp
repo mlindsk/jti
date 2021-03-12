@@ -12,7 +12,7 @@ struct hypergraph {
   bool has_cycle;                                        // does clique_tree contain cycles
   arma::Mat<int> rooted_junction_tree;
 
-  // Constructor
+  // Constructor when only cliques are given
   hypergraph(Rcpp::List cliques) {
 
     // Init nodes
@@ -27,7 +27,7 @@ struct hypergraph {
     visited.resize(nodes.size());
     std::fill(visited.begin(), visited.end(), false);
 
-    // Sort the elements so int_set_intersect dosent need to do it every single time
+    // Sort the elements so int_set_intersect doesent need to do it every single time
     int nc = cliques.size();
     for (int i = 0; i < nc; i++) {
       std::vector<int> cs = cliques[i];
@@ -53,6 +53,35 @@ struct hypergraph {
     // Sort the edges in decending order to prepare for kruskal
     std::sort(edges.begin(), edges.end());
     // show_edges();
+  }
+
+  // constructor when the clique tree is known but we just want to root it
+  hypergraph(arma::Mat<int> ct) {
+
+    int N = ct.n_cols;
+    
+    // convert ct to unordered_map
+    std::unordered_map<int, std::vector<int>> tmp_clique_tree;
+    for (int i = 0; i < N; i++) {
+      auto col_i = ct.col(i);
+      std::vector<int> nei_i;
+      for (int j = 0; j < N; j++) {
+	if (col_i[j] != 0) {
+	  nei_i.push_back(j);
+	}
+      }
+      tmp_clique_tree[i] = nei_i;
+    }
+
+    // Init clique tree
+    clique_tree = tmp_clique_tree;
+    
+    // Init visited
+    visited.resize(N);
+    std::fill(visited.begin(), visited.end(), false);
+
+    // init empty junction tree
+    rooted_junction_tree = arma::zeros<arma::Mat<int>>(ct.n_cols, ct.n_cols);
   }
 
   // Member funcs
@@ -164,13 +193,21 @@ Rcpp::List rooted_junction_tree(Rcpp::List cliques, int root = 0) {
 
   if (root > cliques.size() || root < 1) Rcpp::stop("root must be in {1, 2, ..., #cliques}");
   
-  hypergraph g(cliques); // - 1 to compensate for the R side
+  hypergraph g(cliques);
   g.kruskal();
   // Debugging:
   // g.show_clique_tree();
   
-  g.dfs_root_clique_tree(root - 1);
+  g.dfs_root_clique_tree(root - 1);  // - 1 to compensate for the R side
   return Rcpp::List::create(_["collect"]     = g.rooted_junction_tree,
 			    _["distribute"]  = g.rooted_junction_tree.t(),
 			    _["clique_root"] = root);
+}
+
+
+// [[Rcpp::export]]
+arma::Mat<int> root_clique_tree(arma::Mat<int> clique_tree, int root) {
+    hypergraph g(clique_tree);
+    g.dfs_root_clique_tree(root-1);
+    return g.rooted_junction_tree;
 }
