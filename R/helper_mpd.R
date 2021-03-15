@@ -1,3 +1,53 @@
+cliques_mat_int_ <- function(mat, prime_ints = NULL) {
+  # prime_ints are the true indices of mat columns if considered as a submatrix
+  # of some larger matrix
+  # if NULL no conversion is made (as in new_mpd)
+
+  dimnames(mat)[[1]] <- 1:nrow(mat)
+  dimnames(mat)[[2]] <- dimnames(mat)[[1]]
+  lapply(rip(as_adj_lst(mat), "")$C, function(x) {
+    if (is.null(prime_ints)) {
+      return(as.integer(x))
+    } else {
+      # Convert to original indices
+      return(prime_ints[as.integer(x)])
+    }
+  })
+}
+
+
+#' Maximal Prime Decomposition
+#'
+#' Find the maximal prime decomposition and its associated junction tree
+#'
+#' @param graph Neighbor matrix
+#' @return
+#'
+#' - \code{prime_ints}: a list with the prime components,
+#' - \code{flawed}: indicating which prime components that are triangulated
+#' - \code{jt_collect}: the MPD junction tree prepared for collecting
+#' 
+#' @examples
+#'
+#' library(igraph)
+#' el <- matrix(c(
+#' "A", "T",
+#' "T", "E",
+#' "S", "L",
+#' "S", "B",
+#' "L", "E",
+#' "E", "X",
+#' "E", "D",
+#' "B", "D"),
+#'  nc = 2,
+#'  byrow = TRUE
+#' )
+#' 
+#' g <- igraph::graph_from_edgelist(el, directed = FALSE)
+#' A <- igraph::as_adjacency_matrix(g, sparse = FALSE)
+#' new_mpd(A)
+#' 
+#' @export
 new_mpd <- function(graph) {
   # graph: undirected adjacency matrix
 

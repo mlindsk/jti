@@ -46,10 +46,9 @@ thin_triang <- function(x, fill_edges) {
 
 triang <- function(obj) {
 
-  if (inherits(obj, "sparse_triang")) {
-    # FIXME
-    stop("not yet implemented")
-  }
+  # if (inherits(obj, "sparse_triang")) {
+  #   stop("not yet implemented")
+  # }
 
   eg  <- elim_game(obj)
   

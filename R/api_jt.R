@@ -311,10 +311,11 @@ query_belief.jt <- function(x, nodes, type = "marginal") {
   } else {
     as.list(nodes)
   }
-  
+
   .query <- lapply(node_lst, function(z) {
     
     if (has_rn) {
+      # FIXME: C1 need not be the root!
       sd <- setdiff(x$cliques$C1, z)
       if (!neq_empt_chr(sd)) return(x$charge$C$C1)
       return(sparta::marg(x$charge$C$C1, sd))
@@ -331,14 +332,16 @@ query_belief.jt <- function(x, nodes, type = "marginal") {
       stop("The function does not, at the moment, support queries of ",
         "nodes that belong to different cliques. ",
         "Use plot(x) or get_cliques(x) to see ",
-        "the cliques of the junction tree."
+        "the cliques of the junction tree.",
+        "Alternatively, use the `joint_vars` ",
+        "argument in the compilation process."
       )
     }
 
-    index_in_which_cliques <- which(in_which_cliques)
+    index_in_which_cliques     <- which(in_which_cliques)
     length_of_possible_cliques <- .map_int(x$cliques[in_which_cliques], length)
-    idx <- index_in_which_cliques[which.min(length_of_possible_cliques)]
-    pot <- x$charge$C[[idx]]
+    idx    <- index_in_which_cliques[which.min(length_of_possible_cliques)]
+    pot    <- x$charge$C[[idx]]
     rm_var <- setdiff(names(attr(pot, "dim_names")), z)
     
     return(sparta::marg(pot, rm_var))

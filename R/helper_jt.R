@@ -27,55 +27,7 @@ has_root_node <- function(x) UseMethod("has_root_node")
 
 has_root_node.jt <- function(x) attr(x, "root_node") != ""
 
-## new_schedule <- function(cliques) {
-##   nc <- length(cliques)
-##   clique_graph <- matrix(0L, nc, nc)
-##   coll_tree   <- clique_graph
-##   dist_tree   <- clique_graph
-
-##   # Alg. 4.8 - Probabilistic Expert Systems (p.55)
-##   for (i in seq_along(cliques)[-1L]) {
-##     for (j in 1:(i-1L)) {
-##       Ci   <- cliques[[i]]
-##       Cj   <- cliques[[j]]
-##       Hi_1 <- unlist(cliques[1:(i-1L)])
-##       Si   <- intersect(Ci, Hi_1)
-##       if (all(Si %in% Cj)) {
-##         clique_graph[i, j] <- 1L
-##         clique_graph[j, i] <- 1L
-##         is_new_directed_edge <- !neq_empt_int(which(coll_tree[i, ] == 1L))
-##         if (is_new_directed_edge) {
-##           coll_tree[i, j] <- 1L
-##           dist_tree[j, i] <- 1L
-##         }
-##       }
-##     }
-##   }
-
-##   coll_lvs <- leaves_jt(coll_tree)
-##   dist_lvs <- leaves_jt(dist_tree)
-
-##   attr(coll_tree, "leaves")  <- coll_lvs
-##   attr(dist_tree, "leaves")  <- dist_lvs
-
-##   attr(coll_tree, "parents") <- parents_jt(coll_tree, coll_lvs)
-##   attr(dist_tree, "parents") <- parents_jt(dist_tree, dist_lvs)
-
-##   collect    <- list(cliques = cliques, tree = coll_tree)
-##   distribute <- list(cliques = cliques, tree = dist_tree)
-  
-##   return(
-##     list(
-##       collect = collect ,
-##       distribute = distribute,
-##       clique_graph = clique_graph,
-##       clique_root = "C1"
-##     )
-##   )
-  
-## }
-
-new_schedule2 <- function(cliques_chr, cliques_int, root_node) {
+new_schedule <- function(cliques_chr, cliques_int, root_node) {
   
   # mcs promise that the root_node lives in clique one
   jrn <- if (root_node != "") 1L else 0L
@@ -161,66 +113,30 @@ prune_jt <- function(jt) {
   return(jt)
 }
 
-## Old method:
-## set_evidence_jt <- function(charge, cliques, evidence) {
-##   for (k in seq_along(charge$C)) {
-##     Ck <- names(charge$C[[k]])
-##     for (i in seq_along(evidence)) {
-##       e     <- evidence[i]
-##       e_var <- names(e)
-##       e_val <- unname(e)
-##       if (e_var %in% Ck) {
-##         m <- try(sparta::slice(charge$C[[k]], e), silent = TRUE)
-##         if (inherits(m, "try-error")) {
-##           stop(
-##             "The evidence leads to a degenerate distribution ",
-##             "since the evidence was never observed in one or ",
-##             "more of the clique potentials.",
-##             call. = FALSE
-##           )
-##         }
-##         charge$C[[k]] <- m
-##       }
-##     }
-##   }
-##   return(charge)
-## }
 
 set_evidence_jt <- function(charge, cliques, evidence) {
-
-  n_evidence   <- length(evidence)
-  n_cliques    <- length(cliques)
-  n_evidence_set <- 0L
-  
   for (k in seq_along(charge$C)) {
     Ck <- names(charge$C[[k]])
-    for (i in seq_along(evidence)) {
+    if (inherits(Ck, "sparta_unity")) next
+    es_in_ck <- which(names(evidence) %in% Ck)
+    for (i in es_in_ck) {
       e     <- evidence[i]
       e_var <- names(e)
       e_val <- unname(e)
       if (e_var %in% Ck) {
         m <- try(sparta::slice(charge$C[[k]], e), silent = TRUE)
         if (inherits(m, "try-error")) {
-          if (k == n_cliques) {
-            stop(
-              "The evidence leads to a degenerate distribution ",
-              "since some part of the evidence was never observed",
-              "in any of the the clique potentials.",
-              call. = FALSE
-            )
-          } else {
-            next
-          }
+          stop(
+            "inconsistent evidence",
+            call. = FALSE
+          )
         }
         charge$C[[k]] <- m
-        n_evidence_set <- n_evidence_set + 1L
-        if (n_evidence_set == n_evidence) return(charge)
-        next
       }
     }
   }
+  return(charge)
 }
-
 
 
 new_jt <- function(x, evidence = NULL, flow = "sum") {
@@ -232,9 +148,7 @@ new_jt <- function(x, evidence = NULL, flow = "sum") {
 
   if (!is.null(evidence)) charge <- set_evidence_jt(charge, cliques, evidence)
 
-  # schedule  <- new_schedule_grain(grain_obj)
-  # schedule  <- new_schedule(cliques)
-  schedule  <- new_schedule2(cliques, attr(x, "cliques_int"), attr(x, "root_node"))
+  schedule  <- new_schedule(cliques, attr(x, "cliques_int"), attr(x, "root_node"))
   attr(x, "cliques_int") <- NULL
 
   jt <- list(

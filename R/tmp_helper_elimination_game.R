@@ -29,51 +29,52 @@ new_minimal_triang <- function(x) {
 #          HELPERS TO FIND NEXT ELIMINATION NODE 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-new_node_to_eliminate_sparse <- function(spt, x) {
-  # x: The submatrix during elimination
-  nnzc <- .map_dbl(1:ncol(x), function(k) {
+# new_node_to_eliminate_sparse <- function(spt, x) {
+#   # x: The submatrix during elimination
+#   nnzc <- .map_dbl(1:ncol(x), function(k) {
 
-    new_node <- k
-    nei_idx <- unname(which(x[, new_node] == 1L))
-    nei_x   <- x[nei_idx, nei_idx]
-    length(nei_idx)
+#     new_node <- k
+#     nei_idx <- unname(which(x[, new_node] == 1L))
+#     nei_x   <- x[nei_idx, nei_idx]
+#     length(nei_idx)
 
-    # which messages and which non_allocated can be put into (new_node, nei_idx)
-    new_prime_chr <- colnames(x)[c(new_node, nei_idx)]
+#     # which messages and which non_allocated can be put into (new_node, nei_idx)
+#     new_prime_chr <- colnames(x)[c(new_node, nei_idx)]
 
-    na_cpts_idx <- .map_lgl(spt$tmp_potentials$non_allocated_cpts, function(cpt) {
-      all(names(cpt) %in% new_prime_chr)
-    })
+#     na_cpts_idx <- .map_lgl(spt$tmp_potentials$non_allocated_cpts, function(cpt) {
+#       all(names(cpt) %in% new_prime_chr)
+#     })
 
-    msg_cpts_idx <- .map_lgl(spt$tmp_potentials$flawed_root_msg, function(cpt) {
-      all(names(cpt) %in% new_prime_chr)
-    })
+#     msg_cpts_idx <- .map_lgl(spt$tmp_potentials$flawed_root_msg, function(cpt) {
+#       all(names(cpt) %in% new_prime_chr)
+#     })
 
-    na_cpts  <- spt$tmp_potentials$non_allocated_cpts[na_cpts_idx]
-    msg_cpts <- spt$tmp_potentials$flawed_root_msg[msg_cpts_idx]
-    all_cpts <- c(na_cpts, msg_cpts)
+#     na_cpts  <- spt$tmp_potentials$non_allocated_cpts[na_cpts_idx]
+#     msg_cpts <- spt$tmp_potentials$flawed_root_msg[msg_cpts_idx]
+#     all_cpts <- c(na_cpts, msg_cpts)
 
-    statespace_vars <- spt$dns[unique(unlist(lapply(all_cpts, names)))]
-    statespace <- prod(.map_int(statespace_vars, length))
-    sparsity_  <- prod(.map_dbl(all_cpts, function(x) {
-      sparta::sparsity(x)
-    }))
+#     statespace_vars <- spt$dns[unique(unlist(lapply(all_cpts, names)))]
+#     statespace <- prod(.map_int(statespace_vars, length))
+#     sparsity_  <- prod(.map_dbl(all_cpts, function(x) {
+#       sparta::sparsity(x)
+#     }))
 
-    # TODO: TRY TO MULTIPLY THE NUMBER OF VARIABLES IN THE NEW CLIQUE!
-    # Estimate of number of non-zero elements in the product
-    sparsity_ * statespace # * length(statespace_vars)^7
+#     # TODO: TRY TO MULTIPLY THE NUMBER OF VARIABLES IN THE NEW CLIQUE!
+#     # Estimate of number of non-zero elements in the product
+#     sparsity_ * statespace * length(statespace_vars)
 
-    # Sanity check
-    # Reduce(sparta::mult, all_cpts)
-  })
+#     # Sanity check
+#     # Reduce(sparta::mult, all_cpts)
+#   })
 
-  new_node     <- which.min(nnzc)
-  nei_idx      <- unname(which(x[, new_node] == 1L))
-  x_nei        <- x[nei_idx, nei_idx]
-  nei_complete <- sum(x_nei) == length(nei_idx) * (length(nei_idx) - 1)
+#   new_node     <- which.min(nnzc)
+#   nei_idx      <- unname(which(x[, new_node] == 1L))
+#   x_nei        <- x[nei_idx, nei_idx]
+#   nei_complete <- sum(x_nei) == length(nei_idx) * (length(nei_idx) - 1)
   
-  return(list(x_nei = x_nei, nei_idx = nei_idx, nei_complete = nei_complete, a = new_node))
-}
+#   return(list(x_nei = x_nei, nei_idx = nei_idx, nei_complete = nei_complete, a = new_node))
+# }
+
 
 new_node_to_eliminate_alpha <- function(x, alpha, x_orig_col_idx) {
   new_node <- match(alpha[1L], x_orig_col_idx)
@@ -154,11 +155,13 @@ new_node_to_eliminate_min_sp <- function(x, nlvls) {
 elim_game <- function(obj) {
   # x: adjacency matrix
 
-  x <- if (inherits(obj, "sparse_triang")) {
-    obj$flawed_root_graph
-  } else {
-    obj$x
-  }
+  # x <- if (inherits(obj, "sparse_triang")) {
+  #   obj$flawed_root_graph
+  # } else {
+  #   obj$x
+  # }
+
+  x <- obj$x
 
   # Save the input graph
   y <- x
@@ -170,15 +173,12 @@ elim_game <- function(obj) {
 
   while (ncol(x) > 1L) {
 
-    
     X <- if (inherits(obj, "min_nei_triang")) {
       new_node_to_eliminate_min_nei(x)
     } else if (inherits(obj, "min_fill_triang")) {
       new_node_to_eliminate_min_fill(x)
     } else if (inherits(obj, "min_sp_triang")) {
       new_node_to_eliminate_min_sp(x, obj$nlvls)
-    } else if (inherits(obj, "sparse_triang")) {
-      new_node_to_eliminate_sparse(obj, x)
     } else if (inherits(obj, "alpha_triang")) {
       new_node_to_eliminate_alpha(x, obj$alpha, x_orig_col_idx)
     } else if (inherits(obj, "minimal_triang")) {

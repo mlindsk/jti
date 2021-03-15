@@ -123,20 +123,22 @@ cpt_list.data.frame <- function(x, g) {
 #' @param x An object returned from \code{cpt_list}
 #' @param root_node A node for which we require it to live in the root
 #' clique (the first clique)
-#' @param joint_vars A vector of variables for which we require to be in
-#' the same clique
+#' @param joint_vars A vector of variables for which we require them
+#' to be in the same clique. Edges between all these variables are added
+#' to the moralized graph.
 #' @param save_graph Logical.
 #' @param tri The optimization strategy used for triangulation. Either
 #' one of 'min_nei', 'min_fill', 'min_sp', 'sparse', 'ord', 'minimal'
-#' @param alpha If tri equals 'ord' one must supply an ordering for use
-#' during triangulation 
+#' @param alpha If tri equals 'alpha' one must supply an ordering for use
+#' during triangulation. It should be a permutation of \code{1:<number_of_variables>}.
 #' @details The Junction Tree Algorithm performs both a forward and inward
 #' message passsing (collect and distribute). However, when the forward
-#' phase is finish, the root clique potential is guaranteed to be the
+#' phase is finished, the root clique potential is guaranteed to be the
 #' joint pmf over the variables involved in the root clique. Thus, if
 #' it is known in advance that a specific variable is of interest, the
 #' algortihm can be terminated after the forward phase. Use the \code{root_node}
-#' to specify such a variable.
+#' to specify such a variable and specify \code{propagate = "collect} in
+#' the juntion tree algortihm function \code{jt}.
 #'
 #' Moreover, if interest is in some joint pmf for variables that end up
 #' being in different cliques these variables must be specified in advance
@@ -160,21 +162,24 @@ compile <- function(x,
 #' @rdname compile
 #' @export
 compile.cpt_list <- function(x,
-                             root_node = "",
+                             root_node  = "",
                              joint_vars = NULL,
                              save_graph = FALSE,
-                             tri = "minimal",
-                             alpha = NULL) {
+                             tri        = "min_nei",
+                             alpha      = NULL) {
 
-  if (tri %ni% c("min_nei", "min_fill", "min_sp", "sparse", "alpha", "minimal")) {
+  if (tri %ni% c("min_nei", "min_fill", "min_sp", "alpha", "minimal")) {
     stop(
-      "tri must be one of min_nei, min_fill, min_sp, sparse, alpha, minimal",
+      "tri must be one of min_nei, min_fill, min_sp, alpha, minimal",
       call. = FALSE
     )
   }
 
-  # TODO:
-  # if (tri == "alpha") check_alpha(alpha)
+  if (tri == "alpha") {
+    if (!identical(sort(alpha), 1:length(attr(x, "dim_names")))) {
+      stop("invalid alpha")
+    }
+  }
   
   g       <- attr(x, "graph")
   parents <- attr(x, "parents")
@@ -189,7 +194,6 @@ compile.cpt_list <- function(x,
     "min_nei"  = new_min_nei_triang(M),
     "min_fill" = new_min_fill_triang(M),
     "min_sp"   = new_min_sp_triang(M, .map_int(attr(x, "dim_names"), length)),
-    "sparse"   = new_sparse_triang(M, x),
     "alpha"    = new_alpha_triang(M, alpha),
     "minimal"  = new_minimal_triang(M)
   )
@@ -204,6 +208,8 @@ compile.cpt_list <- function(x,
   root_node_int <- ifelse(root_node != "", as.character(match(root_node, names(adj_lst))), "")
   cliques_int   <- lapply(rip(adj_lst_int, root_node_int)$C, as.integer)
 
+  # TODO: Enter evidence before constructing the charge
+  
   cliques <- construct_cliques(adj_lst, root_node)
   charge  <- new_charge(x, cliques, parents)
   out     <- structure(

@@ -10,7 +10,8 @@ compile(
   root_node = "",
   joint_vars = NULL,
   save_graph = FALSE,
-  opt = "minimal"
+  tri = "minimal",
+  alpha = NULL
 )
 
 \method{compile}{cpt_list}(
@@ -18,7 +19,8 @@ compile(
   root_node = "",
   joint_vars = NULL,
   save_graph = FALSE,
-  opt = "minimal"
+  tri = "min_nei",
+  alpha = NULL
 )
 }
 \arguments{
@@ -27,13 +29,17 @@ compile(
 \item{root_node}{A node for which we require it to live in the root
 clique (the first clique)}
 
-\item{joint_vars}{A vector of variables for which we require to be in
-the same clique}
+\item{joint_vars}{A vector of variables for which we require them
+to be in the same clique. Edges between all these variables are added
+to the moralized graph.}
 
 \item{save_graph}{Logical.}
 
-\item{opt}{The optimization strategy used for triangulation. Either
-'min_fill', 'min_sp' or 'minimal'}
+\item{tri}{The optimization strategy used for triangulation. Either
+one of 'min_nei', 'min_fill', 'min_sp', 'sparse', 'ord', 'minimal'}
+
+\item{alpha}{If tri equals 'alpha' one must supply an ordering for use
+during triangulation. It should be a permutation of \code{1:<number_of_variables>}.}
 }
 \description{
 Compiled objects are used as building blocks for junction tree inference
@@ -41,11 +47,12 @@ Compiled objects are used as building blocks for junction tree inference
 \details{
 The Junction Tree Algorithm performs both a forward and inward
 message passsing (collect and distribute). However, when the forward
-phase is finish, the root clique potential is guaranteed to be the
+phase is finished, the root clique potential is guaranteed to be the
 joint pmf over the variables involved in the root clique. Thus, if
 it is known in advance that a specific variable is of interest, the
 algortihm can be terminated after the forward phase. Use the \code{root_node}
-to specify such a variable.
+to specify such a variable and specify \code{propagate = "collect} in
+the juntion tree algortihm function \code{jt}.
 
 Moreover, if interest is in some joint pmf for variables that end up
 being in different cliques these variables must be specified in advance
