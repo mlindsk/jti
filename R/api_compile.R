@@ -168,7 +168,7 @@ compile <- function(x,
                     evidence   = NULL,
                     root_node  = "",
                     joint_vars = NULL,
-                    tri        = "minimal"
+                    tri        = "min_fill"
                     ) {
   UseMethod("compile")
 }
