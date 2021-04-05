@@ -45,34 +45,34 @@ as_adj_mat <- function(adj) {
   A
 }
 
-subgraph <- function(x, g) {
-  # x: vector of nodes to delete - either character or indices
-  if (inherits(g, "matrix")) {
-    keepers <- if (inherits(x, "character")) {
-      setdiff(dimnames(g)[[1]], x)
-    } else {
-      setdiff(1:ncol(g), x)
-    }
-    g <- g[keepers, keepers]
-    return(g)
-  }
-  else if (inherits(g, "list")) {
-    g <- if (inherits(x, "character")) {
-      g[-match(x, names(g))]
-    } else {
-      g[-x]
-    }
-    g <- lapply(g, function(e) {
-      rm_idx <- as.vector(stats::na.omit(match(x, e)))
-      if (neq_empt_int(rm_idx)) return(e[-rm_idx])
-      return(e)
-    })
-    return(g)
-  }
-  else {
-    stop("g must either be a matrix of an adjacency list.", call. = FALSE)
-  }
-}
+# subgraph <- function(x, g) {
+#   # x: vector of nodes to delete - either character or indices
+#   if (inherits(g, "matrix")) {
+#     keepers <- if (inherits(x, "character")) {
+#       setdiff(dimnames(g)[[1]], x)
+#     } else {
+#       setdiff(1:ncol(g), x)
+#     }
+#     g <- g[keepers, keepers]
+#     return(g)
+#   }
+#   else if (inherits(g, "list")) {
+#     g <- if (inherits(x, "character")) {
+#       g[-match(x, names(g))]
+#     } else {
+#       g[-x]
+#     }
+#     g <- lapply(g, function(e) {
+#       rm_idx <- as.vector(stats::na.omit(match(x, e)))
+#       if (neq_empt_int(rm_idx)) return(e[-rm_idx])
+#       return(e)
+#     })
+#     return(g)
+#   }
+#   else {
+#     stop("g must either be a matrix of an adjacency list.", call. = FALSE)
+#   }
+# }
 
 ## MISC
 push <- function(l, el, name = NULL) {

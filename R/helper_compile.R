@@ -22,13 +22,19 @@ parents_cpt_list <- function(x) {
 
 
 graph_from_cpt_list <- function(x) {
-  pairs <- lapply(seq_along(x), function(i) {
-    child <- names(x)[i]
-    parents <- setdiff(names(attr(x[[i]], "dim_names")), child)
+  g <- igraph::make_empty_graph(n = length(x))
+  g <- igraph::set_vertex_attr(g, "label", value = names(x))
+  g <- igraph::set_vertex_attr(g, "name", value = names(x))
+  edges <- lapply(seq_along(x), function(i) {
+    child   <- names(x)[i]
+    parents <- setdiff(names(x[[i]]), child)
     as.matrix(expand.grid(parents, child, stringsAsFactors = FALSE))
   })
-  el <- do.call(rbind, pairs)
-  igraph::graph_from_edgelist(el)
+  edges <- do.call(rbind, edges)
+  for (k in 1:nrow(edges)) {
+    g <- igraph::add_edges(g, unname(edges[k, ]))
+  }
+  g
 }
 
 moralize_igraph <- function(g, parents) {
@@ -60,14 +66,6 @@ add_joint_vars_igraph <- function(g, joint_vars) {
 triangulate_igraph <- function(g) {
   igraph::is.chordal(g, fillin = FALSE, newgraph = TRUE)$newgraph
 }
-
-
-## construct_cliques_and_parents <- function(adj, root_node = "") {
-##   rip_ <- rip(adj, start_node = root_node, check = FALSE)
-##   cliques <- rip_$C
-##   names(cliques) <- paste("C", 1:length(cliques), sep = "")
-##   return(list(cliques = cliques, parents = rip_$P))
-## }
 
 construct_cliques <- function(adj, root_node = "") {
   rip_ <- rip(adj, start_node = root_node, check = FALSE)

@@ -114,29 +114,56 @@ prune_jt <- function(jt) {
 }
 
 
-set_evidence_jt <- function(charge, cliques, evidence) {
-  for (k in seq_along(charge$C)) {
-    Ck <- names(charge$C[[k]])
-    if (inherits(Ck, "sparta_unity")) next
+# set_evidence_jt <- function(charge, cliques, evidence) {
+#   for (k in seq_along(charge$C)) {
+#     Ck <- names(charge$C[[k]])
+#     if (inherits(Ck, "sparta_unity")) next
+#     es_in_ck <- which(names(evidence) %in% Ck)
+#     for (i in es_in_ck) {
+#       e     <- evidence[i]
+#       e_var <- names(e)
+#       e_val <- unname(e)
+#       if (e_var %in% Ck) {
+#         m <- try(sparta::slice(charge$C[[k]], e), silent = TRUE)
+#         if (inherits(m, "try-error")) {
+#           stop(
+#             "inconsistent evidence",
+#             call. = FALSE
+#           )
+#         }
+#         charge$C[[k]] <- m
+#       }
+#     }
+#   }
+#   return(charge)
+# }
+
+
+set_evidence <- function(x, cliques, evidence) {
+  # x: list of (sparse) potentials
+  for (k in seq_along(x)) {
+    Ck <- names(x[[k]])
+    if (inherits(x[[k]], "sparta_unity")) next
     es_in_ck <- which(names(evidence) %in% Ck)
     for (i in es_in_ck) {
       e     <- evidence[i]
       e_var <- names(e)
       e_val <- unname(e)
       if (e_var %in% Ck) {
-        m <- try(sparta::slice(charge$C[[k]], e), silent = TRUE)
+        m <- try(sparta::slice(x[[k]], e), silent = TRUE)
         if (inherits(m, "try-error")) {
           stop(
             "inconsistent evidence",
             call. = FALSE
           )
         }
-        charge$C[[k]] <- m
+        x[[k]] <- m
       }
     }
   }
-  return(charge)
+  return(x)
 }
+
 
 
 new_jt <- function(x, evidence = NULL, flow = "sum") {
@@ -146,7 +173,7 @@ new_jt <- function(x, evidence = NULL, flow = "sum") {
   charge  <- x$charge
   cliques <- x$cliques
 
-  if (!is.null(evidence)) charge <- set_evidence_jt(charge, cliques, evidence)
+  if (!is.null(evidence)) charge$C <- set_evidence(charge$C, cliques, evidence)
 
   schedule  <- new_schedule(cliques, attr(x, "cliques_int"), attr(x, "root_node"))
   attr(x, "cliques_int") <- NULL
@@ -163,6 +190,7 @@ new_jt <- function(x, evidence = NULL, flow = "sum") {
   attr(jt, "flow")        <- flow
   attr(jt, "root_node")   <- attr(x, "root_node")
   attr(jt, "clique_root") <- schedule$clique_root
+  attr(jt, "evidence")    <- attr(x, "evidence") # The aggregated evidence
   
   if (flow == "max") {
     # most probable explanation
@@ -175,7 +203,19 @@ new_jt <- function(x, evidence = NULL, flow = "sum") {
   return(jt)
 }
 
-send_messages <- function(jt, flow = "sum") {
+
+#' Send Messages in a Junction Tree
+#'
+#' Send messages from the current leaves to the current parents
+#' in a junction tree
+#' 
+#' @param jt A \code{jt} object return from the \code{jt} function
+#' @seealso \code{\link{jt}}, \code{\link{get_cliques}}, \code{\link{leaves}},
+#' \code{\link{parents}}
+#' @examples
+#' # See example 6 in the help page for the jt function
+#' @export
+send_messages <- function(jt) {
 
   direction <- attr(jt, "direction")
   if (direction == "full") {

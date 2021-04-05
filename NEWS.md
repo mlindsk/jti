@@ -1,7 +1,14 @@
-## jti 0.6.0.9999 (2021-xx-yy)
+## jti 0.7.0.9999 (xxxx-yy-zz)
 
- * New triangulation method exploiting sparsity
+ * A small bug fixed for working with undirected graphs
+
+## jti 0.7.0 (2021-04-03)
+
+ * Evidence can now be entered in the compilation process.
  * Optimized propagation by avoiding all those unity tables. That is, when a message is sent to a unity table no multiplication is performed; the updated potential just becomes the message.
+ * A procedure, =mpd= for finding maximal prime decompositions is now include included
+ * It is now possible to =triangulate= a graph before compilation in order to investigate the size of the cliques etc.
+ * Triangulation is orders of magnitudes faster now.
 
 ## jti v0.6.0 (2020-12-16)
 

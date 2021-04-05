@@ -25,7 +25,12 @@
 #' )
 #' 
 #' g <- igraph::graph_from_edgelist(el) 
-#' cpt_list(asia, g)
+#' cl <- cpt_list(asia, g)
+#' 
+#' print(cl)
+#' dim_names(cl)
+#' names(cl)
+#' plot(get_graph(cl))
 #' @export
 cpt_list <- function(x, g = NULL) UseMethod("cpt_list")
 
@@ -47,8 +52,9 @@ cpt_list.list <- function(x, g = NULL) {
   
   y <- lapply(seq_along(x), function(i) {
     l <- x[[i]]
-    class_allowed <- any(.map_lgl(sparta::allowed_class_to_sparta(), function(x) inherits(l, x)))
-    if (!class_allowed) stop("one ore more elements in x is not an array-like object")
+    # class_allowed <- any(.map_lgl(sparta::allowed_class_to_sparta(), function(x) inherits(l, x)))
+    # if (!class_allowed) stop("one ore more elements in x is not an array-like object")
+    # Should be checked automatically in as_sparta now!
     spar <- sparta::as_sparta(l)
     # This ensures, that the CPTs and dim_names have the same ordering of the lvls!
     dim_names <<- push(dim_names, attr(spar, "dim_names"))
@@ -63,11 +69,11 @@ cpt_list.list <- function(x, g = NULL) {
   if (!igraph::is_dag(g)) stop("The cpts does not induce an acyclic graph.")
 
   structure(y,
-    names = names(x),
+    names     = names(x),
     dim_names = dim_names,
-    parents = parents_cpt_list(y),
-    graph = g,
-    class = c("cpt_list", "list")
+    parents   = parents_cpt_list(y), # NOTE: Needed?
+    graph     = g,
+    class     = c("cpt_list", "list")
   )
 }
 
@@ -84,11 +90,11 @@ cpt_list.data.frame <- function(x, g) {
       stop("undirected graphs must be be decomposable")
     }
   }
-
+  
   parents <- if (is_dag) {
     parents_igraph(g)
   } else {
-    rip(as_adj_lst(igraph::as_adjacency_matrix(g)), check = FALSE)$P 
+    rip(as_adj_lst(igraph::as_adjacency_matrix(g, sparse = FALSE)), check = FALSE)$P 
   }
   
   dns <- list()
@@ -105,14 +111,14 @@ cpt_list.data.frame <- function(x, g) {
 
   dns <- unlist(dns, FALSE)
   dns <- dns[unique(names(dns))]
-
+  
   structure(
     y,
-    names = names(parents),
+    names     = names(parents),
     dim_names = dns,
-    parents = parents,
-    graph = g,
-    class = c("cpt_list", "list")
+    parents   = parents,
+    graph     = g,
+    class     = c("cpt_list", "list")
   )
 }
 
@@ -121,23 +127,22 @@ cpt_list.data.frame <- function(x, g) {
 #' Compiled objects are used as building blocks for junction tree inference
 #'
 #' @param x An object returned from \code{cpt_list}
+#' @param evidence A named vector. The names are the variabes and the elements
+#' are the evidence.
 #' @param root_node A node for which we require it to live in the root
-#' clique (the first clique)
+#' clique (the first clique).
 #' @param joint_vars A vector of variables for which we require them
 #' to be in the same clique. Edges between all these variables are added
 #' to the moralized graph.
-#' @param save_graph Logical.
 #' @param tri The optimization strategy used for triangulation. Either
-#' one of 'min_nei', 'min_fill', 'min_sp', 'sparse', 'ord', 'minimal'
-#' @param alpha If tri equals 'alpha' one must supply an ordering for use
-#' during triangulation. It should be a permutation of \code{1:<number_of_variables>}.
+#' one of 'min_nei', 'min_fill', 'min_sp', 'sparse', 'minimal'
 #' @details The Junction Tree Algorithm performs both a forward and inward
 #' message passsing (collect and distribute). However, when the forward
 #' phase is finished, the root clique potential is guaranteed to be the
 #' joint pmf over the variables involved in the root clique. Thus, if
 #' it is known in advance that a specific variable is of interest, the
 #' algortihm can be terminated after the forward phase. Use the \code{root_node}
-#' to specify such a variable and specify \code{propagate = "collect} in
+#' to specify such a variable and specify \code{propagate = "collect"} in
 #' the juntion tree algortihm function \code{jt}.
 #'
 #' Moreover, if interest is in some joint pmf for variables that end up
@@ -145,16 +150,25 @@ cpt_list.data.frame <- function(x, g) {
 #' using the \code{joint_vars} argument. The compilation step then
 #' adds edges between all of these variables to ensure that at least one
 #' clique contains all of them.
+#'
+#' Evidence can be entered either at compile stage
+#' or after compilation. Hence, one can also combine
+#' evidence from before compilation with evidence
+#' after compilation. Before refers to entering
+#' evidence in the 'compile' function and after
+#' refers to entering evidence in the 'jt' function.
 #' @examples
 #' cptl <- cpt_list(asia2)
-#' compile(cptl, joint_vars = c("bronc", "tub"))
+#' cp1  <- compile(cptl, evidence = c(bronc = "yes"), joint_vars = c("bronc", "tub"))
+#' print(cp1)
+#' dim_names(cp1)
+#' plot(get_graph(cp1))
 #' @export
 compile <- function(x,
+                    evidence   = NULL,
                     root_node  = "",
                     joint_vars = NULL,
-                    save_graph = FALSE,
-                    tri        = "minimal",
-                    alpha      = NULL
+                    tri        = "minimal"
                     ) {
   UseMethod("compile")
 }
@@ -162,23 +176,16 @@ compile <- function(x,
 #' @rdname compile
 #' @export
 compile.cpt_list <- function(x,
+                             evidence   = NULL,
                              root_node  = "",
                              joint_vars = NULL,
-                             save_graph = FALSE,
-                             tri        = "min_nei",
-                             alpha      = NULL) {
+                             tri        = "min_nei") {
 
-  if (tri %ni% c("min_nei", "min_fill", "min_sp", "alpha", "minimal")) {
+  if (tri %ni% c("min_nei", "min_fill", "min_sp", "minimal")) {
     stop(
-      "tri must be one of min_nei, min_fill, min_sp, alpha, minimal",
+      "tri must be one of min_nei, min_fill, min_sp, minimal",
       call. = FALSE
     )
-  }
-
-  if (tri == "alpha") {
-    if (!identical(sort(alpha), 1:length(attr(x, "dim_names")))) {
-      stop("invalid alpha")
-    }
   }
   
   g       <- attr(x, "graph")
@@ -188,17 +195,17 @@ compile.cpt_list <- function(x,
   if (!is.null(joint_vars)) gm <- add_joint_vars_igraph(gm, joint_vars)
 
   # Note here: if sparse = TRUE, the run time explodes! Wonder why..
-  M       <- igraph::as_adjacency_matrix(gm, sparse = FALSE)
+  M  <- igraph::as_adjacency_matrix(gm, sparse = FALSE)
 
   tri_obj <- switch(tri,
     "min_nei"  = new_min_nei_triang(M),
     "min_fill" = new_min_fill_triang(M),
     "min_sp"   = new_min_sp_triang(M, .map_int(attr(x, "dim_names"), length)),
-    "alpha"    = new_alpha_triang(M, alpha),
     "minimal"  = new_minimal_triang(M)
   )
 
-  gmt     <- triang(tri_obj)
+  # gmt   <- if (tri != "sparse") triang(tri_obj) else readRDS("link_triangulated_graph.rds")
+  gmt     <- .triang(tri_obj)
   adj_lst <- as_adj_lst(gmt)
 
   # cliques_int is needed to construct the junction tree in new_jt -> new_schedule
@@ -208,48 +215,77 @@ compile.cpt_list <- function(x,
   root_node_int <- ifelse(root_node != "", as.character(match(root_node, names(adj_lst))), "")
   cliques_int   <- lapply(rip(adj_lst_int, root_node_int)$C, as.integer)
 
-  # TODO: Enter evidence before constructing the charge
-  
-  cliques <- construct_cliques(adj_lst, root_node)
+  cliques       <- construct_cliques(adj_lst, root_node) # just use cliques_int ?
+
+  if (!is.null(evidence)) {
+    if (!valid_evidence(attr(x, "dim_names"), evidence)) {
+      stop("evidence is not on correct form", call. = FALSE)
+    }
+    # x looses its attributes in set_evidence
+    att_ <- attributes(x)
+    x    <- set_evidence(x, cliques, evidence)
+    attributes(x) <- att_
+  }
+ 
   charge  <- new_charge(x, cliques, parents)
   out     <- structure(
     list(charge = charge, cliques = cliques),
     root_node   = root_node,
     dim_names   = attr(x, "dim_names"),
+    evidence    = evidence,
+    graph       = g,
     cliques_int = cliques_int,
     class       = c("charge", "list")
   )
 
-  if (save_graph) attr(out, "graph") <- g
   out
 }
 
 
-
-#' DAG
+#' Cpt list getters
 #'
-#' Retrieve the DAG from a compiled object
+#' Getter methods for cpt list objects
+#' 
+#' @param x \code{cpt_list} or a compiled object
+
+#' @rdname getters
+#' @export
+dim_names <- function(x) UseMethod("dim_names")
+
+#' @rdname getters
+#' @export
+dim_names.cpt_list <- function(x) attr(x, "dim_names")
+
+#' @rdname getters
+#' @export
+names.cpt_list <- function(x) attr(x, "names")
+
+#' @rdname getters
+#' @export
+dim_names.charge <- function(x) attr(x, "dim_names")
+
+#' @rdname getters
+#' @export
+names.charge <- function(x) names(attr(x, "dim_names"))
+
+#' Get graph
 #'
-#' @param x A compiled object
-#' @return A dag as an \code{igraph} object
+#' Retrieve the graph from
+#'
+#' @param x \code{cpt_list} or a compiled object
+#' @return A graph as an \code{igraph} object
 
-#' @rdname dag
+#' @rdname get-graph
 #' @export
-dag <- function(x) UseMethod("dag")
+get_graph <- function(x) UseMethod("get_graph")
 
-#' @rdname dag
+#' @rdname get-graph
 #' @export
-dag.charge <- function(x) attr(x, "graph")
+get_graph.charge <- function(x) attr(x, "graph")
 
-#' @rdname dag
+#' @rdname get-graph
 #' @export
-dag.cpt_list <- function(x) attr(x, "graph")
-
-## #' @export
-## triangulate.igraph <- function(g) triangulate_igraph(g)
-
-## #' @export
-## moralize.igraph <- function(g) moralize_igraph(g, parents_igraph(g))
+get_graph.cpt_list <- function(x) attr(x, "graph")
 
 
 #' A print method for cpt lists
@@ -279,7 +315,6 @@ print.cpt_list <- function(x, ...) {
   
 }
 
-
 #' A print method for compiled objects
 #'
 #' @param x A compiled object
@@ -287,8 +322,9 @@ print.cpt_list <- function(x, ...) {
 #' @seealso \code{\link{jt}}
 #' @export
 print.charge <- function(x, ...) {
+  # TODO: PRINT EVIDENCE
   cls <- paste0("<", paste0(class(x), collapse = ", "), ">")
-  nn  <- length(names(attr(x, "dim_names")))
+  nn  <- length(names(x))
   clique_sizes <- .map_int(x$cliques, length)
   max_C <- max(clique_sizes)
   min_C <- min(clique_sizes)
@@ -299,8 +335,20 @@ print.charge <- function(x, ...) {
     "\n  Cliques:", length(x$cliques),
     "\n   - max:", max_C,
     "\n   - min:", min_C,
-    "\n   - avg:", round(avg_C, 2), 
-    paste0("\n  ", cls),
+    "\n   - avg:", round(avg_C, 2)
+  )
+
+  e <- attr(x, "evidence")
+  if (!is.null(e)) {
+    cat("\n  Evidence:")
+    for (i in seq_along(e)) {
+      cat(
+        "\n   -", paste0(names(e[i]), ":"), unname(e[i])
+      )
+    }
+  }
+
+  cat(paste0("\n  ", cls),
     "\n -------------------------\n"
   ) 
 }

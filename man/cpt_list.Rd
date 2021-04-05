@@ -41,5 +41,10 @@ el <- matrix(c(
 )
 
 g <- igraph::graph_from_edgelist(el) 
-cpt_list(asia, g)
+cl <- cpt_list(asia, g)
+
+print(cl)
+dim_names(cl)
+names(cl)
+plot(get_graph(cl))
 }

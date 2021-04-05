@@ -14,11 +14,6 @@ new_min_sp_triang <- function(x, nlvls) {
   structure(list(x = x, nlvls =  nlvls[dimnames(x)[[1]]]), class = c("min_sp_triang", "list"))
 }
 
-new_alpha_triang <- function(x, alpha) {
-  stopifnot(identical(sort(alpha), 1:ncol(x)))
-  structure(list(x = x, alpha = alpha), class = c("alpha_triang", "list"))
-}
-
 new_minimal_triang <- function(x) {
     structure(list(x = x), class = c("minimal_triang", "list"))
 }
@@ -53,13 +48,20 @@ new_minimal_triang <- function(x) {
 #     msg_cpts <- spt$tmp_potentials$flawed_root_msg[msg_cpts_idx]
 #     all_cpts <- c(na_cpts, msg_cpts)
 
+#     1)
+#     sparsity_ <- function(x) 1 - ncol(x) / prod(.map_int(sparta::dim_names(x), length))
+#     2) Mark msg's
+#     2.5) Gang "samme" potentialer sammen
+#     3) Log final clique pot size vs. estimated
+#     4) Use the updated JT in jt().
+#     5) Findings / evidence
+
 #     statespace_vars <- spt$dns[unique(unlist(lapply(all_cpts, names)))]
 #     statespace <- prod(.map_int(statespace_vars, length))
 #     sparsity_  <- prod(.map_dbl(all_cpts, function(x) {
-#       sparta::sparsity(x)
+#       sparsity_(x)
 #     }))
 
-#     # TODO: TRY TO MULTIPLY THE NUMBER OF VARIABLES IN THE NEW CLIQUE!
 #     # Estimate of number of non-zero elements in the product
 #     sparsity_ * statespace * length(statespace_vars)
 
@@ -71,19 +73,17 @@ new_minimal_triang <- function(x) {
 #   nei_idx      <- unname(which(x[, new_node] == 1L))
 #   x_nei        <- x[nei_idx, nei_idx]
 #   nei_complete <- sum(x_nei) == length(nei_idx) * (length(nei_idx) - 1)
+
+#   # INSPECTION
+#   # ----------
+#   # browser()
+#   # igraph::graph_from_adjacency_matrix(x, "undirected") %>% plot(vertex.size = .1, vertex.label = NA)
+#   # colnames(x)[new_node]
+#   # ----------
   
 #   return(list(x_nei = x_nei, nei_idx = nei_idx, nei_complete = nei_complete, a = new_node))
 # }
 
-
-new_node_to_eliminate_alpha <- function(x, alpha, x_orig_col_idx) {
-  new_node <- match(alpha[1L], x_orig_col_idx)
-  nei      <- x[, new_node, drop = TRUE]
-  nei_idx  <- unname(which(nei == 1L))
-  x_nei    <- x[nei_idx, nei_idx, drop = FALSE]
-  nei_complete <- sum(x_nei) == length(nei_idx) * (length(nei_idx) - 1)
-  return(list(x_nei = x_nei, nei_idx = nei_idx, nei_complete = nei_complete, a = new_node))
-}
 
 new_node_to_eliminate_min_nei <- function(x) {
   # Minimum-neibor/minimum size elimination:
@@ -126,6 +126,7 @@ new_node_to_eliminate_min_fill <- function(x) {
   nei_complete <- sum(x_nei) == length(nei_idx) * (length(nei_idx) - 1)
   return(list(x_nei = x_nei, nei_idx = nei_idx, nei_complete = nei_complete, a = new_node))
 }
+
 new_node_to_eliminate_min_sp <- function(x, nlvls) {
   # Find the optimal node to eliminate
   new_node <- integer(0)
@@ -169,6 +170,9 @@ elim_game <- function(obj) {
   # triangulation set
   fill_edges <- list()
 
+  alpha      <- vector("integer", length = ncol(x))
+  alpha_iter <- 1L
+  
   x_orig_col_idx <- 1:ncol(x)
 
   while (ncol(x) > 1L) {
@@ -179,11 +183,13 @@ elim_game <- function(obj) {
       new_node_to_eliminate_min_fill(x)
     } else if (inherits(obj, "min_sp_triang")) {
       new_node_to_eliminate_min_sp(x, obj$nlvls)
-    } else if (inherits(obj, "alpha_triang")) {
-      new_node_to_eliminate_alpha(x, obj$alpha, x_orig_col_idx)
     } else if (inherits(obj, "minimal_triang")) {
-      new_node_to_eliminate_min_nei(x)
+      new_node_to_eliminate_min_fill(x)
     }
+
+    # else if (inherits(obj, "sparse_triang")) {
+    #   new_node_to_eliminate_sparse(spt, x)
+    # }
     
     xa        <- X$a
     nc        <- X$nei_complete
@@ -194,7 +200,6 @@ elim_game <- function(obj) {
       nei_idx <- X$nei_idx
       nn      <- ncol(x_nei)
 
-      # if (nn > 1) { # Already complete then!
       for (k in 1:(nn-1)) {
 
         x_nei_k <- x_nei[, k, drop = TRUE]
@@ -215,17 +220,22 @@ elim_game <- function(obj) {
         }
       }
     }
-    # }
 
-    x <- x[-xa, -xa, drop = FALSE]
-    x_orig_col_idx <- x_orig_col_idx[-xa]
+    alpha[alpha_iter] <- x_orig_col_idx[xa]
+    alpha_iter        <- alpha_iter + 1L
+    
+    x                 <- x[-xa, -xa, drop = FALSE]
+    x_orig_col_idx    <- x_orig_col_idx[-xa]
 
-    # TODO: Let all new_<>_triang constructors be environments - alpha can be mainted inside then
-    if (inherits(obj, "alpha_triang")) obj$alpha <- obj$alpha[-1L]
+
   }
 
+   # should only ontain 1 value now
+  alpha[length(alpha)] <- x_orig_col_idx[1L]
+  
   list(
     new_graph  = y,
-    fill_edges = fill_edges
+    fill_edges = fill_edges,
+    alpha      = alpha
   )
 }

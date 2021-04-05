@@ -25,6 +25,14 @@ A \code{jt} object
 \description{
 Construction of a junction tree and message passing
 }
+\details{
+Evidence can be entered either at compile stage
+or after compilation. Hence, one can also combine
+evidence from before compilation with evidence
+after compilation. Before refers to entering
+evidence in the 'compile' function and after
+refers to entering evidence in the 'jt' function.
+}
 \examples{
 
 # Setting up the network
@@ -77,6 +85,7 @@ query_belief(jt1, c("B", "D", "E"), type = "joint")
 
 # Example 2: sum-flow with evidence
 # ---------------------------------
+
 e2  <- c(A = "y", X = "n")
 jt2 <- jt(cp, e2) 
 query_belief(jt2, c("B", "D", "E"), type = "joint")
@@ -107,14 +116,14 @@ mpe(jt4)
 # -------------------------------------------------------------------------
 
 \donttest{
-  cp5 <- compile(cpt_list(asia, g), "X")
+  cp5 <- compile(cpt_list(asia, g), root_node = "X")
   jt5 <- jt(cp5, propagate = "collect")
-  query_belief(jt5, get_cliques(jt5)$C1, "joint")
+  query_belief(jt5, get_clique_root(jt5), "joint")
 }
 
-# We can only query from the root clique now (clique 1)
+# We can only query from the variables in the root clique now
 # but we have ensured that the node of interest, "X", does indeed live in
-# this clique
+# this clique. The variables are found using 'get_clique_root'
 
 # Example 6: Compiling from a list of conditional probabilities
 # -------------------------------------------------------------------------
@@ -124,14 +133,50 @@ mpe(jt4)
 #    - The elements need to be array-like objects
 
 cl  <- cpt_list(asia2)
-cp6 <- compile(cl, save_graph = TRUE)
+cp6 <- compile(cl)
 
 # Inspection; see if the graph correspond to the cpts
-# g <- dag(cp6)
+# g <- get_graph(cp6)
 # plot(g) 
 
-jt6 <- jt(cp6)
-query_belief(jt6, c("either", "smoke"))
+# This time we specify that no propagation should be performed
+jt6 <- jt(cp6, propagate = "no")
+
+# We can now inspect the collecting junction tree and see which cliques
+# are leaves and parents
+plot(jt6)
+get_cliques(jt6)
+get_clique_root(jt6)
+
+leaves(jt6)
+unlist(parents(jt6))
+
+# That is;
+# - clique 2 is parent of clique 1
+# - clique 3 is parent of clique 4 etc.
+
+# Next, we send the messages from the leaves to the parents
+jt6 <- send_messages(jt6)
+
+# Inspect again
+plot(jt6)
+
+# Send the last message to the root and inspect
+jt6 <- send_messages(jt6)
+plot(jt6)
+
+# The arrows are now reversed and the outwards (distribute) phase begins
+leaves(jt6)
+parents(jt6)
+
+# Clique 2 (the root) is now a leave and it has 1, 3 and 6 as parents.
+
+# Finishing the message passing
+jt6 <- send_messages(jt6)
+jt6 <- send_messages(jt6)
+
+# Queries can now be performed as normal
+query_belief(jt6, c("either", "tub"), "joint")
 
 }
 \seealso{

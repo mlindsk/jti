@@ -8,6 +8,12 @@
 #' @param flow Either "sum" or "max"
 #' @param propagate Either "no", "collect" or "full".
 #' @return A \code{jt} object
+#' @details Evidence can be entered either at compile stage
+#' or after compilation. Hence, one can also combine
+#' evidence from before compilation with evidence
+#' after compilation. Before refers to entering
+#' evidence in the 'compile' function and after
+#' refers to entering evidence in the 'jt' function.
 #' @seealso \code{\link{query_belief}}, \code{\link{mpe}},
 #' \code{\link{get_cliques}}, \code{\link{get_clique_root}},
 #' \code{\link{propagate}}
@@ -63,6 +69,7 @@
 #' 
 #' # Example 2: sum-flow with evidence
 #' # ---------------------------------
+#'
 #' e2  <- c(A = "y", X = "n")
 #' jt2 <- jt(cp, e2) 
 #' query_belief(jt2, c("B", "D", "E"), type = "joint")
@@ -93,14 +100,14 @@
 #' # -------------------------------------------------------------------------
 #'
 #' \donttest{
-#'   cp5 <- compile(cpt_list(asia, g), "X")
+#'   cp5 <- compile(cpt_list(asia, g), root_node = "X")
 #'   jt5 <- jt(cp5, propagate = "collect")
-#'   query_belief(jt5, get_cliques(jt5)$C1, "joint")
+#'   query_belief(jt5, get_clique_root(jt5), "joint")
 #' }
 #'
-#' # We can only query from the root clique now (clique 1)
+#' # We can only query from the variables in the root clique now
 #' # but we have ensured that the node of interest, "X", does indeed live in
-#' # this clique
+#' # this clique. The variables are found using 'get_clique_root'
 #' 
 #' # Example 6: Compiling from a list of conditional probabilities
 #' # -------------------------------------------------------------------------
@@ -110,14 +117,50 @@
 #' #    - The elements need to be array-like objects
 #'
 #' cl  <- cpt_list(asia2)
-#' cp6 <- compile(cl, save_graph = TRUE)
+#' cp6 <- compile(cl)
 #'
 #' # Inspection; see if the graph correspond to the cpts
-#' # g <- dag(cp6)
+#' # g <- get_graph(cp6)
 #' # plot(g) 
 #'
-#' jt6 <- jt(cp6)
-#' query_belief(jt6, c("either", "smoke"))
+#' # This time we specify that no propagation should be performed
+#' jt6 <- jt(cp6, propagate = "no")
+#'
+#' # We can now inspect the collecting junction tree and see which cliques
+#' # are leaves and parents
+#' plot(jt6)
+#' get_cliques(jt6)
+#' get_clique_root(jt6)
+#'
+#' leaves(jt6)
+#' unlist(parents(jt6))
+#'
+#' # That is;
+#' # - clique 2 is parent of clique 1
+#' # - clique 3 is parent of clique 4 etc.
+#'
+#' # Next, we send the messages from the leaves to the parents
+#' jt6 <- send_messages(jt6)
+#'
+#' # Inspect again
+#' plot(jt6)
+#'
+#' # Send the last message to the root and inspect
+#' jt6 <- send_messages(jt6)
+#' plot(jt6)
+#'
+#' # The arrows are now reversed and the outwards (distribute) phase begins
+#' leaves(jt6)
+#' parents(jt6)
+#'
+#' # Clique 2 (the root) is now a leave and it has 1, 3 and 6 as parents.
+#'
+#' # Finishing the message passing
+#' jt6 <- send_messages(jt6)
+#' jt6 <- send_messages(jt6)
+#'
+#' # Queries can now be performed as normal
+#' query_belief(jt6, c("either", "tub"), "joint")
 #' 
 #' @export
 jt <- function(x, evidence = NULL, flow = "sum", propagate = "full") UseMethod("jt")
@@ -125,11 +168,12 @@ jt <- function(x, evidence = NULL, flow = "sum", propagate = "full") UseMethod("
 #' @rdname jt
 #' @export
 jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = "full") {
-
+  
   if (!is.null(evidence)) {
     if (!valid_evidence(attr(x, "dim_names"), evidence)) {
       stop("evidence is not on correct form", call. = FALSE)
     }
+    attr(x, "evidence") <- c(attr(x, "evidence"), evidence)
   }
 
   # TODO: move to compile?
@@ -139,13 +183,13 @@ jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = "full") {
   if (propagate == "no") {
     return(j)
   } else if (propagate == "collect") {
-    m <- send_messages(j, flow)    
-    while (attr(m, "direction") != "distribute") m <- send_messages(m, flow)
+    m <- send_messages(j)    
+    while (attr(m, "direction") != "distribute") m <- send_messages(m)
     attr(m, "propagated") <- "collect"
     return(m)
   } else {
-    m <- send_messages(j, flow)
-    while (attr(m, "direction") != "full") m <- send_messages(m, flow)
+    m <- send_messages(j)
+    while (attr(m, "direction") != "full") m <- send_messages(m)
     attr(m, "propagated") <- "full"
     return(m)
   }
@@ -176,8 +220,8 @@ propagate.jt <- function(x, prop = "full") {
       stop("the junction tree is already propageted fully", call. = FALSE)
     }
     
-    m <- send_messages(x, attr(x, "flow"))    
-    while (attr(m, "direction") != "distribute") m <- send_messages(m, attr(x, "flow"))
+    m <- send_messages(x)
+    while (attr(m, "direction") != "distribute") m <- send_messages(m)
 
     attr(m, "propagated") <- "collect"
     return(m)
@@ -185,9 +229,9 @@ propagate.jt <- function(x, prop = "full") {
   } else if (prop == "full"){
 
     if (attr(x, "propagated") == "full") return(x)
-    m <- send_messages(x, attr(x, "flow"))
+    m <- send_messages(x)
 
-    while (attr(m, "direction") != "full") m <- send_messages(m, attr(x, "flow"))
+    while (attr(m, "direction") != "full") m <- send_messages(m)
     attr(m, "propagated") <- "full"
     return(m)
   } else {
@@ -195,8 +239,6 @@ propagate.jt <- function(x, prop = "full") {
     stop("propagate must be either 'collect' or full", call. = TRUE)  
   }
 }
-
-
 
 #' Most Probable Explanation
 #'
@@ -217,13 +259,12 @@ mpe.jt <- function(x) {
   attr(x, "mpe")
 }
 
-
 #' Return the cliques of a junction tree
 #'
 #' @param x A junction tree object, \code{jt}.
 #' @seealso \code{\link{jt}}
 #' @examples
-#' # See Example 5 of the 'jt' function 
+#' # See Example 5  and 6 of the 'jt' function 
 #'
 #' @rdname get_cliques
 #' @export
@@ -235,12 +276,15 @@ get_cliques.jt <- function(x) x$cliques
 
 #' @rdname get_cliques
 #' @export
+get_cliques.charge <- function(x) x$cliques
+
+#' @rdname get_cliques
+#' @export
 get_clique_root <- function(x) UseMethod("get_clique_root")
 
 #' @rdname get_cliques
 #' @export
-get_clique_root.jt <- function(x) attr(x, "clique_root")
-
+get_clique_root.jt <- function(x) x$cliques[[as.integer(gsub("C","",attr(x, "clique_root")))]]
 
 #' Query Evidence 
 #'
@@ -267,6 +311,54 @@ query_evidence.jt <- function(x) {
   return(attr(x, "probability_of_evidence"))
 }
 
+#' Query Parents or Leaves in a Junction Tree
+#'
+#' Return the clique indices of current parents or leaves
+#' in a junction tree
+#'
+#' @param jt A junction tree object, \code{jt}.
+#' @seealso \code{\link{jt}}, \code{\link{get_cliques}}
+#' @examples
+#' # See example 6 in the help page for the jt function
+#' @rdname par_lvs
+#' @export
+leaves <- function(jt) UseMethod("leaves")
+
+#' @rdname par_lvs
+#' @export
+leaves.jt <- function(jt) {
+  direction <- attr(jt, "direction")
+  if (direction == "full") {
+    message("The junction tree is already fully propagated. NULL is returned")
+    return(NULL)
+  }
+  x <- if (direction == "collect") jt$schedule$collect else jt$schedule$distribute
+  lvs               <- attr(x$tree, "leaves")
+  true_clique_names <- names(x$cliques)[lvs]
+  true_lvs_indicies <- as.integer(gsub("C", "", true_clique_names))
+  return(true_lvs_indicies)
+}
+
+#' @rdname par_lvs
+#' @export
+parents <- function(jt) UseMethod("parents")
+
+#' @rdname par_lvs
+#' @export
+parents.jt <- function(jt) {
+  direction <- attr(jt, "direction")
+  if (direction == "full") {
+    message("The junction tree is already fully propagated. NULL is returned")
+    return(NULL)
+  }
+  x <- if (direction == "collect") jt$schedule$collect else jt$schedule$distribute
+  par               <- attr(x$tree, "parents")
+  true_clique_names <- lapply(par, function(p) names(x$cliques)[p])
+  true_par_indicies <- lapply(true_clique_names, function(tcn) {
+    as.integer(gsub("C", "", tcn))
+  })
+  return(true_par_indicies)
+}
 
 #' Query probabilities
 #'
@@ -291,17 +383,18 @@ query_belief.jt <- function(x, nodes, type = "marginal") {
   }
   
   if (attr(x, "flow") == "max") {
-    stop("It does not make sense to query probablities from a junction tree with max-flow. ",
+    stop("It does not make sense to query probablities from a junction",
+      "tree with flow = 'max'. ",
       "Use 'mpe' to obtain the max configuration.", call. = FALSE)
   }
 
   has_rn <- has_root_node(x)
 
-  if (has_rn) if (!all(nodes %in% names(attr(x$charge$C$C1, "dim_names")))) {
+  if (has_rn) if (!all(nodes %in% get_clique_root(x))) {
     stop(
-      "All nodes must be in the root node (clique 1) ",
+      "All nodes must be in the root clique",
       "since the junction tree has only collected! ",
-      "See get_cliques(x) to find the nodes in the root node.",
+      "See get_clique_root(x) to find the nodes in the root node.",
       call. = FALSE
     )
   }
@@ -380,8 +473,20 @@ print.jt <- function(x, ...) {
     "\n  Cliques:", length(x$cliques),
     "\n   - max:", max_C,
     "\n   - min:", min_C,
-    "\n   - avg:", round(avg_C, 2), 
-    paste0("\n  ", cls),
+    "\n   - avg:", round(avg_C, 2)
+  )
+
+  e <- attr(x, "evidence")
+  if (!is.null(e)) {
+    cat("\n  Evidence:")
+    for (i in seq_along(e)) {
+      cat(
+        "\n   -", paste0(names(e[i]), ":"), unname(e[i])
+      )
+    }
+  }
+  
+  cat(paste0("\n  ", cls),
     "\n -------------------------\n"
   )
   

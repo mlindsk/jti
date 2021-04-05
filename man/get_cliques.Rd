@@ -3,6 +3,7 @@
 \name{get_cliques}
 \alias{get_cliques}
 \alias{get_cliques.jt}
+\alias{get_cliques.charge}
 \alias{get_clique_root}
 \alias{get_clique_root.jt}
 \title{Return the cliques of a junction tree}
@@ -10,6 +11,8 @@
 get_cliques(x)
 
 \method{get_cliques}{jt}(x)
+
+\method{get_cliques}{charge}(x)
 
 get_clique_root(x)
 
@@ -22,7 +25,7 @@ get_clique_root(x)
 Return the cliques of a junction tree
 }
 \examples{
-# See Example 5 of the 'jt' function 
+# See Example 5  and 6 of the 'jt' function 
 
 }
 \seealso{

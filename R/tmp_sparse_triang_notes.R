@@ -1,32 +1,46 @@
 # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # #            SETUP DATA AND LIBRARIES
 # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# # alarm
+# # andes
+# # asia
+# # barley
+# # cancer
+# # child
+# # diabetes
+# # earthquake
+# # ecoli70
+# # hailfinder
+# # hepar2
+# # insurance
+# # link
+# # mildew
+# # munin
+# # pathfinder
+# # pigs
+# # sachs
+# # survey
+# # water
+# # win95pts
+
 # library(igraph)
 # library(magrittr)
 
-# l    <- readRDS("../../../../sandbox/r/bns/munin.rds")
-# l    <- readRDS("../../../../sandbox/r/bns/link.rds")
-# l    <- readRDS("../../../../sandbox/r/bns/diabetes.rds")
-# l    <- readRDS("../../../../sandbox/r/bns/barley.rds")
-# l    <- readRDS("../../../../sandbox/r/bns/hailfinder.rds")
-# l    <- readRDS("../../../../sandbox/r/bns/asia.rds")
-# l    <- readRDS("../../../../sandbox/r/bns/mildew.rds")
-
+# read_net <- function(net) readRDS(glue::glue("../../../../sandbox/r/bns/", net, ".rds"))
+# l <- read_net("link")
 
 # cpts <- bnfit_to_cpts(l)
 # cl   <- cpt_list(cpts)
 # dns  <- attr(cl, "dim_names")
 # g    <- attr(cl, "graph")
 
-# par(mfrow = c(1, 2))
-# plot(g, vertex.size = 15)
-
 # mg   <- moralize_igraph(g, attr(cl, "parents"))
 # moral_graph <- igraph::as_adjacency_matrix(mg, sparse = FALSE)
 # spt <- new_sparse_triang(moral_graph, cl)
 
+# par(mfrow = c(1, 2))
+# plot(g, vertex.size = 15)
 # plot(mg, vertex.size = 15)
-
 
 # while (any(spt$flawed)) {
 
@@ -60,8 +74,7 @@
 #   #               END OF PROPAGATE
 #   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#   eg <- elim_game(new_min_nei_triang(spt$flawed_root_graph))
-#   # eg <- elim_game(new_min_fill_triang(spt$flawed_root_graph))
+#   # eg <- elim_game(new_min_nei_triang(spt$flawed_root_graph))
 
 #   # Triangulate the flawed root
 #   eg             <- elim_game(spt) # length(eg[[2]])
@@ -79,6 +92,9 @@
 #     moral_graph[f[1], f[2]] <- 1L
 #     moral_graph[f[2], f[1]] <- 1L
 #   }
+
+#   # link_triangulated_graph <- moral_graph
+#   # saveRDS(link_triangulated_graph, "link_triangulated_graph.rds")
   
 #   # Reset messages
 #   spt$tmp_potentials$flawed_root_msg <- list()

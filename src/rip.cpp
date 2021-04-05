@@ -131,6 +131,7 @@ Rcpp::List perfect_separators(VVS & x) {
   return ps;
 }
 
+
 // [[Rcpp::export]]
 Rcpp::List parents(VS po, Rcpp::List ps) {
   // po: perfect ordering from mcs
