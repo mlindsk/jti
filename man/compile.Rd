@@ -5,7 +5,13 @@
 \alias{compile.cpt_list}
 \title{Compile information}
 \usage{
-compile(x, evidence = NULL, root_node = "", joint_vars = NULL, tri = "minimal")
+compile(
+  x,
+  evidence = NULL,
+  root_node = "",
+  joint_vars = NULL,
+  tri = "min_fill"
+)
 
 \method{compile}{cpt_list}(x, evidence = NULL, root_node = "", joint_vars = NULL, tri = "min_nei")
 }
