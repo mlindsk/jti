@@ -72,6 +72,8 @@ cp <- compile(cl)
 # Example 1: sum-flow without evidence
 # ------------------------------------
 jt1 <- jt(cp)
+jt1 <- jt(cp, propagate = "no")
+jt1 <- set_evidence(jt1, c(A = "n"))
 plot(jt1)
 print(jt1)
 query_belief(jt1, c("E", "L", "T"))

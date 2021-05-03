@@ -44,15 +44,9 @@ thin_triang <- function(x, fill_edges) {
 }
 
 
-.triang <- function(obj) {
-
-  # if (inherits(obj, "sparse_triang")) {
-  #   stop("not yet implemented")
-  # }
-
+.triang <- function(obj, thin = FALSE) {
   eg  <- elim_game(obj)
-  
-  if (inherits(obj, "minimal_triang")) {
+  if (thin) {
     return(thin_triang(eg[["new_graph"]], eg[["fill_edges"]])[["new_graph"]])
   } else {
     return(eg[["new_graph"]])
@@ -69,30 +63,29 @@ thin_triang <- function(x, fill_edges) {
 #' to be in the same clique. Edges between all these variables are added
 #' to the moralized graph.
 #' @param tri The optimization strategy used for triangulation. Either
-#' one of 'min_nei', 'min_fill', 'min_sp', 'sparse', 'minimal'
+#' one of 'min_nei', 'min_fill', 'min_sp', 'evidence', 'minimal'
+#' @param evidence_nodes Character vector. TODO: More details
 #' @export
 triangulate <- function(x,
                         joint_vars = NULL,
-                        tri = "min_fill"
+                        tri = "min_fill",
+                        evidence_nodes = character(0)
                         ) {
   UseMethod("triangulate")
 }
 
 
-state_space <- function(cp, cl) {
-
-}
-
 #' @rdname triangulate
 #' @export
 triangulate.cpt_list <- function(x,
                                  joint_vars = NULL,
-                                 tri = "min_fill"
+                                 tri = "min_fill",
+                                 evidence_nodes = character(0)
                                  ) {
 
-  if (tri %ni% c("min_nei", "min_fill", "min_sp", "minimal")) {
+  if (tri %ni% c("min_nei", "min_fill", "min_sp", "minimal", "evidence")) {
     stop(
-      "tri must be one of min_nei, min_fill, min_sp, alpha, minimal",
+      "tri must be one of min_nei, min_fill, min_sp, alpha, minimal, evidence",
       call. = FALSE
     )
   }
@@ -109,10 +102,11 @@ triangulate.cpt_list <- function(x,
   tri_obj <- switch(tri,
     "min_nei"  = new_min_nei_triang(M),
     "min_fill" = new_min_fill_triang(M),
+    "minimal"  = new_min_fill_triang(M),
     "min_sp"   = new_min_sp_triang(M, .map_int(attr(x, "dim_names"), length)),
-    "minimal"  = new_minimal_triang(M)
+    "evidence" = new_evidence_triang(M, evidence_nodes)
   )
-
+  
   eg <- elim_game(tri_obj)
   if (inherits(tri_obj, "minimal")) {
     thin_eg <- thin_triang(eg[["new_graph"]], eg[["fill_edges"]])
@@ -122,7 +116,7 @@ triangulate.cpt_list <- function(x,
 
   cliques_    <- rip(as_adj_lst(eg[["new_graph"]]))$C
 
-  statespace_ <- sapply(cliques_, function(clique) {
+  statespace_ <- .map_dbl(cliques_, function(clique) {
     prod(.map_int(dim_names(x)[clique], length))
   })  
   

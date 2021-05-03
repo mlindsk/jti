@@ -52,9 +52,6 @@ cpt_list.list <- function(x, g = NULL) {
   
   y <- lapply(seq_along(x), function(i) {
     l <- x[[i]]
-    # class_allowed <- any(.map_lgl(sparta::allowed_class_to_sparta(), function(x) inherits(l, x)))
-    # if (!class_allowed) stop("one ore more elements in x is not an array-like object")
-    # Should be checked automatically in as_sparta now!
     spar <- sparta::as_sparta(l)
     # This ensures, that the CPTs and dim_names have the same ordering of the lvls!
     dim_names <<- push(dim_names, attr(spar, "dim_names"))
@@ -135,9 +132,10 @@ cpt_list.data.frame <- function(x, g) {
 #' to be in the same clique. Edges between all these variables are added
 #' to the moralized graph.
 #' @param tri The optimization strategy used for triangulation. Either
-#' one of 'min_nei', 'min_fill', 'min_sp', 'sparse', 'minimal'
+#' one of 'min_nei', 'min_fill', 'min_sp', 'evidence', 'minimal'
+#' @param evidence_nodes Character vector. TODO: More details
 #' @details The Junction Tree Algorithm performs both a forward and inward
-#' message passsing (collect and distribute). However, when the forward
+#' message pass (collect and distribute). However, when the forward
 #' phase is finished, the root clique potential is guaranteed to be the
 #' joint pmf over the variables involved in the root clique. Thus, if
 #' it is known in advance that a specific variable is of interest, the
@@ -165,10 +163,11 @@ cpt_list.data.frame <- function(x, g) {
 #' plot(get_graph(cp1))
 #' @export
 compile <- function(x,
-                    evidence   = NULL,
-                    root_node  = "",
-                    joint_vars = NULL,
-                    tri        = "min_fill"
+                    evidence       = NULL,
+                    root_node      = "",
+                    joint_vars     = NULL,
+                    tri            = "min_fill",
+                    evidence_nodes = character(0)
                     ) {
   UseMethod("compile")
 }
@@ -179,11 +178,12 @@ compile.cpt_list <- function(x,
                              evidence   = NULL,
                              root_node  = "",
                              joint_vars = NULL,
-                             tri        = "min_nei") {
+                             tri        = "min_fill",
+                             evidence_nodes = character(0)) {
 
-  if (tri %ni% c("min_nei", "min_fill", "min_sp", "minimal")) {
+  if (tri %ni% c("min_nei", "min_fill", "min_sp", "minimal", "evidence")) {
     stop(
-      "tri must be one of min_nei, min_fill, min_sp, minimal",
+      "tri must be one of min_nei, min_fill, min_sp, minimal, evidence",
       call. = FALSE
     )
   }
@@ -200,12 +200,12 @@ compile.cpt_list <- function(x,
   tri_obj <- switch(tri,
     "min_nei"  = new_min_nei_triang(M),
     "min_fill" = new_min_fill_triang(M),
+    "minimal"  = new_min_fill_triang(M),
     "min_sp"   = new_min_sp_triang(M, .map_int(attr(x, "dim_names"), length)),
-    "minimal"  = new_minimal_triang(M)
+    "evidence" = new_evidence_triang(M, evidence_nodes)
   )
 
-  # gmt   <- if (tri != "sparse") triang(tri_obj) else readRDS("link_triangulated_graph.rds")
-  gmt     <- .triang(tri_obj)
+  gmt     <- .triang(tri_obj, thin = ifelse(tri == "minimal", TRUE, FALSE))
   adj_lst <- as_adj_lst(gmt)
 
   # cliques_int is needed to construct the junction tree in new_jt -> new_schedule
@@ -214,16 +214,16 @@ compile.cpt_list <- function(x,
 
   root_node_int <- ifelse(root_node != "", as.character(match(root_node, names(adj_lst))), "")
   cliques_int   <- lapply(rip(adj_lst_int, root_node_int)$C, as.integer)
-
   cliques       <- construct_cliques(adj_lst, root_node) # just use cliques_int ?
 
   if (!is.null(evidence)) {
     if (!valid_evidence(attr(x, "dim_names"), evidence)) {
-      stop("evidence is not on correct form", call. = FALSE)
+      stop("Evidence is not on correct form", call. = FALSE)
     }
+
     # x looses its attributes in set_evidence
     att_ <- attributes(x)
-    x    <- set_evidence(x, cliques, evidence)
+    x    <- set_evidence_(x, cliques, evidence)
     attributes(x) <- att_
   }
  
@@ -242,9 +242,9 @@ compile.cpt_list <- function(x,
 }
 
 
-#' Cpt list getters
+#' Variable getters
 #'
-#' Getter methods for cpt list objects
+#' Getter methods for information about variables and their statespaces
 #' 
 #' @param x \code{cpt_list} or a compiled object
 
@@ -267,6 +267,15 @@ dim_names.charge <- function(x) attr(x, "dim_names")
 #' @rdname getters
 #' @export
 names.charge <- function(x) names(attr(x, "dim_names"))
+
+#' @rdname getters
+#' @export
+dim_names.jt <- function(x) attr(x, "dim_names")
+
+#' @rdname getters
+#' @export
+names.jt <- function(x) names(attr(x, "dim_names"))
+
 
 #' Get graph
 #'

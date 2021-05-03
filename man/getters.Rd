@@ -6,7 +6,9 @@
 \alias{names.cpt_list}
 \alias{dim_names.charge}
 \alias{names.charge}
-\title{Cpt list getters}
+\alias{dim_names.jt}
+\alias{names.jt}
+\title{Variable getters}
 \usage{
 dim_names(x)
 
@@ -17,10 +19,14 @@ dim_names(x)
 \method{dim_names}{charge}(x)
 
 \method{names}{charge}(x)
+
+\method{dim_names}{jt}(x)
+
+\method{names}{jt}(x)
 }
 \arguments{
 \item{x}{\code{cpt_list} or a compiled object}
 }
 \description{
-Getter methods for cpt list objects
+Getter methods for information about variables and their statespaces
 }

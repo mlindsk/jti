@@ -10,10 +10,18 @@ compile(
   evidence = NULL,
   root_node = "",
   joint_vars = NULL,
-  tri = "min_fill"
+  tri = "min_fill",
+  evidence_nodes = character(0)
 )
 
-\method{compile}{cpt_list}(x, evidence = NULL, root_node = "", joint_vars = NULL, tri = "min_nei")
+\method{compile}{cpt_list}(
+  x,
+  evidence = NULL,
+  root_node = "",
+  joint_vars = NULL,
+  tri = "min_fill",
+  evidence_nodes = character(0)
+)
 }
 \arguments{
 \item{x}{An object returned from \code{cpt_list}}
@@ -29,14 +37,16 @@ to be in the same clique. Edges between all these variables are added
 to the moralized graph.}
 
 \item{tri}{The optimization strategy used for triangulation. Either
-one of 'min_nei', 'min_fill', 'min_sp', 'sparse', 'minimal'}
+one of 'min_nei', 'min_fill', 'min_sp', 'evidence', 'minimal'}
+
+\item{evidence_nodes}{Character vector. TODO: More details}
 }
 \description{
 Compiled objects are used as building blocks for junction tree inference
 }
 \details{
 The Junction Tree Algorithm performs both a forward and inward
-message passsing (collect and distribute). However, when the forward
+message pass (collect and distribute). However, when the forward
 phase is finished, the root clique potential is guaranteed to be the
 joint pmf over the variables involved in the root clique. Thus, if
 it is known in advance that a specific variable is of interest, the

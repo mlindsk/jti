@@ -5,9 +5,19 @@
 \alias{triangulate.cpt_list}
 \title{Triangulate a Bayesian network}
 \usage{
-triangulate(x, joint_vars = NULL, tri = "min_fill")
+triangulate(
+  x,
+  joint_vars = NULL,
+  tri = "min_fill",
+  evidence_nodes = character(0)
+)
 
-\method{triangulate}{cpt_list}(x, joint_vars = NULL, tri = "min_fill")
+\method{triangulate}{cpt_list}(
+  x,
+  joint_vars = NULL,
+  tri = "min_fill",
+  evidence_nodes = character(0)
+)
 }
 \arguments{
 \item{x}{An object returned from \code{cpt_list}}
@@ -17,7 +27,9 @@ to be in the same clique. Edges between all these variables are added
 to the moralized graph.}
 
 \item{tri}{The optimization strategy used for triangulation. Either
-one of 'min_nei', 'min_fill', 'min_sp', 'sparse', 'minimal'}
+one of 'min_nei', 'min_fill', 'min_sp', 'evidence', 'minimal'}
+
+\item{evidence_nodes}{Character vector. TODO: More details}
 }
 \description{
 Given a list of CPTs, this function finds a triangulation

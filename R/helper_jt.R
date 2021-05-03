@@ -23,9 +23,7 @@ valid_evidence <- function(dim_names, e) {
   }
 }
 
-has_root_node <- function(x) UseMethod("has_root_node")
-
-has_root_node.jt <- function(x) attr(x, "root_node") != ""
+has_root_node_jt <- function(x) attr(x, "root_node") != ""
 
 new_schedule <- function(cliques_chr, cliques_int, root_node) {
   
@@ -91,9 +89,11 @@ prune_jt <- function(jt) {
 
       # Normalize clique_root
       cr <- attr(jt, "clique_root")
-      attr(jt, "probability_of_evidence") <- sum(sparta::vals(jt$charge$C[[cr]]))
-      jt$charge$C[[cr]] <- sparta::normalize(jt$charge$C[[cr]])
 
+      attr(jt, "probability_of_evidence") <- sum(sparta::vals(jt$charge$C[[cr]]))
+      attr(jt, "probability_of_evidence") <- jt$charge$C[[cr]]
+      jt$charge$C[[cr]] <- sparta::normalize(jt$charge$C[[cr]])
+      
     } else {
       jt$schedule$distribute <- "full"
       attr(jt, "direction")  <- "full"
@@ -139,7 +139,7 @@ prune_jt <- function(jt) {
 # }
 
 
-set_evidence <- function(x, cliques, evidence) {
+set_evidence_ <- function(x, cliques, evidence) {
   # x: list of (sparse) potentials
   for (k in seq_along(x)) {
     Ck <- names(x[[k]])
@@ -150,7 +150,11 @@ set_evidence <- function(x, cliques, evidence) {
       e_var <- names(e)
       e_val <- unname(e)
       if (e_var %in% Ck) {
-        m <- try(sparta::slice(x[[k]], e), silent = TRUE)
+        m <- if (nrow(x[[k]]) > 1L) {
+          try(sparta::slice(x[[k]], e, drop = TRUE), silent = TRUE)
+        } else {
+          try(sparta::slice(x[[k]], e, drop = FALSE), silent = TRUE)
+        }
         if (inherits(m, "try-error")) {
           stop(
             "inconsistent evidence",
@@ -164,8 +168,6 @@ set_evidence <- function(x, cliques, evidence) {
   return(x)
 }
 
-
-
 new_jt <- function(x, evidence = NULL, flow = "sum") {
   # x: a charge object returned from compile
   #  - a list with the charge and the cliques
@@ -173,7 +175,7 @@ new_jt <- function(x, evidence = NULL, flow = "sum") {
   charge  <- x$charge
   cliques <- x$cliques
 
-  if (!is.null(evidence)) charge$C <- set_evidence(charge$C, cliques, evidence)
+  if (!is.null(evidence)) charge$C <- set_evidence_(charge$C, cliques, evidence)
 
   schedule  <- new_schedule(cliques, attr(x, "cliques_int"), attr(x, "root_node"))
   attr(x, "cliques_int") <- NULL
@@ -190,7 +192,8 @@ new_jt <- function(x, evidence = NULL, flow = "sum") {
   attr(jt, "flow")        <- flow
   attr(jt, "root_node")   <- attr(x, "root_node")
   attr(jt, "clique_root") <- schedule$clique_root
-  attr(jt, "evidence")    <- attr(x, "evidence") # The aggregated evidence
+  attr(jt, "evidence")    <- attr(x, "evidence")  # The aggregated evidence
+  attr(jt, "dim_names")   <- attr(x, "dim_names") # To verify valid evidence in set_evidence.jt
   
   if (flow == "max") {
     # most probable explanation
@@ -242,11 +245,18 @@ send_messages <- function(jt) {
       pot_lvs_k <- jt$charge$C[[C_lvs_k_name]]
       pot_par_k <- jt$charge$C[[C_par_k_name]]
       message_k_names <- setdiff(names(pot_lvs_k), C_par_k)
+
+      # browser()
       
       if (direction == "collect") {
 
         par_is_unity <- inherits(pot_par_k, "sparta_unity")
-        message_k <- sparta::marg(pot_lvs_k, message_k_names, attr(jt, "flow"))
+
+        message_k <- if (!is_scalar(pot_lvs_k)) {
+          sparta::marg(pot_lvs_k, message_k_names, attr(jt, "flow"))
+        } else {
+          pot_lvs_k
+        }
 
         jt$charge$C[[C_par_k_name]] <- if (par_is_unity) message_k else sparta::mult(pot_par_k, message_k)
         jt$charge$C[[C_lvs_k_name]] <- sparta::div(pot_lvs_k, message_k)
@@ -273,7 +283,11 @@ send_messages <- function(jt) {
         }
 
         # Send the message
-        message_k <- sparta::marg(pot_lvs_k, message_k_names, attr(jt, "flow"))
+        message_k <- if (!is_scalar(pot_lvs_k)) {
+          sparta::marg(pot_lvs_k, message_k_names, attr(jt, "flow"))          
+        } else {
+          pot_lvs_k
+        }
         jt$charge$C[[C_par_k_name]] <- sparta::mult(pot_par_k, message_k)
         jt$charge$S[[paste("S", pk, sep = "")]] <- message_k
         

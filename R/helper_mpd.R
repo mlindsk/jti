@@ -20,7 +20,9 @@ cliques_mat_int_ <- function(mat, prime_ints = NULL) {
 #'
 #' Find the maximal prime decomposition and its associated junction tree
 #'
-#' @param graph Neighbor matrix
+#' @param x Either a neighbor matrix or a \code{cpt_list} object
+#' @param save_graph Logical indicating if the moralized graph should be kept.
+#' Useful when \code{x} is a \code{cpt_list} object.
 #' @return
 #'
 #' - \code{prime_ints}: a list with the prime components,
@@ -45,9 +47,33 @@ cliques_mat_int_ <- function(mat, prime_ints = NULL) {
 #' 
 #' g <- igraph::graph_from_edgelist(el, directed = FALSE)
 #' A <- igraph::as_adjacency_matrix(g, sparse = FALSE)
-#' new_mpd(A)
-#' 
+#' mpd(A)
+
+
+#' @rdname mpd
 #' @export
+mpd <- function(x, save_graph = TRUE) UseMethod("mpd")
+
+#' @rdname mpd
+#' @export
+mpd.matrix <- function(x, save_graph = TRUE) new_mpd(x)
+
+#' @rdname mpd
+#' @export
+mpd.cpt_list <- function(x, save_graph = TRUE) {
+  g       <- attr(x, "graph")
+  parents <- attr(x, "parents")
+  gm      <- moralize_igraph(get_graph(x), parents)
+  M  <- igraph::as_adjacency_matrix(gm, sparse = FALSE)
+  if (save_graph) {
+    out <- new_mpd(M)
+    out$graph <- M
+    return(out)
+  } else {
+    return(new_mpd(M))
+  }
+}
+
 new_mpd <- function(graph) {
   # graph: undirected adjacency matrix
 
@@ -148,5 +174,4 @@ new_mpd <- function(graph) {
     jt_collect   = jt_collect
   )
 }
-
 
