@@ -235,7 +235,6 @@ propagate.jt <- function(x, prop = "full") {
     
   } else if (prop == "full"){
 
-    # browser()
     if (attr(x, "propagated") == "full") return(x)
     m <- send_messages(x)
 

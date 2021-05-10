@@ -245,8 +245,6 @@ send_messages <- function(jt) {
       pot_lvs_k <- jt$charge$C[[C_lvs_k_name]]
       pot_par_k <- jt$charge$C[[C_par_k_name]]
       message_k_names <- setdiff(names(pot_lvs_k), C_par_k)
-
-      # browser()
       
       if (direction == "collect") {
 

@@ -45,12 +45,13 @@ thin_triang <- function(x, fill_edges) {
 
 
 .triang <- function(obj, thin = FALSE) {
+  # browser()
   eg  <- elim_game(obj)
   if (thin) {
     return(thin_triang(eg[["new_graph"]], eg[["fill_edges"]])[["new_graph"]])
   } else {
     return(eg[["new_graph"]])
-  }
+  }    
 }
 
 

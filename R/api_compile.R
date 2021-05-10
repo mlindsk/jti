@@ -175,15 +175,16 @@ compile <- function(x,
 #' @rdname compile
 #' @export
 compile.cpt_list <- function(x,
-                             evidence   = NULL,
-                             root_node  = "",
-                             joint_vars = NULL,
-                             tri        = "min_fill",
-                             evidence_nodes = character(0)) {
+                             evidence       = NULL,
+                             root_node      = "",
+                             joint_vars     = NULL,
+                             tri            = "min_fill",
+                             evidence_nodes = character(0)
+                             ) {
 
-  if (tri %ni% c("min_nei", "min_fill", "min_sp", "minimal", "evidence")) {
+  if (tri %ni% c("min_nei", "min_fill", "min_sp", "minimal", "evidence", "evidence2")) {
     stop(
-      "tri must be one of min_nei, min_fill, min_sp, minimal, evidence",
+      "tri must be one of min_nei, min_fill, min_sp, minimal, evidence, evidence2",
       call. = FALSE
     )
   }
@@ -198,13 +199,14 @@ compile.cpt_list <- function(x,
   M  <- igraph::as_adjacency_matrix(gm, sparse = FALSE)
 
   tri_obj <- switch(tri,
-    "min_nei"  = new_min_nei_triang(M),
-    "min_fill" = new_min_fill_triang(M),
-    "minimal"  = new_min_fill_triang(M),
-    "min_sp"   = new_min_sp_triang(M, .map_int(attr(x, "dim_names"), length)),
-    "evidence" = new_evidence_triang(M, evidence_nodes)
+    "min_nei"   = new_min_nei_triang(M),
+    "min_fill"  = new_min_fill_triang(M),
+    "minimal"   = new_min_fill_triang(M),
+    "min_sp"    = new_min_sp_triang(M, .map_int(dim_names(x), length)),
+    "evidence"  = new_evidence_triang(M, pmf_evidence, .map_int(dim_names(x), length))
   )
 
+  # browser()
   gmt     <- .triang(tri_obj, thin = ifelse(tri == "minimal", TRUE, FALSE))
   adj_lst <- as_adj_lst(gmt)
 
@@ -240,7 +242,6 @@ compile.cpt_list <- function(x,
 
   out
 }
-
 
 #' Variable getters
 #'
