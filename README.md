@@ -1,5 +1,5 @@
-jti: Junction Tree Inference
-================
+
+# jti: Junction Tree Inference <img src='man/figures/logo.png' align="right" height="240" />
 
 <!-- badges: start -->
 
@@ -211,7 +211,7 @@ e4  <- c(T = "y", X = "y", D = "y")
 jt4 <- jt(cp, e4, flow = "max")
 mpe(jt4)
 #>   A   T   E   L   S   B   X   D 
-#> "n" "y" "y" "n" "y" "y" "y" "y"
+#> "n"  "" "y" "n" "y" "y"  ""  ""
 ```
 
 Notice, that `T`, `E`, `S`, `B`, `X` and `D` has changed from `"n"` to
