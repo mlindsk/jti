@@ -79,7 +79,7 @@
 #'
 #' e2  <- c(A = "y", X = "n")
 #' jt2 <- jt(cp, e2) 
-#' query_belief(jt2, c("B", "D", "E"), type = "joint")a
+#' query_belief(jt2, c("B", "D", "E"), type = "joint")
 #'
 #' # Notice that, the configuration (D,E,B) = (y,y,n) has changed
 #' # dramatically as a consequence of the evidence
@@ -175,7 +175,7 @@ jt <- function(x, evidence = NULL, flow = "sum", propagate = "full") UseMethod("
 #' @rdname jt
 #' @export
 jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = "full") {
-  
+
   if (!is.null(evidence)) {
     if (!valid_evidence(attr(x, "dim_names"), evidence)) {
       stop("evidence is not on correct form", call. = FALSE)
@@ -187,6 +187,12 @@ jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = "full") {
   j <- new_jt(x, evidence, flow)
   attr(j, "propagated") <- "no"
 
+  # A junction tree with a single node with flow = max
+  if (length(j$charge$C) == 1L && attr(j, "flow") == "max") {
+      max_cell <- sparta::which_max_cell(j$charge$C$C1)
+      attr(j, "mpe")[names(max_cell)] <- max_cell
+  }
+  
   if (propagate == "no") {
     return(j)
   } else if (propagate == "collect") {
@@ -298,8 +304,6 @@ get_clique_root.jt <- function(x) x$cliques[[as.integer(gsub("C","",attr(x, "cli
 #' Get the probability of the evidence entered in the junction tree object
 #'
 #' @param x A junction tree object, \code{jt}.
-#' @examples
-#' # See the 'jt' function
 #' @seealso \code{\link{jt}}, \code{\link{mpe}}
 #' @export
 query_evidence <- function(x) UseMethod("query_evidence")
@@ -331,7 +335,7 @@ query_evidence.jt <- function(x) {
 #' @export
 set_evidence <- function(x, evidence) UseMethod("set_evidence")
 
-#' @rdname query_evidence
+#' @rdname set_evidence
 #' @export
 set_evidence.jt <- function(x, evidence) {
   if (attr(x, "propagated") != "no") {

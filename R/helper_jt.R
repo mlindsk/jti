@@ -1,3 +1,7 @@
+# note: Rows only have a single 1 in collect
+#       this indicates the parent. A column with all
+#       zeroes indicates a leave node.
+
 leaves_jt <- function(x) {
   # x: rooted tree structure of a junctions tree (jt$schedule$collect$tree)
   which(colSums(x) == 0L)
@@ -89,9 +93,7 @@ prune_jt <- function(jt) {
 
       # Normalize clique_root
       cr <- attr(jt, "clique_root")
-
       attr(jt, "probability_of_evidence") <- sum(sparta::vals(jt$charge$C[[cr]]))
-      attr(jt, "probability_of_evidence") <- jt$charge$C[[cr]]
       jt$charge$C[[cr]] <- sparta::normalize(jt$charge$C[[cr]])
       
     } else {
@@ -229,7 +231,7 @@ send_messages <- function(jt) {
   x   <- if (direction == "collect") jt$schedule$collect else jt$schedule$distribute
   lvs <- attr(x$tree, "leaves")
   par <- attr(x$tree, "parents")
-
+  
   for (k in seq_along(lvs)) {
 
     lvs_k <- lvs[k]

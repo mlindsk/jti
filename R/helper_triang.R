@@ -44,10 +44,10 @@ thin_triang <- function(x, fill_edges) {
 }
 
 
-.triang <- function(obj, thin = FALSE) {
+.triang <- function(obj) {
   # browser()
   eg  <- elim_game(obj)
-  if (thin) {
+  if (inherits(obj, "minimal_triang")) {
     return(thin_triang(eg[["new_graph"]], eg[["fill_edges"]])[["new_graph"]])
   } else {
     return(eg[["new_graph"]])
@@ -59,18 +59,14 @@ thin_triang <- function(x, fill_edges) {
 #'
 #' Given a list of CPTs, this function finds a triangulation
 #'
-#' @param x An object returned from \code{cpt_list}
-#' @param joint_vars A vector of variables for which we require them
-#' to be in the same clique. Edges between all these variables are added
-#' to the moralized graph.
-#' @param tri The optimization strategy used for triangulation. Either
-#' one of 'min_nei', 'min_fill', 'min_sp', 'evidence', 'minimal'
-#' @param evidence_nodes Character vector. TODO: More details
+#' @inheritParams compile
 #' @export
 triangulate <- function(x,
-                        joint_vars = NULL,
-                        tri = "min_fill",
-                        evidence_nodes = character(0)
+                        root_node      = "",
+                        joint_vars     = NULL,
+                        tri            = "min_fill",
+                        pmf_evidence   = NULL,
+                        alpha          = NULL                                            
                         ) {
   UseMethod("triangulate")
 }
@@ -79,53 +75,71 @@ triangulate <- function(x,
 #' @rdname triangulate
 #' @export
 triangulate.cpt_list <- function(x,
-                                 joint_vars = NULL,
-                                 tri = "min_fill",
-                                 evidence_nodes = character(0)
+                                 root_node      = "",                                 
+                                 joint_vars     = NULL,
+                                 tri            = "min_fill",
+                                 pmf_evidence   = NULL,
+                                 alpha          = NULL                    
                                  ) {
 
-  if (tri %ni% c("min_nei", "min_fill", "min_sp", "minimal", "evidence")) {
-    stop(
-      "tri must be one of min_nei, min_fill, min_sp, alpha, minimal, evidence",
-      call. = FALSE
-    )
-  }
+  .defense_compile(tri, pmf_evidence, alpha, names(x))
   
   g       <- attr(x, "graph")
   parents <- attr(x, "parents")
-
   gm      <- moralize_igraph(g, parents)
+
   if (!is.null(joint_vars)) gm <- add_joint_vars_igraph(gm, joint_vars)
 
   # if sparse = TRUE, the run time explodes
   M  <- igraph::as_adjacency_matrix(gm, sparse = FALSE)
-  
+
   tri_obj <- switch(tri,
-    "min_nei"  = new_min_nei_triang(M),
-    "min_fill" = new_min_fill_triang(M),
-    "minimal"  = new_min_fill_triang(M),
-    "min_sp"   = new_min_sp_triang(M, .map_int(attr(x, "dim_names"), length)),
-    "evidence" = new_evidence_triang(M, evidence_nodes)
+    "min_fill"  = new_min_fill_triang(M),
+    "min_rfill" = new_min_rfill_triang(M),
+    "min_sp"    = new_min_sp_triang(M, .map_int(dim_names(x), length)),
+    "min_nei"   = new_min_nei_triang(M),
+    "minimal"   = new_minimal_triang(M),
+    "evidence"  = new_evidence_triang(M, .map_int(dim_names(x), length), pmf_evidence),
+    # "evidence2" = new_evidence2_triang(M, .map_int(dim_names(x), length), pmf_evidence),
+    "alpha"     = new_alpha_triang(M, alpha)
   )
-  
+
+  # browser()
   eg <- elim_game(tri_obj)
+
   if (inherits(tri_obj, "minimal")) {
     thin_eg <- thin_triang(eg[["new_graph"]], eg[["fill_edges"]])
     eg[["new_graph"]]  <- thin_eg[["new_graph"]]
     eg[["fill_edges"]] <- thin_eg[["fill_edges"]]
   }
 
-  cliques_    <- rip(as_adj_lst(eg[["new_graph"]]))$C
-
-  statespace_ <- .map_dbl(cliques_, function(clique) {
+  # construct cliques and statespace
+  mat_tri           <- eg[["new_graph"]]
+  adj_lst_tri       <- as_adj_lst(eg[["new_graph"]])
+  cliques_          <- construct_cliques(adj_lst_tri)
+  statespace_       <- .map_dbl(cliques_, function(clique) {
     prod(.map_int(dim_names(x)[clique], length))
-  })  
+  })
+
+  # construct junction tree
+  dimnames(mat_tri) <- lapply(dimnames(mat_tri), function(x) 1:nrow(mat_tri))
+  adj_lst_int       <- as_adj_lst(mat_tri)
+  root_node_int     <- ifelse(root_node != "", as.character(match(root_node, names(adj_lst_tri))), "")
+  cliques_int       <- lapply(rip(adj_lst_int)$C, as.integer)
+  rjt               <- rooted_junction_tree(cliques_int)
+
   
-  list(
-    new_graph  = eg[["new_graph"]],
-    fill_edges = lapply(eg[["fill_edges"]], function(e) names(x)[e]),
-    alpha      = names(x)[eg[["alpha"]]],
-    cliques    = cliques_,
-    statespace = statespace_
+  structure(
+    list(
+      new_graph             = eg[["new_graph"]],
+      fill_edges            = lapply(eg[["fill_edges"]], function(e) names(x)[e]),
+      alpha                 = names(x)[eg[["alpha"]]],
+      cliques               = cliques_,
+      statespace            = statespace_,
+      dim_names             = dim_names(x),
+      junction_tree_collect = rjt$collect,
+      clique_root           = rjt$clique_root
+    ),
+    class = c("triangulation", "list")
   )
 }

@@ -1,265 +1,461 @@
-# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# #              NEW TRIANGULATION CONSTRUCTORS
-# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#                TRIANGULATION CONSTRUCTORS
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# NOTE:
 
-# # TODO: 
+# The four arguments
+# - current_nei_mat
+# - current_nei_idx
+# - is_nei_complete
+# - new_node_idx   
 
-# new_min_nei_triang <- function(x) {
-#   structure(list(x = x), class = c("min_nei_triang", "list"))
-# }
+# _must_ be part of any new structure and 
+# must be placed as the "last" arguments. They
+# should be initialized as NULL. These variables are updated
+# in each iteration of the elimination game.
 
-# new_min_fill_triang <- function(x) {
-#   structure(list(x = x), class = c("min_fill_triang", "list"))
-# }
+# The argument
+# - x
+# is the input matrix and must be placed first.
 
-# new_min_sp_triang <- function(x, nlvls) {
-#   structure(list(x = x, nlvls =  nlvls[dimnames(x)[[1]]]), class = c("min_sp_triang", "list"))
-# }
+new_min_nei_triang <- function(x) {
+  structure(
+    list(
+      x               = x,
+      current_nei_mat = NULL,
+      current_nei_idx = NULL,
+      is_nei_complete = NULL,
+      new_node_idx    = NULL
+    ),
+    class = c("min_nei_triang", "list")
+  )
+}
 
-# new_evidence_triang <- function(x, evidence_nodes) {
-#   # Note: Evidence nodes must be ordered according to their priority
-#   # bools <- vector("logical", length = ncol(x))
-#   if (neq_empt_chr(evidence_nodes)) {
-#     # Test if evidence_are valid
-#     stopifnot(all(evidence_nodes %in% colnames(x)))
-#     # bools[match(evidence_nodes, colnames(x))] <- TRUE
+new_min_fill_triang <- function(x) {
+  structure(
+    list(
+      x               = x,
+      current_nei_mat = NULL,
+      current_nei_idx = NULL,
+      is_nei_complete = NULL,
+      new_node_idx    = NULL
+    ),
+    class = c("min_fill_triang", "list")
+  )
+}
+
+new_min_rfill_triang <- function(x) {
+  structure(
+    list(
+      x               = x,
+      current_nei_mat = NULL,
+      current_nei_idx = NULL,
+      is_nei_complete = NULL,
+      new_node_idx    = NULL
+    ),
+    class = c("min_rfill_triang", "list")
+  )
+}
+
+
+new_minimal_triang <- function(x) {
+  obj <- new_min_fill_triang(x)
+  class(obj) <- c("minimal_triang", class(obj))
+  obj
+}
+
+new_min_sp_triang <- function(x, nlvls) {
+  structure(
+    list(
+      x               = x,
+      nlvls           = nlvls[dimnames(x)[[1]]],
+      current_nei_mat = NULL,
+      current_nei_idx = NULL,
+      is_nei_complete = NULL,
+      new_node_idx    = NULL      
+    ),
+    class = c("min_sp_triang", "list")
+  )
+}
+
+new_evidence_triang <- function(x, nlvls, pmf_evidence) {
+  if (neq_empt_int(nlvls)) {
+    # TODO: check if pmf and nlvls agree!
+  }
+  structure(
+    list(
+      x                = x,
+      nlvls            = nlvls[dimnames(x)[[1]]],
+      pmf_evidence     = pmf_evidence,
+      find_simplicials = TRUE,
+      current_nei_mat  = NULL,
+      current_nei_idx  = NULL,
+      is_nei_complete  = NULL,
+      new_node_idx     = NULL      
+    ),
+    class = c("evidence_triang", "list")
+  )
+}
+
+# new_evidence2_triang <- function(x, nlvls, pmf_evidence) {
+#   if (neq_empt_int(nlvls)) {
+#     # TODO: check if pmf and nlvls agree!
 #   }
-#   structure(list(x = x, evidence_nodes = evidence_nodes), class = c("evidence_triang", "list"))
-# }
-
-# new_evidence_triang2 <- function(x, evidence_nodes, nlvls) {
-#   # Note: Evidence nodes must be ordered according to their priority
-#   if (neq_empt_chr(evidence_nodes)) {
-#     # Test if evidence_are valid
-#     stopifnot(all(evidence_nodes %in% colnames(x)))
-#   }
-#   structure(list(x = x, evidence_nodes = evidence_nodes, nlvls =  nlvls[dimnames(x)[[1]]]), class = c("evidence_triang2", "list"))
-# }
-
-
-# new_node_to_eliminate_min_nei <- function(x) {
-#   # Minimum-neibor/minimum size elimination:
-#   # Minimizing the number of fillins by choosing vertices that
-#   # are hopefully simplicial
-#   lookup_order <- as.integer(names(sort(structure(apply(x, 2L, sum), names = 1:ncol(x)))))
-#   new_node     <- lookup_order[1L]
-#   nei          <- x[, new_node, drop = TRUE]
-#   nei_idx      <- unname(which(nei == 1L))
-#   x_nei        <- x[nei_idx, nei_idx, drop = FALSE]
-
-#   nn        <- ncol(x_nei)
-#   max_edges <- nn * (nn - 1)
-#   nei_complete <- sum(x_nei) == max_edges
-  
-#   return(list(x_nei = x_nei, nei_idx = nei_idx, nei_complete = nei_complete, a = new_node))
-# }
-
-# new_node_to_eliminate_min_fill <- function(x) {
-#   # Find the optimal node to eliminate
-#   new_node <- integer(0)
-#   nei_idx  <- integer(0)
-#   crit     <- Inf
-  
-#   for (k in 1:ncol(x)) {
-#     nei_idx_k <- which(x[, k] == 1L)
-
-#     all_edges <- length(nei_idx_k) * (length(nei_idx_k) - 1L) / 2
-#     existing_edges <- sum(x[nei_idx_k, nei_idx_k]) / 2L
-#     crit_k <- all_edges - existing_edges
-    
-#     if (crit_k < crit) {
-#       crit     <- crit_k
-#       new_node <- k
-#       nei_idx  <- nei_idx_k
-#     }
-#   }
-
-#   x_nei    <- x[nei_idx, nei_idx, drop = FALSE]
-#   nei_complete <- sum(x_nei) == length(nei_idx) * (length(nei_idx) - 1)
-#   return(list(x_nei = x_nei, nei_idx = nei_idx, nei_complete = nei_complete, a = new_node))
-# }
-
-# new_node_to_eliminate_min_sp <- function(x, nlvls) {
-
-#   # Find the optimal node to eliminate
-#   new_node <- integer(0)
-#   nei_idx  <- integer(0)
-#   crit     <- Inf
-
-#   for (k in 1:ncol(x)) {
-#     nei_idx_k <- which(x[, k] == 1L)
-#     family_k  <- c(k, nei_idx_k)
-#     crit_k    <- prod(nlvls[family_k])
-#     if (crit_k < crit) {
-#       crit     <- crit_k
-#       new_node <- k
-#       nei_idx  <- nei_idx_k
-#     }
-#   }
-
-#   x_nei    <- x[nei_idx, nei_idx, drop = FALSE]
-#   nei_complete <- sum(x_nei) == length(nei_idx) * (length(nei_idx) - 1)
-#   return(list(x_nei = x_nei, nei_idx = nei_idx, nei_complete = nei_complete, a = new_node))
-# }
-
-# new_node_to_eliminate_evidence <- function(x, evidence_nodes) {
-
-#   n_new_fills <- .map_dbl(1:ncol(x), function(k) {
-#     nei_idx_k <- which(x[, k] == 1L)
-#     all_edges <- length(nei_idx_k) * (length(nei_idx_k) - 1L) / 2
-#     existing_edges <- sum(x[nei_idx_k, nei_idx_k]) / 2L
-#     all_edges - existing_edges
-#   })
-  
-#   F_ <- which(n_new_fills == min(n_new_fills))
-#   E  <- na.omit(match(evidence_nodes, colnames(x)))
-#   H  <- setdiff(F_, E)
-#   W  <- intersect(F_, E)
-
-#   new_node <- if (neq_empt_int(E)) {
-#     if (neq_empt_int(H)) {
-#       neis <- lapply(E, function(e) which(H %in% which(x[, e] == 1L)))
-#       neis <- Filter(neq_empt_int, neis)
-#       if (neq_empt_lst(neis)) {
-#         H[neis[[1]][1]] 
-#       } else {
-#         neis <- lapply(E, function(e) which(W %in% which(x[, e] == 1L)))
-#         neis <- Filter(neq_empt_int, neis)
-#         if (neq_empt_lst(neis)) {
-#           W[neis[[length(neis)]][1]]
-#         } else {
-#           F_[1]
-#         }
-#       }
-#     } else {
-#       F_[1]
-#     }
-#   }
-  
-#   nei_idx      <- which(x[, new_node] == 1L)
-#   x_nei        <- x[nei_idx, nei_idx, drop = FALSE]
-#   nei_complete <- sum(x_nei) == length(nei_idx) * (length(nei_idx) - 1)
-
-#   return(list(x_nei = x_nei, nei_idx = nei_idx, nei_complete = nei_complete, a = new_node))
-# }
-
-
-# # new_node_to_eliminate_evidence2 <- function(x, evidence_nodes, nlvls) {
-# #   # TODO: INPUT SHOULD JUST BE x and obj and return obj
-
-# #   n_new_fills <- .map_dbl(1:ncol(x), function(k) {
-# #     nei_idx_k <- which(x[, k] == 1L)
-# #     all_edges <- length(nei_idx_k) * (length(nei_idx_k) - 1L) / 2
-# #     existing_edges <- sum(x[nei_idx_k, nei_idx_k]) / 2L
-# #     all_edges - existing_edges
-# #   })
-
-# #   # n_new_fills <- .map_dbl(1:ncol(x), function(k) {
-# #   #   nei_idx_k <- which(x[, k] == 1L)
-# #   #   family_k  <- c(k, nei_idx_k)
-# #   #   prod(nlvls[family_k])
-# #   # })
-
-# #   F_ <- which(n_new_fills == min(n_new_fills))
-
-# #   # TODO: For each candidate in F_, eliminate the one
-# #   # for wich the new clique has the smalleste expected statespace taking
-# #   # into account the evidence variables
-
-# #   # This expectation requires the dimension names? We must loop over all
-# #   # configurations of the evidence nodes.
-
-# #   # We can utilize the more sophisticated MRF for the evidence nodes here
-
-  
-# #   nei_idx      <- which(x[, new_node] == 1L)
-# #   x_nei        <- x[nei_idx, nei_idx, drop = FALSE]
-# #   nei_complete <- sum(x_nei) == length(nei_idx) * (length(nei_idx) - 1)
-
-# #   return(list(x_nei = x_nei, nei_idx = nei_idx, nei_complete = nei_complete, a = new_node))
-# # }
- 
-
-# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# #               ELIMINATION GAME ENGINE
-# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# elim_game <- function(obj) {
-  
-#   # x: adjacency matrix
-
-#   x <- obj$x
-
-#   # Save the input graph
-#   y <- x
-
-#   # triangulation set
-#   fill_edges <- list()
-
-#   # elimination ordering
-#   alpha      <- vector("integer", length = ncol(x))
-#   alpha_iter <- 1L
-  
-#   x_orig_col_idx <- 1:ncol(x)
-
-#   while (ncol(x) > 1L) {
-
-#     X <- if (inherits(obj, "min_nei_triang")) {
-#       new_node_to_eliminate_min_nei(x)
-#     } else if (inherits(obj, "min_fill_triang")) {
-#       new_node_to_eliminate_min_fill(x)
-#     } else if (inherits(obj, "min_sp_triang")) {
-#       out <- new_node_to_eliminate_min_sp(x, obj$nlvls)
-#       obj$nlvls <- obj$nlvls[-out$a]
-#       out
-#     } else if (inherits(obj, "evidence_triang")) {
-#       new_node_to_eliminate_evidence(x, obj$evidence_nodes)
-#     } else if (inherits(obj, "evidence_triang2")) {
-#       out <- new_node_to_eliminate_evidence2(x, obj$evidence_nodes, obj$nlvls)
-#       obj$nlvls <- obj$nlvls[-out$a]
-#       out
-#     }    
-    
-#     xa        <- X$a
-#     nc        <- X$nei_complete
-    
-#     if (!nc) { # append new fill_edges
-#       x_nei   <- X$x_nei
-#       nei_idx <- X$nei_idx
-#       nn      <- ncol(x_nei)
-
-#       for (k in 1:(nn-1)) {
-#         x_nei_k <- x_nei[, k, drop = TRUE]
-#         non_adj <- nei_idx[which(x_nei_k[(k+1):nn] == 0L) + k]
-#         fills   <- lapply(non_adj, function(a) c(nei_idx[k], a))
-        
-#         for (fill in fills) {
-#           # convert to original indices:
-#           fill_orig    <- x_orig_col_idx[fill]
-#           fill_edges   <- push(fill_edges, fill_orig)
-
-#           x[fill[1], fill[2]] <- 1L
-#           x[fill[2], fill[1]] <- 1L
-
-#           y[fill_orig[1], fill_orig[2]] <- 1L
-#           y[fill_orig[2], fill_orig[1]] <- 1L
-          
-#         }
-#       }
-#     }
-
-#     alpha[alpha_iter] <- x_orig_col_idx[xa]
-#     alpha_iter        <- alpha_iter + 1L
-
-#     x                 <- x[-xa, -xa, drop = FALSE]     # TODO: Do this inside obj
-#     x_orig_col_idx    <- x_orig_col_idx[-xa]
-#   }
-
-#    # should only ontain 1 value now
-#   alpha[length(alpha)] <- x_orig_col_idx[1L]
-  
-#   list(
-#     new_graph  = y,
-#     fill_edges = fill_edges,
-#     alpha      = alpha
+#   structure(
+#     list(
+#       x                = x,
+#       nlvls            = nlvls[dimnames(x)[[1]]],
+#       pmf_evidence     = pmf_evidence,
+#       find_simplicials = TRUE,
+#       current_nei_mat  = NULL,
+#       current_nei_idx  = NULL,
+#       is_nei_complete  = NULL,
+#       new_node_idx     = NULL      
+#     ),
+#     class = c("evidence2_triang", "list")
 #   )
 # }
+
+new_alpha_triang <- function(x, alpha) {
+  structure(
+    list(
+      x               = x,
+      alpha           = alpha,
+      current_nei_mat = NULL,
+      current_nei_idx = NULL,
+      is_nei_complete = NULL,
+      new_node_idx    = NULL      
+    ),
+    class = c("alpha_triang", "list")
+  )
+}
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#                UPDATING FUNCTIONS
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+new_node_to_eliminate <- function(obj) UseMethod("new_node_to_eliminate")
+
+new_node_to_eliminate.min_nei_triang <- function(obj) {
+  # Minimum-neibor/minimum size elimination:
+  # Minimizing the number of fillins by choosing vertices that
+  # are hopefully simplicial
+  x               <- obj$x
+  lookup_order    <- as.integer(names(sort(structure(apply(x, 2L, sum), names = 1:ncol(x)))))
+  new_node_idx    <- lookup_order[1L]
+  nei             <- x[, new_node_idx, drop = TRUE]
+  current_nei_idx <- unname(which(nei == 1L))
+  current_nei_mat <- x[current_nei_idx, current_nei_idx, drop = FALSE]
+
+  nn        <- ncol(current_nei_mat)
+  max_edges <- nn * (nn - 1)
+  is_nei_complete <- sum(current_nei_mat) == max_edges
+
+  obj$current_nei_mat <- current_nei_mat
+  obj$current_nei_idx <- current_nei_idx
+  obj$is_nei_complete <- is_nei_complete
+  obj$new_node_idx    <- new_node_idx
+  
+  return(obj)
+}
+
+new_node_to_eliminate.min_fill_triang <- function(obj) {
+  x               <- obj$x
+  new_node_idx    <- integer(0)
+  current_nei_idx <- integer(0)
+  edges_to_add    <- Inf
+
+  for (k in 1:ncol(obj$x)) {
+    current_nei_idx_k <- which(x[, k] == 1L)
+    all_edges         <- length(current_nei_idx_k) * (length(current_nei_idx_k) - 1L) / 2
+    existing_edges    <- sum(x[current_nei_idx_k, current_nei_idx_k]) / 2L
+    edges_to_add_k    <- all_edges - existing_edges
+    
+    if (edges_to_add_k < edges_to_add) {
+      edges_to_add    <- edges_to_add_k
+      new_node_idx    <- k
+      current_nei_idx <- current_nei_idx_k
+    }
+  }
+
+  current_nei_mat     <- obj$x[current_nei_idx, current_nei_idx, drop = FALSE]
+  
+  obj$current_nei_mat <- current_nei_mat
+  obj$current_nei_idx <- current_nei_idx
+  obj$is_nei_complete <- sum(current_nei_mat) == length(current_nei_idx) * (length(current_nei_idx) - 1)
+  obj$new_node_idx    <- new_node_idx
+
+  return(obj)
+}
+
+new_node_to_eliminate.min_rfill_triang <- function(obj) {
+  x                   <- obj$x
+
+  number_of_fills <- .map_dbl(1:ncol(x), function(k) {
+    current_nei_idx_k <- which(x[, k] == 1L)
+    all_edges         <- length(current_nei_idx_k) * (length(current_nei_idx_k) - 1L) / 2
+    existing_edges    <- sum(x[current_nei_idx_k, current_nei_idx_k]) / 2L
+    all_edges - existing_edges    
+  })
+
+  # browser()
+  candidates          <- which(number_of_fills == min(number_of_fills))
+  
+  new_node_idx        <- sample(candidates, 1L)
+  current_nei_idx     <- which(x[, new_node_idx, drop = TRUE] == 1L)
+  current_nei_mat     <- obj$x[current_nei_idx, current_nei_idx, drop = FALSE]
+
+  obj$current_nei_idx <- current_nei_idx
+  obj$current_nei_mat <- current_nei_mat
+  obj$is_nei_complete <- sum(current_nei_mat) == length(current_nei_idx) * (length(current_nei_idx) - 1)
+  obj$new_node_idx    <- new_node_idx
+
+  return(obj)
+}
+
+
+new_node_to_eliminate.min_sp_triang <- function(obj) {
+  x               <- obj$x
+  nlvls           <- obj$nlvs
+  new_node_idx    <- integer(0)
+  current_nei_idx <- integer(0)
+  min_sp          <- Inf
+
+  for (k in 1:ncol(x)) {
+    current_nei_idx_k <- which(x[, k] == 1L)
+    family_k <- c(k, current_nei_idx_k)
+    min_sp_k <- prod(nlvls[family_k])
+    if (min_sp_k < min_sp) {
+      min_sp          <- min_sp_k
+      new_node_idx    <- k
+      current_nei_idx <- current_nei_idx_k
+    }
+  }
+
+  current_nei_mat     <- obj$x[current_nei_idx, current_nei_idx, drop = FALSE]
+  
+  obj$current_nei_mat <- current_nei_mat
+  obj$current_nei_idx <- current_nei_idx
+  obj$is_nei_complete <- sum(current_nei_mat) == length(current_nei_idx) * (length(current_nei_idx) - 1)
+  obj$new_node_idx    <- new_node_idx
+  obj$nlvls           <- nlvls[-new_node_idx]
+
+  return(obj)
+}
+
+new_node_to_eliminate.alpha_triang <- function(obj) {
+  new_node_idx        <- match(obj$alpha[1L], colnames(obj$x))
+  current_nei_idx     <- which(obj$x[, new_node_idx] == 1L)
+  current_nei_mat     <- obj$x[current_nei_idx, current_nei_idx, drop = FALSE]
+  obj$current_nei_mat <- current_nei_mat
+  obj$current_nei_idx <- current_nei_idx
+  obj$is_nei_complete <- sum(current_nei_mat) == length(current_nei_idx) * (length(current_nei_idx) - 1)
+  obj$new_node_idx    <- new_node_idx
+  obj$alpha           <- obj$alpha[-1L]
+  return(obj)
+}
+
+# new_node_to_eliminate.evidence2_triang <- function(obj) {
+#   x               <- obj$x
+#   new_node_idx    <- integer(0)
+#   current_nei_idx <- integer(0)
+#   nlvls           <- obj$nlvls
+
+#   simplicial_nodes_idx <- if (obj$find_simplicials) {
+#     n_new_fills <- .map_dbl(1:ncol(x), function(k) {
+#       current_nei_idx_k <- which(x[, k] == 1L)
+#       all_edges <- length(current_nei_idx_k) * (length(current_nei_idx_k) - 1L) / 2
+#       existing_edges <- sum(x[current_nei_idx_k, current_nei_idx_k]) / 2L
+#       all_edges - existing_edges
+#     })
+#     which(n_new_fills == 0)
+#   } else {
+#     integer(0)
+#   }
+
+#   if (neq_empt_int(simplicial_nodes_idx)) {
+#     # Eliminate simplicial node
+#     new_node_idx    <- simplicial_nodes_idx[1L]
+#     current_nei_idx <- current_nei_idx_k <- which(x[, new_node_idx] == 1L)
+#   } else {
+#     # Don't look for simplicial nodes from now on
+#     obj$find_simplicial <- FALSE
+
+#     # Calculate expected statespace
+#     pmf <- obj$pmf_evidence
+#     evidence_nodes <- names(pmf)
+#     nodes <- colnames(x)
+#     expected_statespace <- Inf
+    
+#     for (k in 1:ncol(x)) {
+#       current_nei_idx_k   <- which(x[, k] == 1L)
+#       family_k            <- nodes[c(k, current_nei_idx_k)]
+#       # family_size         <- length(family_k)
+#       evidence_nodes_k    <- intersect(evidence_nodes, family_k)
+#       remaining_nodes_k   <- setdiff(family_k, evidence_nodes)
+#       prod_sp_remaining_k <- prod(nlvls[remaining_nodes_k])
+      
+#       if (neq_empt_chr(evidence_nodes_k)) {
+#         sp_evidence_k <- nlvls[evidence_nodes_k]
+#         pmf_k         <- sparta::marg(pmf, setdiff(names(pmf), evidence_nodes_k))
+#         vals_k        <- sparta::vals(pmf_k)
+
+#         sum_ <- 0
+#         for (j in 1:ncol(pmf_k)) {
+#           cj   <- pmf_k[, j, drop = TRUE] # relies on row.names in names(idx) - is this ok?
+#           idx  <- which(cj == 2) # dangerous with "2" but will be encapsulated in the future
+#           valk <- if (neq_empt_int(idx)) prod(sp_evidence_k[names(idx)]) * vals_k[j] else vals_k[j]
+#           sum_ <- sum_ + valk
+#         }
+
+#         expected_statespace_k <- sum_ * prod_sp_remaining_k
+#         if (expected_statespace_k < expected_statespace) {
+#           expected_statespace <- expected_statespace_k
+#           current_nei_idx <- current_nei_idx_k
+#           new_node_idx    <- k
+#         }
+#       } else {
+#         if (prod_sp_remaining_k < expected_statespace) {
+#           expected_statespace <- prod_sp_remaining_k
+#           current_nei_idx <- current_nei_idx_k
+#           new_node_idx    <- k
+#         }
+#       }
+#     }
+#   }
+  
+#   current_nei_mat     <- obj$x[current_nei_idx, current_nei_idx, drop = FALSE]
+#   obj$current_nei_mat <- current_nei_mat
+#   obj$current_nei_idx <- current_nei_idx
+#   obj$is_nei_complete <- sum(current_nei_mat) == length(current_nei_idx) * (length(current_nei_idx) - 1)
+#   obj$new_node_idx    <- new_node_idx
+#   obj$nlvls           <- nlvls[-new_node_idx]
+
+#   return(obj)
+# }
+
+new_node_to_eliminate.evidence_triang <- function(obj) {
+  x               <- obj$x
+  new_node_idx    <- integer(0)
+  current_nei_idx <- integer(0)
+  nlvls           <- obj$nlvls
+
+  min_fills <- .map_dbl(1:ncol(x), function(k) {
+    current_nei_idx_k <- which(x[, k] == 1L)
+    all_edges <- length(current_nei_idx_k) * (length(current_nei_idx_k) - 1L) / 2
+    existing_edges <- sum(x[current_nei_idx_k, current_nei_idx_k]) / 2L
+    all_edges - existing_edges
+  })
+
+  candidate_nodes_idx <- which(min_fills == min(min_fills))
+
+  pmf <- obj$pmf_evidence
+  evidence_nodes <- names(pmf)
+  nodes <- colnames(x)
+  expected_statespace <- Inf
+
+  # TODO: Skip if candidates induce no fill edges
+  for (k in candidate_nodes_idx) {
+    current_nei_idx_k   <- which(x[, k] == 1L)
+    family_k            <- nodes[c(k, current_nei_idx_k)]
+    evidence_nodes_k    <- intersect(evidence_nodes, family_k)
+    remaining_nodes_k   <- setdiff(family_k, evidence_nodes)
+    prod_sp_remaining_k <- prod(nlvls[remaining_nodes_k])
+    
+    if (neq_empt_chr(evidence_nodes_k)) {
+      sp_evidence_k <- nlvls[evidence_nodes_k]
+      pmf_k         <- pmf[evidence_nodes_k]
+      pmf_k_lst     <- lapply(pmf_k, function(p) c(1-p, p))
+
+      # Calculate expected statespace
+      evidence_state_space <- expand.grid(replicate(length(pmf_k), c(1, 2), FALSE), stringsAsFactors = FALSE)
+      expected_sum_k <- sum(apply(evidence_state_space, 1L, function(state){
+        state_prob <- .map_dbl(seq_along(pmf_k_lst), function(k) pmf_k_lst[[k]][state[k]])
+        prod(sp_evidence_k^c(state-1)) * prod(state_prob)
+      }))
+
+      expected_statespace_k <- expected_sum_k * prod_sp_remaining_k
+      if (expected_statespace_k < expected_statespace) {
+        expected_statespace <- expected_statespace_k
+        current_nei_idx <- current_nei_idx_k
+        new_node_idx    <- k
+      }
+    } else {
+      if (prod_sp_remaining_k < expected_statespace) {
+        expected_statespace <- prod_sp_remaining_k
+        current_nei_idx <- current_nei_idx_k
+        new_node_idx    <- k
+      }
+    }
+  }
+  
+  current_nei_mat     <- obj$x[current_nei_idx, current_nei_idx, drop = FALSE]
+  obj$current_nei_mat <- current_nei_mat
+  obj$current_nei_idx <- current_nei_idx
+  obj$is_nei_complete <- sum(current_nei_mat) == length(current_nei_idx) * (length(current_nei_idx) - 1)
+  obj$new_node_idx    <- new_node_idx
+  obj$nlvls           <- nlvls[-new_node_idx]
+
+  return(obj)
+}
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#               ELIMINATION GAME ENGINE
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+elim_game <- function(obj) {
+  # Save the input graph
+  y <- obj$x
+
+  # triangulation set
+  fill_edges <- list()
+
+  # elimination ordering
+  alpha      <- vector("integer", length = ncol(obj$x))
+  alpha_iter <- 1L
+
+  # transformation of current variable indices in a subgraph to original indices
+  x_orig_col_idx <- 1:ncol(y)
+
+  while (ncol(obj$x) > 1L) {
+
+    # browser()
+    obj <- new_node_to_eliminate(obj)
+    
+    if (!obj$is_nei_complete) { # append new fill_edges
+      nn <- ncol(obj$current_nei_mat)
+
+      for (k in 1:(nn-1)) {
+        current_nei_mat_k <- obj$current_nei_mat[, k, drop = TRUE]
+        non_adj <- obj$current_nei_idx[which(current_nei_mat_k[(k+1):nn] == 0L) + k]
+        fills   <- lapply(non_adj, function(a) c(obj$current_nei_idx[k], a))
+        
+        for (fill in fills) {
+          # convert to original indices:
+          fill_orig    <- x_orig_col_idx[fill]
+          fill_edges   <- push(fill_edges, fill_orig)
+
+          obj$x[fill[1], fill[2]] <- 1L
+          obj$x[fill[2], fill[1]] <- 1L
+
+          y[fill_orig[1], fill_orig[2]] <- 1L
+          y[fill_orig[2], fill_orig[1]] <- 1L
+          
+        }
+      }
+    }
+
+    alpha[alpha_iter] <- x_orig_col_idx[obj$new_node_idx]
+    alpha_iter        <- alpha_iter + 1L
+    x_orig_col_idx    <- x_orig_col_idx[-obj$new_node_idx]
+    obj$x             <- obj$x[-obj$new_node_idx, -obj$new_node_idx, drop = FALSE]
+  }
+
+   # should only ontain 1 value now
+  alpha[length(alpha)] <- x_orig_col_idx[1L]
+  
+  list(
+    new_graph  = y,
+    fill_edges = fill_edges,
+    alpha      = alpha
+  )
+}

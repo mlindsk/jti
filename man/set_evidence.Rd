@@ -2,9 +2,12 @@
 % Please edit documentation in R/api_jt.R
 \name{set_evidence}
 \alias{set_evidence}
+\alias{set_evidence.jt}
 \title{Enter Evidence}
 \usage{
 set_evidence(x, evidence)
+
+\method{set_evidence}{jt}(x, evidence)
 }
 \arguments{
 \item{x}{A junction tree object, \code{jt}.}

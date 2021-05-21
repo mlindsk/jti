@@ -72,8 +72,6 @@ cp <- compile(cl)
 # Example 1: sum-flow without evidence
 # ------------------------------------
 jt1 <- jt(cp)
-jt1 <- jt(cp, propagate = "no")
-jt1 <- set_evidence(jt1, c(A = "n"))
 plot(jt1)
 print(jt1)
 query_belief(jt1, c("E", "L", "T"))
@@ -83,7 +81,14 @@ query_belief(jt1, c("B", "D", "E"), type = "joint")
 # Notice, that jt1 is equivalent to:
 # jt1 <- jt(cp, propagate = "no")
 # jt1 <- propagate(jt1, prop = "full")
+
 # That is; it is possible to postpone the actual propagation
+# In this setup, the junction tree is saved in the jt1 object,
+# and one can repeadetly enter evidence for new observations
+# using the set_evidence function on jt1 and then query
+# several probabilites without repeadetly calculating the
+# the junction tree over and over again. One just needs
+# to use the propagate function on jt1.
 
 # Example 2: sum-flow with evidence
 # ---------------------------------

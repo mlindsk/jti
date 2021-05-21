@@ -1,10 +1,11 @@
-## jti 0.7.0.9999 (xxxx-yy-zz)
+## jti 0.7.1 (2021-05-21)
 
  * A small bug fixed for working with undirected graphs
  * =new_mpd= renamed to =mpd=. Works on =cpt_list= objects now.
  * =triangulate= method for =cpt_list= objects.
  * A new heuristic, =evidence=, for triangulation.
  * Better performance when inserting evidence in general since redundant information is now removed.
+ * New function =jt_binary_ops= for calculating the number of binary operations to perform a full message passing
 
 ## jti 0.7.0 (2021-04-03)
 

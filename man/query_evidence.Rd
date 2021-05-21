@@ -3,23 +3,17 @@
 \name{query_evidence}
 \alias{query_evidence}
 \alias{query_evidence.jt}
-\alias{set_evidence.jt}
 \title{Query Evidence}
 \usage{
 query_evidence(x)
 
 \method{query_evidence}{jt}(x)
-
-\method{set_evidence}{jt}(x, evidence)
 }
 \arguments{
 \item{x}{A junction tree object, \code{jt}.}
 }
 \description{
 Get the probability of the evidence entered in the junction tree object
-}
-\examples{
-# See the 'jt' function
 }
 \seealso{
 \code{\link{jt}}, \code{\link{mpe}}
