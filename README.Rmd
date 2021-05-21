@@ -1,5 +1,4 @@
 ---
-title: "jti: Junction Tree Inference"
 output:
   github_document
 ---
@@ -14,6 +13,8 @@ knitr::opts_chunk$set(
   out.width = "100%"
 )
 ```
+
+# jti: Junction Tree Inference <img src='man/figures/logo.png' align="right" height="240" />
 
 <!-- badges: start -->
 [![R buildstatus](https://github.com/mlindsk/jti/workflows/R-CMD-check/badge.svg)](https://github.com/mlindsk/jti/actions)
