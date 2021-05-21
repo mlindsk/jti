@@ -10,10 +10,20 @@ compile(
   evidence = NULL,
   root_node = "",
   joint_vars = NULL,
-  tri = "min_fill"
+  tri = "min_fill",
+  pmf_evidence = NULL,
+  alpha = NULL
 )
 
-\method{compile}{cpt_list}(x, evidence = NULL, root_node = "", joint_vars = NULL, tri = "min_nei")
+\method{compile}{cpt_list}(
+  x,
+  evidence = NULL,
+  root_node = "",
+  joint_vars = NULL,
+  tri = "min_fill",
+  pmf_evidence = NULL,
+  alpha = NULL
+)
 }
 \arguments{
 \item{x}{An object returned from \code{cpt_list}}
@@ -28,15 +38,22 @@ clique (the first clique).}
 to be in the same clique. Edges between all these variables are added
 to the moralized graph.}
 
-\item{tri}{The optimization strategy used for triangulation. Either
-one of 'min_nei', 'min_fill', 'min_sp', 'sparse', 'minimal'}
+\item{tri}{The optimization strategy used for triangulation. One of
+'min_nei', 'min_fill', 'min_rfill', 'min_sp', 'evidence', 'minimal', 'alpha'.}
+
+\item{pmf_evidence}{A named vector of frequencies. The names should
+correspond to the evidence that is expected to see over time.}
+
+\item{alpha}{Character vector. A permutation of the nodes
+in the graph. It specifies a user-supplied eliminination ordering for
+triangulation of the moral graph.}
 }
 \description{
 Compiled objects are used as building blocks for junction tree inference
 }
 \details{
 The Junction Tree Algorithm performs both a forward and inward
-message passsing (collect and distribute). However, when the forward
+message pass (collect and distribute). However, when the forward
 phase is finished, the root clique potential is guaranteed to be the
 joint pmf over the variables involved in the root clique. Thus, if
 it is known in advance that a specific variable is of interest, the
@@ -61,6 +78,7 @@ refers to entering evidence in the 'jt' function.
 cptl <- cpt_list(asia2)
 cp1  <- compile(cptl, evidence = c(bronc = "yes"), joint_vars = c("bronc", "tub"))
 print(cp1)
+names(cp1)
 dim_names(cp1)
 plot(get_graph(cp1))
 }

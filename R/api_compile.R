@@ -52,9 +52,6 @@ cpt_list.list <- function(x, g = NULL) {
   
   y <- lapply(seq_along(x), function(i) {
     l <- x[[i]]
-    # class_allowed <- any(.map_lgl(sparta::allowed_class_to_sparta(), function(x) inherits(l, x)))
-    # if (!class_allowed) stop("one ore more elements in x is not an array-like object")
-    # Should be checked automatically in as_sparta now!
     spar <- sparta::as_sparta(l)
     # This ensures, that the CPTs and dim_names have the same ordering of the lvls!
     dim_names <<- push(dim_names, attr(spar, "dim_names"))
@@ -87,7 +84,7 @@ cpt_list.data.frame <- function(x, g) {
   is_dag <- igraph::is_dag(g)
   if (!is_dag) {
     if (!igraph::is_chordal(g)$chordal) {
-      stop("undirected graphs must be be decomposable")
+      stop("undirected graphs must be be decomposable", call. = FALSE)
     }
   }
   
@@ -134,10 +131,16 @@ cpt_list.data.frame <- function(x, g) {
 #' @param joint_vars A vector of variables for which we require them
 #' to be in the same clique. Edges between all these variables are added
 #' to the moralized graph.
-#' @param tri The optimization strategy used for triangulation. Either
-#' one of 'min_nei', 'min_fill', 'min_sp', 'sparse', 'minimal'
+#' @param tri The optimization strategy used for triangulation. One of
+#' 'min_nei', 'min_fill', 'min_rfill', 'min_sp', 'evidence', 'minimal', 'alpha'.
+#' @param pmf_evidence A named vector of frequencies. The names should
+#' correspond to the evidence that is expected to see over time.
+#' @param alpha Character vector. A permutation of the nodes
+#' in the graph. It specifies a user-supplied eliminination ordering for
+#' triangulation of the moral graph.
+#' 
 #' @details The Junction Tree Algorithm performs both a forward and inward
-#' message passsing (collect and distribute). However, when the forward
+#' message pass (collect and distribute). However, when the forward
 #' phase is finished, the root clique potential is guaranteed to be the
 #' joint pmf over the variables involved in the root clique. Thus, if
 #' it is known in advance that a specific variable is of interest, the
@@ -157,18 +160,22 @@ cpt_list.data.frame <- function(x, g) {
 #' after compilation. Before refers to entering
 #' evidence in the 'compile' function and after
 #' refers to entering evidence in the 'jt' function.
+#' 
 #' @examples
 #' cptl <- cpt_list(asia2)
 #' cp1  <- compile(cptl, evidence = c(bronc = "yes"), joint_vars = c("bronc", "tub"))
 #' print(cp1)
+#' names(cp1)
 #' dim_names(cp1)
 #' plot(get_graph(cp1))
 #' @export
 compile <- function(x,
-                    evidence   = NULL,
-                    root_node  = "",
-                    joint_vars = NULL,
-                    tri        = "min_fill"
+                    evidence       = NULL,
+                    root_node      = "",
+                    joint_vars     = NULL,
+                    tri            = "min_fill",
+                    pmf_evidence   = NULL,
+                    alpha          = NULL
                     ) {
   UseMethod("compile")
 }
@@ -176,17 +183,15 @@ compile <- function(x,
 #' @rdname compile
 #' @export
 compile.cpt_list <- function(x,
-                             evidence   = NULL,
-                             root_node  = "",
-                             joint_vars = NULL,
-                             tri        = "min_nei") {
+                             evidence       = NULL,
+                             root_node      = "",
+                             joint_vars     = NULL,
+                             tri            = "min_fill",
+                             pmf_evidence   = NULL,
+                             alpha          = NULL                             
+                             ) {
 
-  if (tri %ni% c("min_nei", "min_fill", "min_sp", "minimal")) {
-    stop(
-      "tri must be one of min_nei, min_fill, min_sp, minimal",
-      call. = FALSE
-    )
-  }
+  .defense_compile(tri, pmf_evidence, alpha, names(x))
   
   g       <- attr(x, "graph")
   parents <- attr(x, "parents")
@@ -194,36 +199,38 @@ compile.cpt_list <- function(x,
   gm      <- moralize_igraph(g, parents)
   if (!is.null(joint_vars)) gm <- add_joint_vars_igraph(gm, joint_vars)
 
-  # Note here: if sparse = TRUE, the run time explodes! Wonder why..
+  # Note here: if sparse = TRUE, the run time explodes! Wonder why...
   M  <- igraph::as_adjacency_matrix(gm, sparse = FALSE)
-
+  
   tri_obj <- switch(tri,
-    "min_nei"  = new_min_nei_triang(M),
-    "min_fill" = new_min_fill_triang(M),
-    "min_sp"   = new_min_sp_triang(M, .map_int(attr(x, "dim_names"), length)),
-    "minimal"  = new_minimal_triang(M)
+    "min_fill"  = new_min_fill_triang(M),
+    "min_rfill" = new_min_rfill_triang(M),
+    "min_sp"    = new_min_sp_triang(M, .map_int(dim_names(x), length)),
+    "min_nei"   = new_min_nei_triang(M),
+    "minimal"   = new_minimal_triang(M),
+    "evidence"  = new_evidence_triang(M, .map_int(dim_names(x), length), pmf_evidence),
+    # "evidence2" = new_evidence2_triang(M, .map_int(dim_names(x), length), pmf_evidence),
+    "alpha"     = new_alpha_triang(M, alpha)
   )
-
-  # gmt   <- if (tri != "sparse") triang(tri_obj) else readRDS("link_triangulated_graph.rds")
+  
   gmt     <- .triang(tri_obj)
   adj_lst <- as_adj_lst(gmt)
+  cliques <- construct_cliques(adj_lst, root_node) # just use cliques_int ?
 
   # cliques_int is needed to construct the junction tree in new_jt -> new_schedule
   dimnames(gmt) <- lapply(dimnames(gmt), function(x) 1:nrow(gmt))
   adj_lst_int   <- as_adj_lst(gmt)
-
   root_node_int <- ifelse(root_node != "", as.character(match(root_node, names(adj_lst))), "")
   cliques_int   <- lapply(rip(adj_lst_int, root_node_int)$C, as.integer)
 
-  cliques       <- construct_cliques(adj_lst, root_node) # just use cliques_int ?
-
   if (!is.null(evidence)) {
     if (!valid_evidence(attr(x, "dim_names"), evidence)) {
-      stop("evidence is not on correct form", call. = FALSE)
+      stop("Evidence is not on correct form", call. = FALSE)
     }
+
     # x looses its attributes in set_evidence
     att_ <- attributes(x)
-    x    <- set_evidence(x, cliques, evidence)
+    x    <- set_evidence_(x, cliques, evidence)
     attributes(x) <- att_
   }
  
@@ -241,10 +248,9 @@ compile.cpt_list <- function(x,
   out
 }
 
-
-#' Cpt list getters
+#' Variable getters
 #'
-#' Getter methods for cpt list objects
+#' Getter methods for information about variables and their statespaces
 #' 
 #' @param x \code{cpt_list} or a compiled object
 
@@ -267,6 +273,15 @@ dim_names.charge <- function(x) attr(x, "dim_names")
 #' @rdname getters
 #' @export
 names.charge <- function(x) names(attr(x, "dim_names"))
+
+#' @rdname getters
+#' @export
+dim_names.jt <- function(x) attr(x, "dim_names")
+
+#' @rdname getters
+#' @export
+names.jt <- function(x) names(attr(x, "dim_names"))
+
 
 #' Get graph
 #'

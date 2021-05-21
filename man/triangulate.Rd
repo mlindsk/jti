@@ -5,19 +5,43 @@
 \alias{triangulate.cpt_list}
 \title{Triangulate a Bayesian network}
 \usage{
-triangulate(x, joint_vars = NULL, tri = "min_fill")
+triangulate(
+  x,
+  root_node = "",
+  joint_vars = NULL,
+  tri = "min_fill",
+  pmf_evidence = NULL,
+  alpha = NULL
+)
 
-\method{triangulate}{cpt_list}(x, joint_vars = NULL, tri = "min_fill")
+\method{triangulate}{cpt_list}(
+  x,
+  root_node = "",
+  joint_vars = NULL,
+  tri = "min_fill",
+  pmf_evidence = NULL,
+  alpha = NULL
+)
 }
 \arguments{
 \item{x}{An object returned from \code{cpt_list}}
+
+\item{root_node}{A node for which we require it to live in the root
+clique (the first clique).}
 
 \item{joint_vars}{A vector of variables for which we require them
 to be in the same clique. Edges between all these variables are added
 to the moralized graph.}
 
-\item{tri}{The optimization strategy used for triangulation. Either
-one of 'min_nei', 'min_fill', 'min_sp', 'sparse', 'minimal'}
+\item{tri}{The optimization strategy used for triangulation. One of
+'min_nei', 'min_fill', 'min_rfill', 'min_sp', 'evidence', 'minimal', 'alpha'.}
+
+\item{pmf_evidence}{A named vector of frequencies. The names should
+correspond to the evidence that is expected to see over time.}
+
+\item{alpha}{Character vector. A permutation of the nodes
+in the graph. It specifies a user-supplied eliminination ordering for
+triangulation of the moral graph.}
 }
 \description{
 Given a list of CPTs, this function finds a triangulation

@@ -15,9 +15,6 @@ query_evidence(x)
 \description{
 Get the probability of the evidence entered in the junction tree object
 }
-\examples{
-# See the 'jt' function
-}
 \seealso{
 \code{\link{jt}}, \code{\link{mpe}}
 }

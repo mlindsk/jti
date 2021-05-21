@@ -8,6 +8,12 @@ neq_null     <- function(x) !is.null(x)
 '%ni%'       <- Negate('%in%')
 
 
+# Used in connection to marginalization of numbers
+is_scalar <- function(x) {
+  is.atomic(x) && length(x) == 1L && (class(x) == "numeric" || class(x) == "integer")
+}
+
+
 ## GRAPHS
 is_decomposable <- function(adj) {
   m <- try(mcs(adj), silent = TRUE)

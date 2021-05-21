@@ -65,7 +65,14 @@
 #' # Notice, that jt1 is equivalent to:
 #' # jt1 <- jt(cp, propagate = "no")
 #' # jt1 <- propagate(jt1, prop = "full")
+#'
 #' # That is; it is possible to postpone the actual propagation
+#' # In this setup, the junction tree is saved in the jt1 object,
+#' # and one can repeadetly enter evidence for new observations
+#' # using the set_evidence function on jt1 and then query
+#' # several probabilites without repeadetly calculating the
+#' # the junction tree over and over again. One just needs
+#' # to use the propagate function on jt1.
 #' 
 #' # Example 2: sum-flow with evidence
 #' # ---------------------------------
@@ -168,7 +175,7 @@ jt <- function(x, evidence = NULL, flow = "sum", propagate = "full") UseMethod("
 #' @rdname jt
 #' @export
 jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = "full") {
-  
+
   if (!is.null(evidence)) {
     if (!valid_evidence(attr(x, "dim_names"), evidence)) {
       stop("evidence is not on correct form", call. = FALSE)
@@ -180,6 +187,12 @@ jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = "full") {
   j <- new_jt(x, evidence, flow)
   attr(j, "propagated") <- "no"
 
+  # A junction tree with a single node with flow = max
+  if (length(j$charge$C) == 1L && attr(j, "flow") == "max") {
+      max_cell <- sparta::which_max_cell(j$charge$C$C1)
+      attr(j, "mpe")[names(max_cell)] <- max_cell
+  }
+  
   if (propagate == "no") {
     return(j)
   } else if (propagate == "collect") {
@@ -219,7 +232,7 @@ propagate.jt <- function(x, prop = "full") {
     if (attr(x, "propagated") == "full") {
       stop("the junction tree is already propageted fully", call. = FALSE)
     }
-    
+
     m <- send_messages(x)
     while (attr(m, "direction") != "distribute") m <- send_messages(m)
 
@@ -291,8 +304,6 @@ get_clique_root.jt <- function(x) x$cliques[[as.integer(gsub("C","",attr(x, "cli
 #' Get the probability of the evidence entered in the junction tree object
 #'
 #' @param x A junction tree object, \code{jt}.
-#' @examples
-#' # See the 'jt' function
 #' @seealso \code{\link{jt}}, \code{\link{mpe}}
 #' @export
 query_evidence <- function(x) UseMethod("query_evidence")
@@ -309,6 +320,36 @@ query_evidence.jt <- function(x) {
       "the root node.")
   }
   return(attr(x, "probability_of_evidence"))
+}
+
+#' Enter Evidence 
+#'
+#' Enter evidence into a the junction tree object that has not been propagated
+#'
+#' @param x A junction tree object, \code{jt}.
+#' @param evidence A named vector. The names are the variabes and the elements
+#' are the evidence.
+#' @examples
+#' # See the 'jt' function
+#' @seealso \code{\link{jt}}, \code{\link{mpe}}
+#' @export
+set_evidence <- function(x, evidence) UseMethod("set_evidence")
+
+#' @rdname set_evidence
+#' @export
+set_evidence.jt <- function(x, evidence) {
+  if (attr(x, "propagated") != "no") {
+    stop("Evidence can only be entered into a junction tree, ",
+    "that has not begun propagation.")
+  }
+  
+  if (!valid_evidence(attr(x, "dim_names"), evidence)) {
+    stop("Evidence is not on correct form", call. = FALSE)
+  }
+
+  x$charge$C <- set_evidence_(x$charge$C, x$cliques, evidence)
+  attr(x, "evidence") <- c(attr(x, "evidence"), evidence)
+  return(x)
 }
 
 #' Query Parents or Leaves in a Junction Tree
@@ -388,13 +429,18 @@ query_belief.jt <- function(x, nodes, type = "marginal") {
       "Use 'mpe' to obtain the max configuration.", call. = FALSE)
   }
 
-  has_rn <- has_root_node(x)
+  if (any(x %in% names(attr(x, "evidence")))) {
+    stop("It is not possible to query probabilities from",
+      "evidence nodes", call. = FALSE)
+  }
+
+  has_rn <- has_root_node_jt(x)
 
   if (has_rn) if (!all(nodes %in% get_clique_root(x))) {
     stop(
       "All nodes must be in the root clique",
       "since the junction tree has only collected! ",
-      "See get_clique_root(x) to find the nodes in the root node.",
+      "See get_clique_root(x) to find the nodes in the root clique.",
       call. = FALSE
     )
   }
@@ -408,8 +454,7 @@ query_belief.jt <- function(x, nodes, type = "marginal") {
   .query <- lapply(node_lst, function(z) {
     
     if (has_rn) {
-      # FIXME: C1 need not be the root!
-      sd <- setdiff(x$cliques$C1, z)
+      sd <- setdiff(get_clique_root(x), z)
       if (!neq_empt_chr(sd)) return(x$charge$C$C1)
       return(sparta::marg(x$charge$C$C1, sd))
     }
@@ -422,12 +467,13 @@ query_belief.jt <- function(x, nodes, type = "marginal") {
     in_which_cliques <- .map_lgl(x$cliques, function(clq) all(z %in% clq))
     
     if (!any(in_which_cliques) && type == "joint") {
-      stop("The function does not, at the moment, support queries of ",
-        "nodes that belong to different cliques. ",
+      stop("The function does not, at the moment, support out-of-clique ",
+        "queries, i.e. nodes that belong to different cliques. ",
         "Use plot(x) or get_cliques(x) to see ",
-        "the cliques of the junction tree.",
+        "the cliques of the junction tree. ",
         "Alternatively, use the `joint_vars` ",
-        "argument in the compilation process."
+        "argument in the compilation process. ",
+        "We hope to implement this feature in the future."
       )
     }
 

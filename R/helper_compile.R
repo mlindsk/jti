@@ -1,16 +1,43 @@
+.tri_options <- function(tri) {
+  c("min_fill", "min_rfill", "min_sp", "min_nei", "minimal", "evidence", "alpha")
+}
+
+.defense_compile <- function(tri, pmf_evidence, alpha, nodes) {
+  if (!(tri %in% .tri_options())) {
+    stop("tri must be one of ", paste(.tri_options(), collapse = ", "), call. = FALSE)
+  }
+
+  if (tri == "evidence" && is.null(pmf_evidence)) {
+    stop("tri = 'evidence' requires that pmf_evidence is specified", call. = FALSE)
+  }
+
+  if (tri == "alpha")  {
+    if (is.null(alpha)) {
+      stop("tri = 'alpha' requires that the alpha parameter is specified", call. = FALSE)
+    }
+    if (!identical(sort(alpha), sort(nodes))) stop("The alpha parameter was not specified correctly")
+  }
+  invisible(NULL)
+}
+
 as_undirected_igraph <- function(g) igraph::as.undirected(g)
 
 parents_igraph <- function(g) {
   # g: dag
   # out: named list where a name is the child and elements are parents
-  A  <- igraph::as_adjacency_matrix(g)
+  A  <- igraph::as_adjacency_matrix(g, sparse = FALSE)
   cn <- colnames(A)
   if (is.null(cn)) {
     stop("The vertices in the igraph object must have names")
   }
-  apply(A, 2, function(x) {
-    names(which(x == 1L))
-  })
+
+  par_lst <- structure(vector("list", ncol(A)), names = cn)
+  for (name in cn) {
+    z <- which(A[, name] == 1L)
+    par_lst[[name]] <- names(z)
+  }
+
+  par_lst
 }
 
 parents_cpt_list <- function(x) {
