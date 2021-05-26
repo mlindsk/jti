@@ -34,7 +34,17 @@ to be in the same clique. Edges between all these variables are added
 to the moralized graph.}
 
 \item{tri}{The optimization strategy used for triangulation. One of
-'min_nei', 'min_fill', 'min_rfill', 'min_sp', 'evidence', 'minimal', 'alpha'.}
+\itemize{
+\item 'min_fill'
+\item 'min_rfill'
+\item 'min_efill'
+\item 'min_sfill'
+\item 'min_sp'
+\item 'min_esp'
+\item 'min_nei'
+\item 'minimal'
+\item 'alpha'
+}}
 
 \item{pmf_evidence}{A named vector of frequencies. The names should
 correspond to the evidence that is expected to see over time.}

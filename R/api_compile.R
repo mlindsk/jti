@@ -132,7 +132,16 @@ cpt_list.data.frame <- function(x, g) {
 #' to be in the same clique. Edges between all these variables are added
 #' to the moralized graph.
 #' @param tri The optimization strategy used for triangulation. One of
-#' 'min_nei', 'min_fill', 'min_rfill', 'min_sp', 'evidence', 'minimal', 'alpha'.
+#'  * 'min_fill'
+#'  * 'min_rfill'
+#'  * 'min_efill'
+#'  * 'min_sfill'
+#'  * 'min_sp'
+#'  * 'min_esp'
+#'  * 'min_nei'
+#'  * 'minimal'
+#'  * 'alpha'
+#' @md
 #' @param pmf_evidence A named vector of frequencies. The names should
 #' correspond to the evidence that is expected to see over time.
 #' @param alpha Character vector. A permutation of the nodes
@@ -205,11 +214,12 @@ compile.cpt_list <- function(x,
   tri_obj <- switch(tri,
     "min_fill"  = new_min_fill_triang(M),
     "min_rfill" = new_min_rfill_triang(M),
+    "min_efill" = new_min_efill_triang(M, .map_int(dim_names(x), length), pmf_evidence),
+    "min_sfill" = new_min_sfill_triang(M, .map_int(dim_names(x), length)),
     "min_sp"    = new_min_sp_triang(M, .map_int(dim_names(x), length)),
+    "min_esp"   = new_min_esp_triang(M, .map_int(dim_names(x), length), pmf_evidence),
     "min_nei"   = new_min_nei_triang(M),
     "minimal"   = new_minimal_triang(M),
-    "evidence"  = new_evidence_triang(M, .map_int(dim_names(x), length), pmf_evidence),
-    # "evidence2" = new_evidence2_triang(M, .map_int(dim_names(x), length), pmf_evidence),
     "alpha"     = new_alpha_triang(M, alpha)
   )
   
