@@ -105,7 +105,6 @@ triangulate.cpt_list <- function(x,
     "alpha"     = new_alpha_triang(M, alpha)
   )
 
-  # browser()
   eg <- elim_game(tri_obj)
 
   if (inherits(tri_obj, "minimal")) {
@@ -117,8 +116,10 @@ triangulate.cpt_list <- function(x,
   # construct cliques and statespace
   mat_tri           <- eg[["new_graph"]]
   adj_lst_tri       <- as_adj_lst(eg[["new_graph"]])
-  cliques_          <- construct_cliques(adj_lst_tri)
-  statespace_       <- .map_dbl(cliques_, function(clique) {
+
+  rip_        <- rip(adj_lst_tri, start_node = root_node, check = FALSE)
+  cliques_    <- structure(rip_$C, names = paste("C", 1:length(rip_$C), sep = ""))
+  statespace_ <- .map_dbl(cliques_, function(clique) {
     prod(.map_int(dim_names(x)[clique], length))
   })
 
@@ -129,7 +130,6 @@ triangulate.cpt_list <- function(x,
   cliques_int       <- lapply(rip(adj_lst_int)$C, as.integer)
   rjt               <- rooted_junction_tree(cliques_int)
 
-  
   structure(
     list(
       new_graph             = eg[["new_graph"]],

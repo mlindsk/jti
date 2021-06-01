@@ -183,7 +183,6 @@ jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = "full") {
     attr(x, "evidence") <- c(attr(x, "evidence"), evidence)
   }
 
-  # TODO: move to compile?
   j <- new_jt(x, evidence, flow)
   attr(j, "propagated") <- "no"
 
@@ -418,7 +417,7 @@ query_belief <- function(x, nodes, type = "marginal") UseMethod("query_belief")
 #' @rdname query_belief
 #' @export
 query_belief.jt <- function(x, nodes, type = "marginal") {
-  
+
   if (type %ni% c("marginal", "joint")) {
     stop("Type must be 'marginal' or 'joint'.", call. = FALSE)
   }
@@ -429,7 +428,7 @@ query_belief.jt <- function(x, nodes, type = "marginal") {
       "Use 'mpe' to obtain the max configuration.", call. = FALSE)
   }
 
-  if (any(x %in% names(attr(x, "evidence")))) {
+  if (any(nodes %in% names(attr(x, "evidence")))) {
     stop("It is not possible to query probabilities from",
       "evidence nodes", call. = FALSE)
   }
@@ -452,11 +451,11 @@ query_belief.jt <- function(x, nodes, type = "marginal") {
   }
 
   .query <- lapply(node_lst, function(z) {
-    
+
     if (has_rn) {
-      sd <- setdiff(get_clique_root(x), z)
-      if (!neq_empt_chr(sd)) return(x$charge$C$C1)
-      return(sparta::marg(x$charge$C$C1, sd))
+      pot <- x$charge$C$C1
+      marg_out <- setdiff(names(pot), z)
+      return(sparta::marg(x$charge$C$C1, marg_out))
     }
     
     # TODO: Also check the separators! They may be much smaller!!!
@@ -514,7 +513,6 @@ print.jt <- function(x, ...) {
     "\n -------------------------",
     "\n  Propagated:", attr(x, "propagated"),
     "\n  Flow:", flow,
-    "\n  Nodes:", nv,
     "\n  Edges:", ne, "/", nv*(nv-1)/2,
     "\n  Cliques:", length(x$cliques),
     "\n   - max:", max_C,

@@ -91,6 +91,9 @@ cpt_list.data.frame <- function(x, g) {
   parents <- if (is_dag) {
     parents_igraph(g)
   } else {
+    # NOTE 1: Consider implementing MRFs without using parents and DAGs
+    #         Then make new_charge a generic that dispatches on
+    #         classes "dag" and "mrf"!
     rip(as_adj_lst(igraph::as_adjacency_matrix(g, sparse = FALSE)), check = FALSE)$P 
   }
   
@@ -99,6 +102,10 @@ cpt_list.data.frame <- function(x, g) {
   y <- lapply(seq_along(parents), function(i) {
     child <- names(parents)[i]
     pars  <- parents[[i]]
+    # NOTE 2: Can be expensive in complex MRFs with huge cliques to use as_sparta
+    #       Consider something like:
+    #       table(apply(x[, c(child, pars), 1L, paste, collapse = ":"))
+    #       and deduce the non-zero cells from here!
     spar  <- sparta::as_sparta(x[, c(child, pars), drop = FALSE])
     spar  <- sparta::as_cpt(spar, pars)
     # This ensures, that the CPTs and dim_names have the same ordering of the lvls!
@@ -347,7 +354,6 @@ print.cpt_list <- function(x, ...) {
 #' @seealso \code{\link{jt}}
 #' @export
 print.charge <- function(x, ...) {
-  # TODO: PRINT EVIDENCE
   cls <- paste0("<", paste0(class(x), collapse = ", "), ">")
   nn  <- length(names(x))
   clique_sizes <- .map_int(x$cliques, length)

@@ -227,7 +227,7 @@ We use the `ess` package (on CRAN), found at https://github.com/mlindsk/ess, to 
 library(ess)
 
 g7  <- ess::fit_graph(asia, trace = FALSE)
-ig7 <- igraph::graph_from_adjacency_matrix(ess::adj_mat(g7), "undirected")
+ig7 <- ess::as_igraph(g7)
 cp7 <- compile(cpt_list(asia, ig7))
 jt7 <- jt(cp7)
 

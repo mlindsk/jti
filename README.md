@@ -110,7 +110,6 @@ jt1
 #>  ------------------------- 
 #>   Propagated: full 
 #>   Flow: sum 
-#>   Nodes: 6 
 #>   Edges: 5 / 15 
 #>   Cliques: 6 
 #>    - max: 3 
@@ -363,7 +362,7 @@ graph to data.
 library(ess)
 
 g7  <- ess::fit_graph(asia, trace = FALSE)
-ig7 <- igraph::graph_from_adjacency_matrix(ess::adj_mat(g7), "undirected")
+ig7 <- ess::as_igraph(g7)
 cp7 <- compile(cpt_list(asia, ig7))
 jt7 <- jt(cp7)
 
