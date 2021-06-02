@@ -158,10 +158,9 @@ set_evidence_ <- function(x, cliques, evidence) {
           try(sparta::slice(x[[k]], e, drop = FALSE), silent = TRUE)
         }
         if (inherits(m, "try-error")) {
-          stop(
-            "inconsistent evidence",
-            call. = FALSE
-          )
+          msg <- paste("One or more tables had inconsistent evidence. Converted to a unit potential")
+          message(msg)
+          sparta::sparta_unity_struct(sparta::dim_names(x[[k]]))
         }
         x[[k]] <- m
       }
