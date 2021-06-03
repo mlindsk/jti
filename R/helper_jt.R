@@ -19,11 +19,13 @@ parents_jt <- function(x, lvs) {
 }
 
 valid_evidence <- function(dim_names, e) {
-  lookup <- mapply(match, e, dim_names[names(e)])
-  if (anyNA(lookup)) {
-    return(FALSE)
-  } else {
+
+  nemvc <- neq_empt_vector_chr(e)
+  e_conforms_with_dim_names <- !anyNA(mapply(match, e, dim_names[names(e)]))
+  if (e_conforms_with_dim_names && nemvc) {
     return(TRUE)
+  } else {
+    return(FALSE)
   }
 }
 
@@ -152,16 +154,24 @@ set_evidence_ <- function(x, cliques, evidence) {
       e_var <- names(e)
       e_val <- unname(e)
       if (e_var %in% Ck) {
-        m <- if (nrow(x[[k]]) > 1L) {
-          try(sparta::slice(x[[k]], e, drop = TRUE), silent = TRUE)
+        n_names <- length(Ck)
+        m <- if (n_names > 1L) {
+          try(sparta::slice(x[[k]], e, drop = TRUE), silent = TRUE) # possibly a sparta_unity
         } else {
-          try(sparta::slice(x[[k]], e, drop = FALSE), silent = TRUE)
+          try(sparta::slice(x[[k]], e, drop = FALSE), silent = TRUE)            
         }
+
+        # NOTE: Slicing on a sparta_unity with a single variable
+        # will be regarded as inconsistent evidence for now!
+        # Will have to come up with some method dealing with this.
+        
         if (inherits(m, "try-error")) {
-          msg <- paste("One or more tables had inconsistent evidence. Converted to a unit potential")
-          message(msg)
-          sparta::sparta_unity_struct(sparta::dim_names(x[[k]]))
+          stop(
+            "inconsistent evidence",
+            call. = FALSE
+          )
         }
+        
         x[[k]] <- m
       }
     }
