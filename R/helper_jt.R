@@ -19,11 +19,13 @@ parents_jt <- function(x, lvs) {
 }
 
 valid_evidence <- function(dim_names, e) {
-  lookup <- mapply(match, e, dim_names[names(e)])
-  if (anyNA(lookup)) {
-    return(FALSE)
-  } else {
+
+  nemvc <- neq_empt_vector_chr(e)
+  e_conforms_with_dim_names <- !anyNA(mapply(match, e, dim_names[names(e)]))
+  if (e_conforms_with_dim_names && nemvc) {
     return(TRUE)
+  } else {
+    return(FALSE)
   }
 }
 
@@ -141,28 +143,35 @@ prune_jt <- function(jt) {
 # }
 
 
-set_evidence_ <- function(x, cliques, evidence) {
-  # x: list of (sparse) potentials
+set_evidence_ <- function(x, evidence) {
+  # x: list of (sparse) tables
   for (k in seq_along(x)) {
-    Ck <- names(x[[k]])
+    pot_k <- names(x[[k]])
     if (inherits(x[[k]], "sparta_unity")) next
-    es_in_ck <- which(names(evidence) %in% Ck)
+    es_in_ck <- which(names(evidence) %in% pot_k)
     for (i in es_in_ck) {
       e     <- evidence[i]
       e_var <- names(e)
       e_val <- unname(e)
-      if (e_var %in% Ck) {
-        m <- if (nrow(x[[k]]) > 1L) {
-          try(sparta::slice(x[[k]], e, drop = TRUE), silent = TRUE)
+      if (e_var %in% pot_k) {
+        n_names <- length(pot_k)
+        m <- if (n_names > 1L) {
+          try(sparta::slice(x[[k]], e, drop = TRUE), silent = TRUE) # possibly a sparta_unity
         } else {
-          try(sparta::slice(x[[k]], e, drop = FALSE), silent = TRUE)
+          try(sparta::slice(x[[k]], e, drop = FALSE), silent = TRUE)            
         }
+
+        # NOTE: Slicing on a sparta_unity with a single variable
+        # will be regarded as inconsistent evidence for now!
+        # Will have to come up with some method dealing with this.
+        
         if (inherits(m, "try-error")) {
           stop(
             "inconsistent evidence",
             call. = FALSE
           )
         }
+        
         x[[k]] <- m
       }
     }
@@ -177,7 +186,7 @@ new_jt <- function(x, evidence = NULL, flow = "sum") {
   charge  <- x$charge
   cliques <- x$cliques
 
-  if (!is.null(evidence)) charge$C <- set_evidence_(charge$C, cliques, evidence)
+  if (!is.null(evidence)) charge$C <- set_evidence_(charge$C, evidence)
 
   schedule  <- new_schedule(cliques, attr(x, "cliques_int"), attr(x, "root_node"))
   attr(x, "cliques_int") <- NULL
@@ -204,6 +213,7 @@ new_jt <- function(x, evidence = NULL, flow = "sum") {
       vector("character", length = length(all_vars)),
       names = all_vars
     )
+    if (!is.null(evidence)) attr(jt, "mpe")[names(evidence)] <- evidence
   }
   return(jt)
 }

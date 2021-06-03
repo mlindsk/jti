@@ -1,3 +1,9 @@
+## jti 0.7.1.9999 (xxxx-yy-zz)
+
+ * =jt_nbinary_ops= more than twice as fast.
+ * Small fixes here and there
+ * New constructor =pot_list= for markov random fields which is more efficient and idiomatic
+
 ## jti 0.7.1 (2021-05-21)
 
  * A small bug fixed for working with undirected graphs

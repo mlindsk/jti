@@ -4,6 +4,8 @@
 \alias{dim_names}
 \alias{dim_names.cpt_list}
 \alias{names.cpt_list}
+\alias{dim_names.pot_list}
+\alias{names.pot_list}
 \alias{dim_names.charge}
 \alias{names.charge}
 \alias{dim_names.jt}
@@ -15,6 +17,10 @@ dim_names(x)
 \method{dim_names}{cpt_list}(x)
 
 \method{names}{cpt_list}(x)
+
+\method{dim_names}{pot_list}(x)
+
+\method{names}{pot_list}(x)
 
 \method{dim_names}{charge}(x)
 
