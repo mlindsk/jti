@@ -23,15 +23,22 @@ knitr::opts_chunk$set(
 
 ## About
 
-The **jti** package (pronounced 'yeti') is a memory efficient implementaion of the junction tree algorithm (JTA) using the Lauritzen-Spiegelhalter scheme. Why is it memory efficient? Because we use a ![sparse representation](https://github.com/mlindsk/jti) for the potentials which enable us to handle large and complex graphs where the variables can have an arbitrary large number of levels.
+The **jti** package (pronounced 'yeti') is a memory efficient implementaion of the junction tree algorithm (JTA) using the Lauritzen-Spiegelhalter scheme. Why is it memory efficient? Because we use a ![sparse representation](https://github.com/mlindsk/sparta) for the potentials which enable us to handle large and complex graphs where the variables can have an arbitrary large number of levels. The **jti** package is a big part of the software paper ![sparta: Sparse Tables and their Algebra with a View Towards High Dimensional Graphical Models](https://arxiv.org/abs/2103.03647).
 
 ## Installation
 
-You can install the current stable release of the package by using the `devtools` package: 
+Current stable release from CRAN: 
+
+```{r, eval = FALSE}
+install.packages("jti")
+```
+
+Development version:
 
 ```{r, eval = FALSE}
 devtools::install_github("mlindsk/jti", build_vignettes = FALSE)
 ```
+
 ## Libraries
 
 ```{r}

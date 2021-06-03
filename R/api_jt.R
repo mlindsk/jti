@@ -292,6 +292,10 @@ get_cliques.charge <- function(x) x$cliques
 
 #' @rdname get_cliques
 #' @export
+get_cliques.pot_list <- function(x) attr(x, "cliques")
+
+#' @rdname get_cliques
+#' @export
 get_clique_root <- function(x) UseMethod("get_clique_root")
 
 #' @rdname get_cliques
@@ -346,7 +350,7 @@ set_evidence.jt <- function(x, evidence) {
     stop("Evidence is not on correct form", call. = FALSE)
   }
 
-  x$charge$C <- set_evidence_(x$charge$C, x$cliques, evidence)
+  x$charge$C <- set_evidence_(x$charge$C, evidence)
   attr(x, "evidence") <- c(attr(x, "evidence"), evidence)
   return(x)
 }

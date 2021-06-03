@@ -24,7 +24,8 @@ triangulate(
 )
 }
 \arguments{
-\item{x}{An object returned from \code{cpt_list}}
+\item{x}{An object returned from \code{cpt_list} (baeysian network) or
+\code{pot_list} (decomposable markov random field)}
 
 \item{root_node}{A node for which we require it to live in the root
 clique (the first clique).}
@@ -33,7 +34,8 @@ clique (the first clique).}
 to be in the same clique. Edges between all these variables are added
 to the moralized graph.}
 
-\item{tri}{The optimization strategy used for triangulation. One of
+\item{tri}{The optimization strategy used for triangulation if x originates
+from a Baeysian network. One of
 \itemize{
 \item 'min_fill'
 \item 'min_rfill'
@@ -47,7 +49,8 @@ to the moralized graph.}
 }}
 
 \item{pmf_evidence}{A named vector of frequencies. The names should
-correspond to the evidence that is expected to see over time.}
+correspond to the evidence that is expected to see over time. Relevant
+in connection to \code{min_efill} and \code{min_esp} triangulations.}
 
 \item{alpha}{Character vector. A permutation of the nodes
 in the graph. It specifies a user-supplied eliminination ordering for

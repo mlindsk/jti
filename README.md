@@ -13,14 +13,22 @@ buildstatus](https://github.com/mlindsk/jti/workflows/R-CMD-check/badge.svg)](ht
 The **jti** package (pronounced ‘yeti’) is a memory efficient
 implementaion of the junction tree algorithm (JTA) using the
 Lauritzen-Spiegelhalter scheme. Why is it memory efficient? Because we
-use a ![sparse representation](https://github.com/mlindsk/jti) for the
-potentials which enable us to handle large and complex graphs where the
-variables can have an arbitrary large number of levels.
+use a ![sparse representation](https://github.com/mlindsk/sparta) for
+the potentials which enable us to handle large and complex graphs where
+the variables can have an arbitrary large number of levels. The **jti**
+package is a big part of the software paper ![sparta: Sparse Tables and
+their Algebra with a View Towards High Dimensional Graphical
+Models](https://arxiv.org/abs/2103.03647).
 
 ## Installation
 
-You can install the current stable release of the package by using the
-`devtools` package:
+Current stable release from CRAN:
+
+``` r
+install.packages("jti")
+```
+
+Development version:
 
 ``` r
 devtools::install_github("mlindsk/jti", build_vignettes = FALSE)
@@ -53,7 +61,7 @@ g <- igraph::graph_from_edgelist(el)
 plot(g)
 ```
 
-<img src="man/figures/README-unnamed-chunk-4-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-5-1.png" width="100%" />
 
 We use the asia data; see the man page `(?asia)`
 
@@ -120,7 +128,7 @@ jt1
 plot(jt1)
 ```
 
-<img src="man/figures/README-unnamed-chunk-7-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-8-1.png" width="100%" />
 Query probabilities
 
 ``` r
@@ -210,7 +218,7 @@ e4  <- c(T = "y", X = "y", D = "y")
 jt4 <- jt(cp, e4, flow = "max")
 mpe(jt4)
 #>   A   T   E   L   S   B   X   D 
-#> "n"  "" "y" "n" "y" "y"  ""  ""
+#> "n" "y" "y" "n" "y" "y" "y" "y"
 ```
 
 Notice, that `T`, `E`, `S`, `B`, `X` and `D` has changed from `"n"` to
@@ -254,7 +262,7 @@ Inspection; see if the graph correspond to the cpts
 plot(get_graph(cp6)) 
 ```
 
-<img src="man/figures/README-unnamed-chunk-17-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-18-1.png" width="100%" />
 
 This time we specify that no propagation should be performed
 
@@ -269,7 +277,7 @@ are leaves and parents
 plot(jt6)
 ```
 
-<img src="man/figures/README-unnamed-chunk-19-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-20-1.png" width="100%" />
 
 ``` r
 get_cliques(jt6)
@@ -313,7 +321,7 @@ Inspect again
 plot(jt6)
 ```
 
-<img src="man/figures/README-unnamed-chunk-21-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-22-1.png" width="100%" />
 
 Send the last message to the root and inspect
 
@@ -322,7 +330,7 @@ jt6 <- send_messages(jt6)
 plot(jt6)
 ```
 
-<img src="man/figures/README-unnamed-chunk-22-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-23-1.png" width="100%" />
 
 The arrows are now reversed and the outwards (distribute) phase begins
 
