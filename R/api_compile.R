@@ -159,6 +159,7 @@ pot_list.data.frame <- function(x, g) {
   if (!igraph::is.igraph(g)) stop("g must be an igraph object", call. = FALSE)
 
   cliques <- rip(as_adj_lst(igraph::as_adjacency_matrix(g, sparse = FALSE)), check = TRUE)$C
+  names(cliques) <- paste("C", 1:length(cliques), sep = "")
   dns <- list()
 
   y <- lapply(seq_along(cliques), function(i) {
@@ -174,7 +175,7 @@ pot_list.data.frame <- function(x, g) {
   dns <- dns[unique(names(dns))]
   
   structure(
-    structure(y, names = paste("C", 1:length(cliques), sep = "")),
+    structure(y, names = names(cliques)),
     nodes     = colnames(x),
     cliques   = cliques,
     dim_names = dns,

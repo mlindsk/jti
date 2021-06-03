@@ -235,7 +235,7 @@ library(ess)
 
 g7  <- ess::fit_graph(asia, trace = FALSE)
 ig7 <- ess::as_igraph(g7)
-cp7 <- compile(cpt_list(asia, ig7))
+cp7 <- compile(pot_list(asia, ig7))
 jt7 <- jt(cp7)
 
 query_belief(jt7, get_cliques(jt7)[[4]], type = "joint")
