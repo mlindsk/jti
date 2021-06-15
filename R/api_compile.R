@@ -102,6 +102,7 @@ cpt_list.data.frame <- function(x, g) {
   dns <- list()
 
   y <- lapply(seq_along(parents), function(i) {
+    # TODO: Stop making the dense cpts first. Just construct the sparta object directly
     child <- names(parents)[i]
     pars  <- parents[[i]]
     spar  <- sparta::as_sparta(x[, c(child, pars), drop = FALSE])
@@ -312,18 +313,18 @@ compile.cpt_list <- function(x,
     if (!valid_evidence(attr(x, "dim_names"), evidence)) {
       stop("Evidence is not on correct form", call. = FALSE)
     }
-
     # x looses its attributes in set_evidence
     att_ <- attributes(x)
     x    <- set_evidence_(x, evidence)
     attributes(x) <- att_
   }
-  
+
   charge  <- new_charge_cpt(x, cliques, parents)
 
   structure(
     list(charge = charge, cliques = cliques),
     root_node   = root_node,
+    joint_vars  = joint_vars,
     dim_names   = attr(x, "dim_names"),
     evidence    = evidence,
     graph       = g,
@@ -371,6 +372,7 @@ compile.pot_list <- function(x,
   structure(
     list(charge = charge, cliques = cliques),
     root_node   = root_node,
+    joint_vars  = joint_vars,
     dim_names   = attr(x, "dim_names"),
     evidence    = evidence,
     graph       = g,

@@ -28,7 +28,7 @@ Current stable release from CRAN:
 install.packages("jti")
 ```
 
-Development version:
+Development version (see `README.md` for new features):
 
 ``` r
 devtools::install_github("mlindsk/jti", build_vignettes = FALSE)
