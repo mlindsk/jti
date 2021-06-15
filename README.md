@@ -28,7 +28,7 @@ Current stable release from CRAN:
 install.packages("jti")
 ```
 
-Development version:
+Development version (see `README.md` for new features):
 
 ``` r
 devtools::install_github("mlindsk/jti", build_vignettes = FALSE)
@@ -371,21 +371,21 @@ library(ess)
 
 g7  <- ess::fit_graph(asia, trace = FALSE)
 ig7 <- ess::as_igraph(g7)
-cp7 <- compile(cpt_list(asia, ig7))
+cp7 <- compile(pot_list(asia, ig7))
 jt7 <- jt(cp7)
 
 query_belief(jt7, get_cliques(jt7)[[4]], type = "joint")
 #> , , T = n
 #> 
 #>    L
-#> E       n      y
-#>   n 0.926 0.0000
-#>   y 0.000 0.0652
+#> E          n            y
+#>   n 0.999967 0.000000e+00
+#>   y 0.000000 2.930828e-05
 #> 
 #> , , T = y
 #> 
 #>    L
-#> E       n     y
-#>   n 0.000 0e+00
-#>   y 0.008 8e-04
+#> E              n            y
+#>   n 0.000000e+00 0.000000e+00
+#>   y 3.657762e-06 6.286238e-09
 ```

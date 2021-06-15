@@ -102,6 +102,7 @@ cpt_list.data.frame <- function(x, g) {
   dns <- list()
 
   y <- lapply(seq_along(parents), function(i) {
+    # TODO: Stop making the dense cpts first. Just construct the sparta object directly
     child <- names(parents)[i]
     pars  <- parents[[i]]
     spar  <- sparta::as_sparta(x[, c(child, pars), drop = FALSE])
@@ -159,6 +160,7 @@ pot_list.data.frame <- function(x, g) {
   if (!igraph::is.igraph(g)) stop("g must be an igraph object", call. = FALSE)
 
   cliques <- rip(as_adj_lst(igraph::as_adjacency_matrix(g, sparse = FALSE)), check = TRUE)$C
+  names(cliques) <- paste("C", 1:length(cliques), sep = "")
   dns <- list()
 
   y <- lapply(seq_along(cliques), function(i) {
@@ -174,7 +176,7 @@ pot_list.data.frame <- function(x, g) {
   dns <- dns[unique(names(dns))]
   
   structure(
-    structure(y, names = paste("C", 1:length(cliques), sep = "")),
+    structure(y, names = names(cliques)),
     nodes     = colnames(x),
     cliques   = cliques,
     dim_names = dns,
@@ -311,18 +313,18 @@ compile.cpt_list <- function(x,
     if (!valid_evidence(attr(x, "dim_names"), evidence)) {
       stop("Evidence is not on correct form", call. = FALSE)
     }
-
     # x looses its attributes in set_evidence
     att_ <- attributes(x)
     x    <- set_evidence_(x, evidence)
     attributes(x) <- att_
   }
-  
+
   charge  <- new_charge_cpt(x, cliques, parents)
 
   structure(
     list(charge = charge, cliques = cliques),
     root_node   = root_node,
+    joint_vars  = joint_vars,
     dim_names   = attr(x, "dim_names"),
     evidence    = evidence,
     graph       = g,
@@ -370,6 +372,7 @@ compile.pot_list <- function(x,
   structure(
     list(charge = charge, cliques = cliques),
     root_node   = root_node,
+    joint_vars  = joint_vars,
     dim_names   = attr(x, "dim_names"),
     evidence    = evidence,
     graph       = g,

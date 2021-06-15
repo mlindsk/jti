@@ -46,7 +46,7 @@ parents_igraph <- function(g) {
 parents_cpt_list <- function(x) {
   parents <- structure(lapply(seq_along(x), function(i) {
     child   <- names(x)[i]
-    setdiff(names(attr(x[[i]], "dim_names")), child)
+    setdiff(names(x[[i]]), child)
   }), names  = names(x))
 }
 
