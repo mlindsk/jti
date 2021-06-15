@@ -96,15 +96,15 @@ triangulate.cpt_list <- function(x,
   tri_obj <- switch(tri,
     "min_fill"  = new_min_fill_triang(M),
     "min_rfill" = new_min_rfill_triang(M),
+    "min_efill" = new_min_efill_triang(M, .map_int(dim_names(x), length), pmf_evidence),
+    "min_sfill" = new_min_sfill_triang(M, .map_int(dim_names(x), length)),
     "min_sp"    = new_min_sp_triang(M, .map_int(dim_names(x), length)),
+    "min_esp"   = new_min_esp_triang(M, .map_int(dim_names(x), length), pmf_evidence),
     "min_nei"   = new_min_nei_triang(M),
     "minimal"   = new_minimal_triang(M),
-    "evidence"  = new_evidence_triang(M, .map_int(dim_names(x), length), pmf_evidence),
-    # "evidence2" = new_evidence2_triang(M, .map_int(dim_names(x), length), pmf_evidence),
     "alpha"     = new_alpha_triang(M, alpha)
   )
 
-  # browser()
   eg <- elim_game(tri_obj)
 
   if (inherits(tri_obj, "minimal")) {
@@ -116,8 +116,10 @@ triangulate.cpt_list <- function(x,
   # construct cliques and statespace
   mat_tri           <- eg[["new_graph"]]
   adj_lst_tri       <- as_adj_lst(eg[["new_graph"]])
-  cliques_          <- construct_cliques(adj_lst_tri)
-  statespace_       <- .map_dbl(cliques_, function(clique) {
+
+  rip_        <- rip(adj_lst_tri, start_node = root_node, check = FALSE)
+  cliques_    <- structure(rip_$C, names = paste("C", 1:length(rip_$C), sep = ""))
+  statespace_ <- .map_dbl(cliques_, function(clique) {
     prod(.map_int(dim_names(x)[clique], length))
   })
 
@@ -128,7 +130,6 @@ triangulate.cpt_list <- function(x,
   cliques_int       <- lapply(rip(adj_lst_int)$C, as.integer)
   rjt               <- rooted_junction_tree(cliques_int)
 
-  
   structure(
     list(
       new_graph             = eg[["new_graph"]],

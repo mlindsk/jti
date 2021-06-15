@@ -3,6 +3,7 @@
 \name{compile}
 \alias{compile}
 \alias{compile.cpt_list}
+\alias{compile.pot_list}
 \title{Compile information}
 \usage{
 compile(
@@ -24,9 +25,20 @@ compile(
   pmf_evidence = NULL,
   alpha = NULL
 )
+
+\method{compile}{pot_list}(
+  x,
+  evidence = NULL,
+  root_node = "",
+  joint_vars = NULL,
+  tri = "min_fill",
+  pmf_evidence = NULL,
+  alpha = NULL
+)
 }
 \arguments{
-\item{x}{An object returned from \code{cpt_list}}
+\item{x}{An object returned from \code{cpt_list} (baeysian network) or
+\code{pot_list} (decomposable markov random field)}
 
 \item{evidence}{A named vector. The names are the variabes and the elements
 are the evidence.}
@@ -38,11 +50,23 @@ clique (the first clique).}
 to be in the same clique. Edges between all these variables are added
 to the moralized graph.}
 
-\item{tri}{The optimization strategy used for triangulation. One of
-'min_nei', 'min_fill', 'min_rfill', 'min_sp', 'evidence', 'minimal', 'alpha'.}
+\item{tri}{The optimization strategy used for triangulation if x originates
+from a Baeysian network. One of
+\itemize{
+\item 'min_fill'
+\item 'min_rfill'
+\item 'min_efill'
+\item 'min_sfill'
+\item 'min_sp'
+\item 'min_esp'
+\item 'min_nei'
+\item 'minimal'
+\item 'alpha'
+}}
 
 \item{pmf_evidence}{A named vector of frequencies. The names should
-correspond to the evidence that is expected to see over time.}
+correspond to the evidence that is expected to see over time. Relevant
+in connection to \code{min_efill} and \code{min_esp} triangulations.}
 
 \item{alpha}{Character vector. A permutation of the nodes
 in the graph. It specifies a user-supplied eliminination ordering for
@@ -73,6 +97,12 @@ evidence from before compilation with evidence
 after compilation. Before refers to entering
 evidence in the 'compile' function and after
 refers to entering evidence in the 'jt' function.
+
+Finally, one can either use a Bayesian network or a decomposable
+Markov random field (use the \code{ess} package to fit these). Bayesian
+networks must be constructed with \code{cpt_list} and decomposable MRFs
+should be constructed with \code{pot_list}, but can also be constructed
+using \code{cpt_list}.
 }
 \examples{
 cptl <- cpt_list(asia2)

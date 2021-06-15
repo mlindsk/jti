@@ -1,5 +1,5 @@
-jti: Junction Tree Inference
-================
+
+# jti: Junction Tree Inference <img src='man/figures/logo.png' align="right" height="240" />
 
 <!-- badges: start -->
 
@@ -13,14 +13,22 @@ buildstatus](https://github.com/mlindsk/jti/workflows/R-CMD-check/badge.svg)](ht
 The **jti** package (pronounced ‘yeti’) is a memory efficient
 implementaion of the junction tree algorithm (JTA) using the
 Lauritzen-Spiegelhalter scheme. Why is it memory efficient? Because we
-use a ![sparse representation](https://github.com/mlindsk/jti) for the
-potentials which enable us to handle large and complex graphs where the
-variables can have an arbitrary large number of levels.
+use a ![sparse representation](https://github.com/mlindsk/sparta) for
+the potentials which enable us to handle large and complex graphs where
+the variables can have an arbitrary large number of levels. The **jti**
+package is a big part of the software paper ![sparta: Sparse Tables and
+their Algebra with a View Towards High Dimensional Graphical
+Models](https://arxiv.org/abs/2103.03647).
 
 ## Installation
 
-You can install the current stable release of the package by using the
-`devtools` package:
+Current stable release from CRAN:
+
+``` r
+install.packages("jti")
+```
+
+Development version (see `README.md` for new features):
 
 ``` r
 devtools::install_github("mlindsk/jti", build_vignettes = FALSE)
@@ -53,7 +61,7 @@ g <- igraph::graph_from_edgelist(el)
 plot(g)
 ```
 
-<img src="man/figures/README-unnamed-chunk-4-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-5-1.png" width="100%" />
 
 We use the asia data; see the man page `(?asia)`
 
@@ -110,7 +118,6 @@ jt1
 #>  ------------------------- 
 #>   Propagated: full 
 #>   Flow: sum 
-#>   Nodes: 6 
 #>   Edges: 5 / 15 
 #>   Cliques: 6 
 #>    - max: 3 
@@ -121,7 +128,7 @@ jt1
 plot(jt1)
 ```
 
-<img src="man/figures/README-unnamed-chunk-7-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-8-1.png" width="100%" />
 Query probabilities
 
 ``` r
@@ -255,7 +262,7 @@ Inspection; see if the graph correspond to the cpts
 plot(get_graph(cp6)) 
 ```
 
-<img src="man/figures/README-unnamed-chunk-17-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-18-1.png" width="100%" />
 
 This time we specify that no propagation should be performed
 
@@ -270,7 +277,7 @@ are leaves and parents
 plot(jt6)
 ```
 
-<img src="man/figures/README-unnamed-chunk-19-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-20-1.png" width="100%" />
 
 ``` r
 get_cliques(jt6)
@@ -314,7 +321,7 @@ Inspect again
 plot(jt6)
 ```
 
-<img src="man/figures/README-unnamed-chunk-21-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-22-1.png" width="100%" />
 
 Send the last message to the root and inspect
 
@@ -323,7 +330,7 @@ jt6 <- send_messages(jt6)
 plot(jt6)
 ```
 
-<img src="man/figures/README-unnamed-chunk-22-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-23-1.png" width="100%" />
 
 The arrows are now reversed and the outwards (distribute) phase begins
 
@@ -363,22 +370,22 @@ graph to data.
 library(ess)
 
 g7  <- ess::fit_graph(asia, trace = FALSE)
-ig7 <- igraph::graph_from_adjacency_matrix(ess::adj_mat(g7), "undirected")
-cp7 <- compile(cpt_list(asia, ig7))
+ig7 <- ess::as_igraph(g7)
+cp7 <- compile(pot_list(asia, ig7))
 jt7 <- jt(cp7)
 
 query_belief(jt7, get_cliques(jt7)[[4]], type = "joint")
 #> , , T = n
 #> 
 #>    L
-#> E       n      y
-#>   n 0.926 0.0000
-#>   y 0.000 0.0652
+#> E          n            y
+#>   n 0.999967 0.000000e+00
+#>   y 0.000000 2.930828e-05
 #> 
 #> , , T = y
 #> 
 #>    L
-#> E       n     y
-#>   n 0.000 0e+00
-#>   y 0.008 8e-04
+#> E              n            y
+#>   n 0.000000e+00 0.000000e+00
+#>   y 3.657762e-06 6.286238e-09
 ```

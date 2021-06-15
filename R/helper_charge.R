@@ -29,8 +29,7 @@ allocate_child_to_potential <- function(potC, x, cliques, child, parents) {
 ##   }
 ## }
 
-new_charge <- function(x, cliques, parents) {
-  # x: cpt_list
+new_charge_cpt <- function(x, cliques, parents) {
   potC <- new.env()
   potC[["C"]] <- vector("list", length(cliques))
 
@@ -57,5 +56,14 @@ new_charge <- function(x, cliques, parents) {
   potS <- structure(vector("list", length(cliques)), names = names_potS)
   names(potC$C) <- names(cliques)
   pots <- list(C = potC$C, S = potS)
+  return(pots)
+}
+
+new_charge_pot <- function(x) {
+  attributes(x) <- NULL
+  names(x) <- paste("C", 1:length(x), sep = "")
+  names_potS <- paste("S", 1:length(x), sep = "")
+  potS <- structure(vector("list", length(x)), names = names_potS)
+  pots <- list(C = x, S = potS)
   return(pots)
 }

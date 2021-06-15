@@ -1,3 +1,10 @@
+## jti 0.7.1.9999 (xxxx-yy-zz)
+
+ * =jt_nbinary_ops= more than twice as fast.
+ * New constructor =pot_list= for markov random fields which is more efficient and idiomatic
+ * If =joint_vars= is specified, the root node is automatically set to the clique where these variables are located. Hence, one only needs to =collect= to query probabilies about these variables
+ * Small fixes here and there
+
 ## jti 0.7.1 (2021-05-21)
 
  * A small bug fixed for working with undirected graphs

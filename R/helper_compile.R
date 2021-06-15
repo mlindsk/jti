@@ -1,5 +1,5 @@
 .tri_options <- function(tri) {
-  c("min_fill", "min_rfill", "min_sp", "min_nei", "minimal", "evidence", "alpha")
+  c("min_fill", "min_rfill", "min_efill", "min_sfill","min_esp", "min_sp", "min_nei", "minimal", "alpha")
 }
 
 .defense_compile <- function(tri, pmf_evidence, alpha, nodes) {
@@ -7,8 +7,11 @@
     stop("tri must be one of ", paste(.tri_options(), collapse = ", "), call. = FALSE)
   }
 
-  if (tri == "evidence" && is.null(pmf_evidence)) {
-    stop("tri = 'evidence' requires that pmf_evidence is specified", call. = FALSE)
+  if (tri %in% c("min_efill", "min_esp") && is.null(pmf_evidence)) {
+    stop(
+      "tri = " , tri,
+      "requires that pmf_evidence is specified",
+      call. = FALSE)
   }
 
   if (tri == "alpha")  {
@@ -43,7 +46,7 @@ parents_igraph <- function(g) {
 parents_cpt_list <- function(x) {
   parents <- structure(lapply(seq_along(x), function(i) {
     child   <- names(x)[i]
-    setdiff(names(attr(x[[i]], "dim_names")), child)
+    setdiff(names(x[[i]]), child)
   }), names  = names(x))
 }
 

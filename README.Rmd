@@ -1,5 +1,4 @@
 ---
-title: "jti: Junction Tree Inference"
 output:
   github_document
 ---
@@ -15,6 +14,8 @@ knitr::opts_chunk$set(
 )
 ```
 
+# jti: Junction Tree Inference <img src='man/figures/logo.png' align="right" height="240" />
+
 <!-- badges: start -->
 [![R buildstatus](https://github.com/mlindsk/jti/workflows/R-CMD-check/badge.svg)](https://github.com/mlindsk/jti/actions)
 [![](https://www.r-pkg.org/badges/version/jti?color=green)](https://cran.r-project.org/package=jti)
@@ -22,15 +23,22 @@ knitr::opts_chunk$set(
 
 ## About
 
-The **jti** package (pronounced 'yeti') is a memory efficient implementaion of the junction tree algorithm (JTA) using the Lauritzen-Spiegelhalter scheme. Why is it memory efficient? Because we use a ![sparse representation](https://github.com/mlindsk/jti) for the potentials which enable us to handle large and complex graphs where the variables can have an arbitrary large number of levels.
+The **jti** package (pronounced 'yeti') is a memory efficient implementaion of the junction tree algorithm (JTA) using the Lauritzen-Spiegelhalter scheme. Why is it memory efficient? Because we use a ![sparse representation](https://github.com/mlindsk/sparta) for the potentials which enable us to handle large and complex graphs where the variables can have an arbitrary large number of levels. The **jti** package is a big part of the software paper ![sparta: Sparse Tables and their Algebra with a View Towards High Dimensional Graphical Models](https://arxiv.org/abs/2103.03647).
 
 ## Installation
 
-You can install the current stable release of the package by using the `devtools` package: 
+Current stable release from CRAN: 
+
+```{r, eval = FALSE}
+install.packages("jti")
+```
+
+Development version (see `README.md` for new features):
 
 ```{r, eval = FALSE}
 devtools::install_github("mlindsk/jti", build_vignettes = FALSE)
 ```
+
 ## Libraries
 
 ```{r}
@@ -226,8 +234,8 @@ We use the `ess` package (on CRAN), found at https://github.com/mlindsk/ess, to 
 library(ess)
 
 g7  <- ess::fit_graph(asia, trace = FALSE)
-ig7 <- igraph::graph_from_adjacency_matrix(ess::adj_mat(g7), "undirected")
-cp7 <- compile(cpt_list(asia, ig7))
+ig7 <- ess::as_igraph(g7)
+cp7 <- compile(pot_list(asia, ig7))
 jt7 <- jt(cp7)
 
 query_belief(jt7, get_cliques(jt7)[[4]], type = "joint")
