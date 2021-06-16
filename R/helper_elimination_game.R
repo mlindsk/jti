@@ -99,6 +99,21 @@ new_min_sfill_triang <- function(x, nlvls, pmf_evidence) {
   )
 }
 
+new_min_rsfill_triang <- function(x, nlvls, pmf_evidence) {
+  structure(
+    list(
+      x                = x,
+      nlvls            = nlvls[dimnames(x)[[1]]],
+      find_simplicials = TRUE,
+      current_nei_mat  = NULL,
+      current_nei_idx  = NULL,
+      is_nei_complete  = NULL,
+      new_node_idx     = NULL      
+    ),
+    class = c("min_rsfill_triang", "list")
+  )
+}
+
 
 new_min_sp_triang <- function(x, nlvls) {
   structure(
@@ -286,6 +301,47 @@ new_node_to_eliminate.min_sfill_triang <- function(obj) {
 
   return(obj)
 }
+
+new_node_to_eliminate.min_rsfill_triang <- function(obj) {
+  x               <- obj$x
+  nlvls           <- obj$nlvs
+  new_node_idx    <- integer(0)
+  current_nei_idx <- integer(0)
+
+  min_fills <- .map_dbl(1:ncol(x), function(k) {
+    current_nei_idx_k <- which(x[, k] == 1L)
+    all_edges <- length(current_nei_idx_k) * (length(current_nei_idx_k) - 1L) / 2
+    existing_edges <- sum(x[current_nei_idx_k, current_nei_idx_k]) / 2L
+    all_edges - existing_edges
+  })
+
+  min_ <- min(min_fills)
+  candidate_nodes_idx <- which(min_fills == min_)
+
+  if (min_ == 0) {
+    new_node_idx    <- candidate_nodes_idx[1]
+    current_nei_idx <- which(x[, new_node_idx, drop = TRUE] == 1L)
+  } else {
+    all_min_sp <- .map_dbl(candidate_nodes_idx, function(k) {
+      current_nei_idx_k <- which(x[, k] == 1L)
+      family_k <- c(k, current_nei_idx_k)
+      prod(nlvls[family_k])
+    })
+    mins <- which(all_min_sp == min(all_min_sp))
+    current_nei_idx <- candidate_nodes_idx[sample(mins, 1)]
+  }
+
+  current_nei_mat     <- obj$x[current_nei_idx, current_nei_idx, drop = FALSE]
+  obj$current_nei_mat <- current_nei_mat
+  obj$current_nei_idx <- current_nei_idx
+  obj$is_nei_complete <- sum(current_nei_mat) == length(current_nei_idx) * (length(current_nei_idx) - 1)
+  obj$new_node_idx    <- new_node_idx
+  obj$nlvls           <- nlvls[-new_node_idx]
+
+  return(obj)
+}
+
+
 
 new_node_to_eliminate.min_efill_triang <- function(obj) {
   x               <- obj$x

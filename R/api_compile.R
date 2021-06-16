@@ -288,15 +288,16 @@ compile.cpt_list <- function(x,
   M  <- igraph::as_adjacency_matrix(gm, sparse = FALSE)
   
   tri_obj <- switch(tri,
-    "min_fill"  = new_min_fill_triang(M),
-    "min_rfill" = new_min_rfill_triang(M),
-    "min_efill" = new_min_efill_triang(M, .map_int(dim_names(x), length), pmf_evidence),
-    "min_sfill" = new_min_sfill_triang(M, .map_int(dim_names(x), length)),
-    "min_sp"    = new_min_sp_triang(M, .map_int(dim_names(x), length)),
-    "min_esp"   = new_min_esp_triang(M, .map_int(dim_names(x), length), pmf_evidence),
-    "min_nei"   = new_min_nei_triang(M),
-    "minimal"   = new_minimal_triang(M),
-    "alpha"     = new_alpha_triang(M, alpha)
+    "min_fill"   = new_min_fill_triang(M),
+    "min_rfill"  = new_min_rfill_triang(M),
+    "min_efill"  = new_min_efill_triang(M, .map_int(dim_names(x), length), pmf_evidence),
+    "min_sfill"  = new_min_sfill_triang(M, .map_int(dim_names(x), length)),
+    "min_rsfill" = new_min_rsfill_triang(M, .map_int(dim_names(x), length)),
+    "min_sp"     = new_min_sp_triang(M, .map_int(dim_names(x), length)),
+    "min_esp"    = new_min_esp_triang(M, .map_int(dim_names(x), length), pmf_evidence),
+    "min_nei"    = new_min_nei_triang(M),
+    "minimal"    = new_minimal_triang(M),
+    "alpha"      = new_alpha_triang(M, alpha)
   )
   
   gmt     <- .triang(tri_obj)
