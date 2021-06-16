@@ -259,7 +259,7 @@ new_node_to_eliminate.min_rfill_triang <- function(obj) {
 
 new_node_to_eliminate.min_sfill_triang <- function(obj) {
   x               <- obj$x
-  nlvls           <- obj$nlvs
+  nlvls           <- obj$nlvls
   new_node_idx    <- integer(0)
   current_nei_idx <- integer(0)
   min_sp          <- Inf
@@ -304,7 +304,7 @@ new_node_to_eliminate.min_sfill_triang <- function(obj) {
 
 new_node_to_eliminate.min_rsfill_triang <- function(obj) {
   x               <- obj$x
-  nlvls           <- obj$nlvs
+  nlvls           <- obj$nlvls
   new_node_idx    <- integer(0)
   current_nei_idx <- integer(0)
 
@@ -328,7 +328,8 @@ new_node_to_eliminate.min_rsfill_triang <- function(obj) {
       prod(nlvls[family_k])
     })
     mins <- which(all_min_sp == min(all_min_sp))
-    current_nei_idx <- candidate_nodes_idx[sample(mins, 1)]
+    new_node_idx <- candidate_nodes_idx[sample(mins, 1)]
+    current_nei_idx <- which(x[, new_node_idx, drop = TRUE] == 1L)
   }
 
   current_nei_mat     <- obj$x[current_nei_idx, current_nei_idx, drop = FALSE]
@@ -497,7 +498,7 @@ new_node_to_eliminate.min_efill_triang <- function(obj) {
   
 new_node_to_eliminate.min_sp_triang <- function(obj) {
   x               <- obj$x
-  nlvls           <- obj$nlvs
+  nlvls           <- obj$nlvls
   new_node_idx    <- integer(0)
   current_nei_idx <- integer(0)
   min_sp          <- Inf
