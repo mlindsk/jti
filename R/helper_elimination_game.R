@@ -375,7 +375,7 @@ new_node_to_eliminate.min_efill_triang <- function(obj) {
     if (neq_empt_chr(evidence_nodes_k)) {
       sp_evidence_k <- nlvls[evidence_nodes_k]
       pmf_k         <- pmf[evidence_nodes_k]
-      pmf_k_lst     <- lapply(pmf_k, function(p) c(p, p-1)) # pres/absc (0/1) = 1/2 here
+      pmf_k_lst     <- lapply(pmf_k, function(p) c(p, 1-p)) # pres/absc (0/1) = 1/2 here
 
       # Calculate expected statespace
       evidence_state_space <- expand.grid(replicate(length(pmf_k), c(1, 2), FALSE), stringsAsFactors = FALSE)
