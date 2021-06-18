@@ -3,7 +3,9 @@
  * `jt_nbinary_ops` more than twice as fast.
  * New constructor `pot_list` for markov random fields which is more efficient and idiomatic
  * If `joint_vars` is specified, the root node is automatically set to the clique where these variables are located. Hence, one only needs to `collect` to query probabilies about these variables
- * Small fixes here and there
+ * If the entered evidence implies inconsistencies, the `jt` algorithm now proceeds assuming a prior distribution
+ on the affected tables. In this regard, one can not query the evidence since it has no meaning. The print method flags
+ if there are inconsistencies and it can be obtained by `has_inconsistencies`.
 
 ## jti 0.7.1 (2021-05-21)
 

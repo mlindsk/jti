@@ -2,17 +2,22 @@
 % Please edit documentation in R/api_compile.R
 \name{dim_names}
 \alias{dim_names}
+\alias{has_inconsistencies}
 \alias{dim_names.cpt_list}
 \alias{names.cpt_list}
 \alias{dim_names.pot_list}
 \alias{names.pot_list}
 \alias{dim_names.charge}
 \alias{names.charge}
+\alias{has_inconsistencies.charge}
 \alias{dim_names.jt}
 \alias{names.jt}
-\title{Variable getters}
+\alias{has_inconsistencies.jt}
+\title{Various getters}
 \usage{
 dim_names(x)
+
+has_inconsistencies(x)
 
 \method{dim_names}{cpt_list}(x)
 
@@ -26,13 +31,18 @@ dim_names(x)
 
 \method{names}{charge}(x)
 
+\method{has_inconsistencies}{charge}(x)
+
 \method{dim_names}{jt}(x)
 
 \method{names}{jt}(x)
+
+\method{has_inconsistencies}{jt}(x)
 }
 \arguments{
-\item{x}{\code{cpt_list} or a compiled object}
+\item{x}{\code{cpt_list}, \code{pot_list}, \code{charge} or \code{jt}}
 }
 \description{
-Getter methods for information about variables and their statespaces
+Getter methods for \code{cpt_list}, \code{pot_list}, \code{charge}
+and \code{jt} objects
 }
