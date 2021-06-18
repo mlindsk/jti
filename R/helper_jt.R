@@ -238,11 +238,7 @@ send_messages <- function(jt) {
       
       if (direction == "collect") {
 
-        message_k <- if (!is_scalar(jt$charge$C[[C_lvs_k_name]])) {
-          sparta::marg(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
-        } else {
-          jt$charge$C[[C_lvs_k_name]]
-        }
+        message_k <- sparta::marg(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
 
         # Update parent potential
         jt$charge$C[[C_par_k_name]] <- if (par_neq_unity && lvs_neq_unity) {
@@ -250,7 +246,7 @@ send_messages <- function(jt) {
         } else if (par_neq_unity) {
           message_k
         } else {
-          jt$charge$C[[C_par_k_name]]
+          jt$charge$C[[C_lvs_k_name]]
         }
 
         # Update leave potential
@@ -260,29 +256,35 @@ send_messages <- function(jt) {
 
       if (direction == "distribute") {
         if (attr(jt, "flow") == "max") {
-
           # Find the max cell and change the potential
           # before sending the information:
-          max_idx  <- sparta::which_max_idx(jt$charge$C[[C_lvs_k_name]])
-          max_cell <- sparta::which_max_cell(jt$charge$C[[C_lvs_k_name]])
-          max_mat  <- jt$charge$C[[C_lvs_k_name]][, max_idx, drop = FALSE]
-          max_val  <- attr(jt$charge$C[[C_lvs_k_name]], "vals")[max_idx]
-          max_dn   <- attr(jt$charge$C[[C_lvs_k_name]], "dim_names")
 
-          jt$charge$C[[C_lvs_k_name]] <- sparta::sparta_struct(
-            max_mat,
-            max_val,
-            max_dn
-          )
+          max_cell <- sparta::which_max_cell(jt$charge$C[[C_lvs_k_name]])
+          max_dn   <- sparta::dim_names(jt$charge$C[[C_lvs_k_name]])
+
+          jt$charge$C[[C_lvs_k_name]] <- if (!inherits(jt$charge$C[[C_lvs_k_name]], "sparta_unity")) {
+            max_idx  <- sparta::which_max_idx(jt$charge$C[[C_lvs_k_name]])
+            max_mat  <- jt$charge$C[[C_lvs_k_name]][, max_idx, drop = FALSE]
+            max_val  <- attr(jt$charge$C[[C_lvs_k_name]], "vals")[max_idx]
+            sparta::sparta_struct(
+              max_mat,
+              max_val,
+              max_dn
+            )
+          } else {
+            lvs_neq_unity <- TRUE # no longer a unity
+            sparta::sparta_struct(
+              matrix(1L, nrow = length(max_cell), ncol = 1),
+              sparta::sparta_rank(jt$charge$C[[C_lvs_k_name]]),
+              max_dn
+            )
+          }
+
           attr(jt, "mpe")[names(max_cell)] <- max_cell
         }
 
-        # Send the message
-        message_k <- if (!is_scalar(jt$charge$C[[C_lvs_k_name]])) {
-          sparta::marg(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
-        } else {
-          jt$charge$C[[C_lvs_k_name]]
-        }
+        # Send the message (can be scalar if lvs_var = sep_var)
+        message_k <- sparta::marg(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
 
         # Update the parent
         jt$charge$C[[C_par_k_name]] <- if (lvs_neq_unity) {
