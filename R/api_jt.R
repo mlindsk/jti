@@ -195,7 +195,7 @@ jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = "full") {
   if (propagate == "no") {
     return(j)
   } else if (propagate == "collect") {
-    m <- send_messages(j)    
+    m <- send_messages(j)  
     while (attr(m, "direction") != "distribute") m <- send_messages(m)
     attr(m, "propagated") <- "collect"
     return(m)
@@ -203,6 +203,13 @@ jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = "full") {
     m <- send_messages(j)
     while (attr(m, "direction") != "full") m <- send_messages(m)
     attr(m, "propagated") <- "full"
+    if (attr(m, "inconsistencies")) {
+      m$charge$C <- lapply(m$charge$C, sparta::normalize)
+      m$charge$S <- lapply(m$charge$S, function(s) {
+        if (is.null(s)) return(s)
+        sparta::normalize(s)
+      })
+    }
     return(m)
   }
   stop("propagate must be either 'no', 'collect' or full", call. = TRUE)
@@ -238,13 +245,24 @@ propagate.jt <- function(x, prop = "full") {
     attr(m, "propagated") <- "collect"
     return(m)
     
-  } else if (prop == "full"){
+  } else if (prop == "full") {
 
     if (attr(x, "propagated") == "full") return(x)
+
     m <- send_messages(x)
 
     while (attr(m, "direction") != "full") m <- send_messages(m)
+
     attr(m, "propagated") <- "full"
+
+    if (attr(m, "inconsistencies")) {
+      m$charge$C <- lapply(m$charge$C, sparta::normalize)
+      m$charge$S <- lapply(m$charge$S, function(s) {
+        if (is.null(s)) return(s)
+        sparta::normalize(s)
+      })
+    }
+    
     return(m)
   } else {
     
@@ -314,13 +332,21 @@ query_evidence <- function(x) UseMethod("query_evidence")
 #' @rdname query_evidence
 #' @export
 query_evidence.jt <- function(x) {
+
+  if (has_inconsistencies(x)) {
+    stop(
+      "The probability of evidence is not meaningful ",
+      "when there are inconsistencies in the evidence."
+    )
+  }
+  
   if(attr(x, "flow") != "sum") {
-    stop("The flow of the junction tree must be 'sum'.")
+    stop("The flow of the junction tree must be 'sum'.", call. = FALSE)
   }
   if (attr(x, "propagated") == "no") {
     stop("In order to query the probabilty of evidence, ",
       "the junction tree must at least be propagted to ",
-      "the root node.")
+      "the root node.", call. = FALSE)
   }
   return(attr(x, "probability_of_evidence"))
 }
@@ -350,8 +376,11 @@ set_evidence.jt <- function(x, evidence) {
     stop("Evidence is not on correct form", call. = FALSE)
   }
 
-  x$charge$C <- set_evidence_(x$charge$C, evidence)
+  inc <- new.env()
+  inc$inc <- FALSE
+  x$charge$C <- set_evidence_(x$charge$C, evidence, inc)
   attr(x, "evidence") <- c(attr(x, "evidence"), evidence)
+  attr(x, "inconsistencies") <- inc$inc
   return(x)
 }
 
@@ -421,7 +450,7 @@ query_belief <- function(x, nodes, type = "marginal") UseMethod("query_belief")
 #' @rdname query_belief
 #' @export
 query_belief.jt <- function(x, nodes, type = "marginal") {
-
+  
   if (type %ni% c("marginal", "joint")) {
     stop("Type must be 'marginal' or 'joint'.", call. = FALSE)
   }
@@ -475,8 +504,7 @@ query_belief.jt <- function(x, nodes, type = "marginal") {
         "Use plot(x) or get_cliques(x) to see ",
         "the cliques of the junction tree. ",
         "Alternatively, use the `joint_vars` ",
-        "argument in the compilation process. ",
-        "We hope to implement this feature in the future."
+        "argument in the compilation process."
       )
     }
 
@@ -490,7 +518,7 @@ query_belief.jt <- function(x, nodes, type = "marginal") {
   })
 
   if (type == "joint") {
-    return(sparta::as_array(.query[[1]]))
+    sparta::as_array(.query[[1]])
   } else {
     return(structure(lapply(.query, function(z) sparta::as_array(z)), names = nodes))
   }
@@ -524,9 +552,10 @@ print.jt <- function(x, ...) {
     "\n   - avg:", round(avg_C, 2)
   )
 
+  inc <- attr(x, "inconsistencies")
   e <- attr(x, "evidence")
   if (!is.null(e)) {
-    cat("\n  Evidence:")
+    if (inc) cat("\n  Evidence: (inconsistencies)") else cat("\n  Evidence:")
     for (i in seq_along(e)) {
       cat(
         "\n   -", paste0(names(e[i]), ":"), unname(e[i])

@@ -310,27 +310,31 @@ compile.cpt_list <- function(x,
   root_node_int <- ifelse(root_node != "", as.character(match(root_node, names(adj_lst))), "")
   cliques_int   <- lapply(rip(adj_lst_int, root_node_int)$C, as.integer)
 
+  inc <- new.env()
+  inc$inc <- FALSE
   if (!is.null(evidence)) {
     if (!valid_evidence(attr(x, "dim_names"), evidence)) {
       stop("Evidence is not on correct form", call. = FALSE)
     }
     # x looses its attributes in set_evidence
     att_ <- attributes(x)
-    x    <- set_evidence_(x, evidence)
+    x    <- set_evidence_(x, evidence, inc)
     attributes(x) <- att_
   }
 
+  # browser()
   charge  <- new_charge_cpt(x, cliques, parents)
 
   structure(
-    list(charge = charge, cliques = cliques),
-    root_node   = root_node,
-    joint_vars  = joint_vars,
-    dim_names   = attr(x, "dim_names"),
-    evidence    = evidence,
-    graph       = g,
-    cliques_int = cliques_int,
-    class       = c("charge", "list")
+    list(charge   = charge, cliques = cliques),
+    root_node     = root_node,
+    joint_vars    = joint_vars,
+    dim_names     = attr(x, "dim_names"),
+    evidence      = evidence,
+    graph         = g,
+    cliques_int   = cliques_int,
+    inconsistencies = inc$inc,
+    class         = c("charge", "list")
   )
 }
 
@@ -359,40 +363,48 @@ compile.pot_list <- function(x,
   root_node_int <- ifelse(root_node != "", as.character(match(root_node, names(adj_lst))), "")
   cliques_int   <- lapply(rip(adj_lst_int, root_node_int)$C, as.integer)
 
+  inc <- new.env()
+  inc$inc <- FALSE
   if (!is.null(evidence)) {
     if (!valid_evidence(attr(x, "dim_names"), evidence)) {
       stop("Evidence is not on correct form", call. = FALSE)
     }
     # x looses its attributes in set_evidence
     att_ <- attributes(x)
-    x    <- set_evidence_(x, evidence)
+    x    <- set_evidence_(x, evidence, inc)
     attributes(x) <- att_
   }
 
   charge  <- new_charge_pot(x)
   structure(
-    list(charge = charge, cliques = cliques),
-    root_node   = root_node,
-    joint_vars  = joint_vars,
-    dim_names   = attr(x, "dim_names"),
-    evidence    = evidence,
-    graph       = g,
-    cliques_int = cliques_int,
-    class       = c("charge", "list")
+    list(charge   = charge, cliques = cliques),
+    root_node     = root_node,
+    joint_vars    = joint_vars,
+    dim_names     = attr(x, "dim_names"),
+    evidence      = evidence,
+    graph         = g,
+    cliques_int   = cliques_int,
+    inconsistencies = inc$inc,
+    class         = c("charge", "list")
   )
 }
 
 
 
-#' Variable getters
+#' Various getters
 #'
-#' Getter methods for information about variables and their statespaces
+#' Getter methods for \code{cpt_list}, \code{pot_list}, \code{charge}
+#' and \code{jt} objects
 #' 
-#' @param x \code{cpt_list} or a compiled object
+#' @param x \code{cpt_list}, \code{pot_list}, \code{charge} or \code{jt}
 
 #' @rdname getters
 #' @export
 dim_names <- function(x) UseMethod("dim_names")
+
+#' @rdname getters
+#' @export
+has_inconsistencies <- function(x) UseMethod("has_inconsistencies")
 
 #' @rdname getters
 #' @export
@@ -420,12 +432,19 @@ names.charge <- function(x) names(attr(x, "dim_names"))
 
 #' @rdname getters
 #' @export
+has_inconsistencies.charge <- function(x) attr(x, "inconsistencies")
+
+#' @rdname getters
+#' @export
 dim_names.jt <- function(x) attr(x, "dim_names")
 
 #' @rdname getters
 #' @export
 names.jt <- function(x) names(attr(x, "dim_names"))
 
+#' @rdname getters
+#' @export
+has_inconsistencies.jt <- function(x) attr(x, "inconsistencies")
 
 #' Get graph
 #'
@@ -522,8 +541,9 @@ print.charge <- function(x, ...) {
   )
 
   e <- attr(x, "evidence")
+  inc <- attr(x, "inconsistencies")
   if (!is.null(e)) {
-    cat("\n  Evidence:")
+    if (inc) cat("\n  Evidence: (inconsistencies)") else cat("\n  Evidence:")
     for (i in seq_along(e)) {
       cat(
         "\n   -", paste0(names(e[i]), ":"), unname(e[i])
