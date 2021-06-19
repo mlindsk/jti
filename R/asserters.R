@@ -22,11 +22,7 @@ is_decomposable <- function(adj) {
 }
 
 ## MISC
-neq_empt_vector_chr <- function(x) {
-  is.vector(x, mode = "character") &&
-    length(x) > 0L
-}
-
+neq_empt_vector_chr <- function(x) is.character(x) && length(x) > 0L
 
 is_named_list <- function(x) {
   if (is.null(names(x))) return(FALSE)
