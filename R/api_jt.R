@@ -336,18 +336,26 @@ query_evidence.jt <- function(x) {
   if (has_inconsistencies(x)) {
     stop(
       "The probability of evidence is not meaningful ",
-      "when there are inconsistencies in the evidence."
+      "when there are inconsistencies in the evidence.",
+      call. = FALSE
     )
   }
   
   if(attr(x, "flow") != "sum") {
-    stop("The flow of the junction tree must be 'sum'.", call. = FALSE)
+    stop(
+      "The flow of the junction tree must be 'sum'.",
+      call. = FALSE
+    )
   }
+  
   if (attr(x, "propagated") == "no") {
     stop("In order to query the probabilty of evidence, ",
       "the junction tree must at least be propagted to ",
-      "the root node.", call. = FALSE)
+      "the root node.",
+      call. = FALSE
+    )
   }
+  
   return(attr(x, "probability_of_evidence"))
 }
 
@@ -368,8 +376,11 @@ set_evidence <- function(x, evidence) UseMethod("set_evidence")
 #' @export
 set_evidence.jt <- function(x, evidence) {
   if (attr(x, "propagated") != "no") {
-    stop("Evidence can only be entered into a junction tree, ",
-    "that has not begun propagation.")
+    stop(
+      "Evidence can only be entered into a junction tree, ",
+      "that has not begun propagation.",
+      call. = FALSE
+    )
   }
   
   if (!valid_evidence(attr(x, "dim_names"), evidence)) {
@@ -486,8 +497,7 @@ query_belief.jt <- function(x, nodes, type = "marginal") {
   .query <- lapply(node_lst, function(z) {
 
     if (has_rn) {
-      pot <- x$charge$C$C1
-      marg_out <- setdiff(names(pot), z)
+      marg_out <- setdiff(names(x$charge$C$C1), z)
       return(sparta::marg(x$charge$C$C1, marg_out))
     }
     
@@ -545,7 +555,6 @@ print.jt <- function(x, ...) {
     "\n -------------------------",
     "\n  Propagated:", attr(x, "propagated"),
     "\n  Flow:", flow,
-    "\n  Edges:", ne, "/", nv*(nv-1)/2,
     "\n  Cliques:", length(x$cliques),
     "\n   - max:", max_C,
     "\n   - min:", min_C,

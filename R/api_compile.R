@@ -310,6 +310,10 @@ compile.cpt_list <- function(x,
   root_node_int <- ifelse(root_node != "", as.character(match(root_node, names(adj_lst))), "")
   cliques_int   <- lapply(rip(adj_lst_int, root_node_int)$C, as.integer)
 
+  # TODO: REMOVE THE EVIDENCE VARIABLES IN g, IN ADVANCE
+  # AND EXPLOIT THE NEW DAG STRUCTURE! Removing "a" in p(a|b) should result in a
+  # new cpt with no parents but a child var of "a". Then things are consistent again.
+  
   inc <- new.env()
   inc$inc <- FALSE
   if (!is.null(evidence)) {
@@ -322,7 +326,6 @@ compile.cpt_list <- function(x,
     attributes(x) <- att_
   }
 
-  # browser()
   charge  <- new_charge_cpt(x, cliques, parents)
 
   structure(
