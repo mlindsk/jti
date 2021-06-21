@@ -125,9 +125,6 @@ cpt_list.data.frame <- function(x, g) {
   )
 }
 
-# TODO:
-# + Implement new construction of sparse tables
-
 
 #' A check and extraction of clique potentials from a Markov random field
 #' to be used in the junction tree algorithm
@@ -165,8 +162,7 @@ pot_list.data.frame <- function(x, g) {
 
   y <- lapply(seq_along(cliques), function(i) {
     clique <- cliques[[i]]
-    spar  <- sparta::as_sparta(x[, clique, drop = FALSE])
-    spar  <- sparta::normalize(spar)
+    spar   <- sparta::as_sparta(x[, clique, drop = FALSE])
     # This ensures, that the potentials and dim_names have the same ordering of the lvls!
     dns   <<- push(dns, sparta::dim_names(spar))
     spar
@@ -184,7 +180,6 @@ pot_list.data.frame <- function(x, g) {
     class     = c("pot_list", "list")
   )
 }
-
 
 #' Compile information
 #'
