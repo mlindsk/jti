@@ -2,7 +2,14 @@
   c("min_fill", "min_rfill", "min_efill", "min_sfill", "min_rsfill", "min_esp", "min_sp", "min_nei", "minimal", "alpha")
 }
 
-.defense_compile <- function(tri, pmf_evidence, alpha, nodes) {
+check_params_compile <- function(tri, pmf_evidence, alpha, nodes, root_node) {
+
+  if (root_node != "") {
+    if (root_node %ni% nodes) {
+      stop("Invalid root_node", call. = FALSE)      
+    }
+  }
+  
   if (!(tri %in% .tri_options())) {
     stop("tri must be one of ", paste(.tri_options(), collapse = ", "), call. = FALSE)
   }
@@ -97,8 +104,8 @@ triangulate_igraph <- function(g) {
   igraph::is.chordal(g, fillin = FALSE, newgraph = TRUE)$newgraph
 }
 
-construct_cliques <- function(adj, root_node = "") {
-  rip_ <- rip(adj, start_node = root_node, check = FALSE)
+construct_cliques <- function(adj) {
+  rip_ <- rip(adj, check = FALSE)
   structure(rip_$C, names = paste("C", 1:length(rip_$C), sep = ""))
 }
 

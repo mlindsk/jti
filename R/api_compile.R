@@ -155,8 +155,8 @@ pot_list <- function(x, g) UseMethod("pot_list")
 pot_list.data.frame <- function(x, g) {
 
   if (!igraph::is.igraph(g)) stop("g must be an igraph object", call. = FALSE)
-
-  cliques <- rip(as_adj_lst(igraph::as_adjacency_matrix(g, sparse = FALSE)), check = TRUE)$C
+  adj_lst <- as_adj_lst(igraph::as_adjacency_matrix(g, sparse = FALSE))
+  cliques <- rip(adj_lst, check = TRUE)$C
   names(cliques) <- paste("C", 1:length(cliques), sep = "")
   dns <- list()
 
@@ -271,7 +271,7 @@ compile.cpt_list <- function(x,
                              alpha          = NULL                             
                              ) {
 
-  .defense_compile(tri, pmf_evidence, alpha, names(x))
+  check_params_compile(tri, pmf_evidence, alpha, names(x), root_node)
   
   g       <- attr(x, "graph")
   parents <- attr(x, "parents")
@@ -297,13 +297,13 @@ compile.cpt_list <- function(x,
   
   gmt     <- .triang(tri_obj)
   adj_lst <- as_adj_lst(gmt)
-  cliques <- construct_cliques(adj_lst, root_node) # just use cliques_int ?
+  cliques <- construct_cliques(adj_lst)
 
   # cliques_int is needed to construct the junction tree in new_jt -> new_schedule
   dimnames(gmt) <- lapply(dimnames(gmt), function(x) 1:nrow(gmt))
   adj_lst_int   <- as_adj_lst(gmt)
-  root_node_int <- ifelse(root_node != "", as.character(match(root_node, names(adj_lst))), "")
-  cliques_int   <- lapply(rip(adj_lst_int, root_node_int)$C, as.integer)
+  # root_node_int <- ifelse(root_node != "", as.character(match(root_node, names(adj_lst))), "")
+  cliques_int   <- lapply(rip(adj_lst_int)$C, as.integer)
 
   # TODO: REMOVE THE EVIDENCE VARIABLES IN g, IN ADVANCE
   # AND EXPLOIT THE NEW DAG STRUCTURE! Removing "a" in p(a|b) should result in a
@@ -348,7 +348,7 @@ compile.pot_list <- function(x,
                              alpha          = NULL                             
                              ) {
 
-  .defense_compile(tri, pmf_evidence, alpha, names(x))
+  check_params_compile(tri, pmf_evidence, alpha, names(x), root_node)
   
   g       <- attr(x, "graph")
   gmat    <- igraph::as_adjacency_matrix(g, sparse = FALSE)
@@ -358,8 +358,8 @@ compile.pot_list <- function(x,
   # cliques_int is needed to construct the junction tree in new_jt -> new_schedule
   dimnames(gmat) <- lapply(dimnames(gmat), function(x) 1:nrow(gmat))
   adj_lst_int   <- as_adj_lst(gmat)
-  root_node_int <- ifelse(root_node != "", as.character(match(root_node, names(adj_lst))), "")
-  cliques_int   <- lapply(rip(adj_lst_int, root_node_int)$C, as.integer)
+  # root_node_int <- ifelse(root_node != "", as.character(match(root_node, names(adj_lst))), "")
+  cliques_int   <- lapply(rip(adj_lst_int)$C, as.integer)
 
   inc <- new.env()
   inc$inc <- FALSE

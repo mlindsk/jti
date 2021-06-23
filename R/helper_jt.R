@@ -1,3 +1,44 @@
+check_query <- function(prop, type, inconsistent, flow, nodes, evidence, clique_root) {
+  if (prop == "no") {
+    stop("It is not possible to query from a junction tree that ",
+      "hasn't been propagated.", call. = FALSE
+    )
+  }
+  
+  if (type %ni% c("marginal", "joint")) {
+    stop("Type must be 'marginal' or 'joint'.", call. = FALSE)
+  }
+
+  if (type == "joint" && inconsistent) {
+    stop(
+      "It is not possible to make joint queries when ",
+      "there is inconsistent evidence", call. = FALSE
+    )
+  }
+  
+  if (flow == "max") {
+    stop(
+      "It does not make sense to query probablities from a junction",
+      "tree with flow = 'max'. ",
+      "Use 'mpe' to obtain the max configuration.", call. = FALSE
+    )
+  }
+
+  if (any(nodes %in% evidence)) {
+    stop("It is not possible to query probabilities from",
+      "evidence nodes", call. = FALSE)
+  }
+  
+  if (prop == "collect") if (!all(nodes %in% clique_root)) {
+    stop(
+      "All nodes must be in the root clique",
+      "since the junction tree has only collected! ",
+      "See get_clique_root(x) to find the nodes in the root clique.",
+      call. = FALSE
+    )
+  }    
+}
+
 # note: Rows only have a single 1 in collect
 #       this indicates the parent. A column with all
 #       zeroes indicates a leave node.
@@ -32,15 +73,18 @@ has_root_node_jt <- function(x) attr(x, "root_node") != ""
 
 new_schedule <- function(cliques_chr, cliques_int, root_node, joint_vars = NULL) {
 
-  jrn <- if (!is.null(joint_vars)) {
+  clique_root_int <- if (!is.null(joint_vars)) {
     as.integer(unname(which(.map_lgl(cliques_chr, function(x) all(joint_vars %in% x)))))
-  } else if (root_node != "") {
-    1L # mcs promise that the root_node lives in clique one
   } else {
-    0L
+    if (root_node != "") {
+      idx <- which(.map_lgl(cliques_chr, function(z) root_node %in% z))
+      idx[which.min(.map_int(cliques_chr[idx], length))]  
+    } else {
+      0L
+    }
   }
   
-  rjt <- rooted_junction_tree(cliques_int, jrn)
+  rjt <- rooted_junction_tree(cliques_int, clique_root_int)
 
   coll_tree    <- rjt$collect
   dist_tree    <- rjt$distribute
@@ -93,9 +137,9 @@ prune_jt <- function(jt) {
   has_arrived_at_root <- length(x$cliques) < 2L
   if (has_arrived_at_root) {
     if (direction == "collect") {
-      jt$schedule$collect    <- "full"
       attr(jt, "direction")  <- "distribute"
-
+      attr(jt, "propagated") <- "collect"
+      jt$schedule$collect    <- "full"
       cr <- attr(jt, "clique_root")
       attr(jt, "probability_of_evidence") <- sum(jt$charge$C[[cr]])
       jt$charge$C[[cr]] <- sparta::normalize(jt$charge$C[[cr]])
@@ -103,6 +147,7 @@ prune_jt <- function(jt) {
     } else {
       jt$schedule$distribute <- "full"
       attr(jt, "direction")  <- "full"
+      attr(jt, "propagated") <- "distribute"
     }
     return(jt)
   }
@@ -159,7 +204,6 @@ new_jt <- function(x, evidence = NULL, flow = "sum") {
   if (!is.null(evidence)) charge$C <- set_evidence_(charge$C, evidence, inc)
 
   schedule  <- new_schedule(cliques, attr(x, "cliques_int"), attr(x, "root_node"), attr(x, "joint_vars"))
-  attr(x, "cliques_int") <- NULL
 
   jt <- list(
     schedule = schedule[1:2], # collect and distribute
@@ -225,28 +269,43 @@ send_messages <- function(jt) {
       C_lvs_k_name <- names(x$cliques)[lvs_k]
       C_par_k_name <- names(x$cliques)[pk]
       
-      # TODO: DONT SAVE THESE HERE!!!!!
-      # pot_lvs_k <- jt$charge$C[[C_lvs_k_name]]
-      # pot_par_k <- jt$charge$C[[C_par_k_name]]
       message_k_names <- setdiff(names(jt$charge$C[[C_lvs_k_name]]), C_par_k)
 
       # Unities can occur both as a product of triangulation but also
       # because of of inconsistent evidence wich are transformed to unities.
       # This means, that we just put a uniform prior on the respective potential.
-      par_neq_unity <- !inherits(jt$charge$C[[C_par_k_name]], "sparta_unity")
-      lvs_neq_unity <- !inherits(jt$charge$C[[C_lvs_k_name]], "sparta_unity")
+      par_eq_unity <- inherits(jt$charge$C[[C_par_k_name]], "sparta_unity")
+      lvs_eq_unity <- inherits(jt$charge$C[[C_lvs_k_name]], "sparta_unity")
       
       if (direction == "collect") {
 
         message_k <- sparta::marg(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
 
         # Update parent potential
-        jt$charge$C[[C_par_k_name]] <- if (par_neq_unity && lvs_neq_unity) {
-          sparta::mult(jt$charge$C[[C_par_k_name]], message_k)
-        } else if (par_neq_unity) {
-          message_k
-        } else {
-          jt$charge$C[[C_lvs_k_name]]
+        if (!lvs_eq_unity && !par_eq_unity) {
+          jt$charge$C[[C_par_k_name]] <- sparta::mult(jt$charge$C[[C_par_k_name]], message_k)
+          # If the parent becomes the null-potential we make it a unity afterall
+          # This can happen when there is inconsistent evidence or just if data
+          # is very sparse
+          if (ncol(jt$charge$C[[C_par_k_name]]) < 1) {
+            attr(jt, "inconsistencies") <- TRUE
+            dn <- sparta::dim_names(jt$charge$C[[C_par_k_name]])
+            jt$charge$C[[C_par_k_name]] <- sparta::sparta_unity_struct(dn, rank = 1)
+          }
+          
+        } else if (!lvs_eq_unity && par_eq_unity) {
+          # Note here, that the new potential is possibly not defined over all variables in the clique
+          # We must take this into account wheen we query variables that are no longer in the potential
+          if (is_scalar(message_k)) {
+            # Can be a scalar because of evidence reduction.
+            jt$charge$C[[C_par_k_name]] <- sparta::mult(jt$charge$C[[C_par_k_name]], message_k)
+          } else {
+            jt$charge$C[[C_par_k_name]] <- message_k
+          }
+          # in the last cases, just leave the parent potential as is since we
+          # only multiply with ones. This will result in "wrong" factors; but it
+          # can only occur if there is inconsistent evidence, and here we have
+          # already taken this into account by saying that prob(evidence) is no longer valid.
         }
 
         # Update leave potential
@@ -255,6 +314,9 @@ send_messages <- function(jt) {
       }
 
       if (direction == "distribute") {
+
+
+        
         if (attr(jt, "flow") == "max") {
           # Find the max cell and change the potential
           # before sending the information:
@@ -272,7 +334,7 @@ send_messages <- function(jt) {
               max_dn
             )
           } else {
-            lvs_neq_unity <- TRUE # no longer a unity
+            lvs_eq_unity <- FALSE # no longer a unity
             sparta::sparta_struct(
               matrix(1L, nrow = length(max_cell), ncol = 1),
               sparta::sparta_rank(jt$charge$C[[C_lvs_k_name]]),
@@ -286,14 +348,21 @@ send_messages <- function(jt) {
         # Send the message (can be scalar if lvs_var = sep_var)
         message_k <- sparta::marg(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
 
-        # Update the parent
-        jt$charge$C[[C_par_k_name]] <- if (lvs_neq_unity) {
-          sparta::mult(jt$charge$C[[C_par_k_name]], message_k)
-        } else {
-          jt$charge$C[[C_par_k_name]]
-        }
-
-        # Update the separator
+        # Update parent potential
+        if (!lvs_eq_unity && !par_eq_unity) {
+          jt$charge$C[[C_par_k_name]] <- sparta::mult(jt$charge$C[[C_par_k_name]], message_k)
+          if (ncol(jt$charge$C[[C_par_k_name]]) < 1) {
+            attr(jt, "inconsistencies") <- TRUE
+            dn <- sparta::dim_names(jt$charge$C[[C_par_k_name]])
+            jt$charge$C[[C_par_k_name]] <- sparta::sparta_unity_struct(dn, rank = 1)
+          }
+        } else if (!lvs_eq_unity && par_eq_unity) {
+          if (is_scalar(message_k)) {
+            jt$charge$C[[C_par_k_name]] <- sparta::mult(jt$charge$C[[C_par_k_name]], message_k)
+          } else {
+            jt$charge$C[[C_par_k_name]] <- message_k  
+          }
+        }         
         jt$charge$S[[paste("S", pk, sep = "")]] <- message_k
         
         if (attr(jt, "flow") == "max") {
