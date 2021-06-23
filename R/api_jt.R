@@ -206,7 +206,7 @@ jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = "full") {
     if (attr(m, "inconsistencies")) {
       m$charge$C <- lapply(m$charge$C, sparta::normalize)
       m$charge$S <- lapply(m$charge$S, function(s) {
-        if (is.null(s)) return(s)
+        if (is.null(s) || is_scalar(s)) return(s)
         sparta::normalize(s)
       })
     }
@@ -314,11 +314,19 @@ get_cliques.pot_list <- function(x) attr(x, "cliques")
 
 #' @rdname get_cliques
 #' @export
+get_clique_root_idx <- function(x) UseMethod("get_clique_root_idx")
+
+#' @rdname get_cliques
+#' @export
+get_clique_root_idx.jt <- function(x) as.integer(gsub("C","",attr(x, "clique_root")))
+
+#' @rdname get_cliques
+#' @export
 get_clique_root <- function(x) UseMethod("get_clique_root")
 
 #' @rdname get_cliques
 #' @export
-get_clique_root.jt <- function(x) x$cliques[[as.integer(gsub("C","",attr(x, "clique_root")))]]
+get_clique_root.jt <- function(x) x$cliques[[get_clique_root_idx(x)]]
 
 #' Query Evidence 
 #'
@@ -351,7 +359,7 @@ query_evidence.jt <- function(x) {
   if (attr(x, "propagated") == "no") {
     stop("In order to query the probabilty of evidence, ",
       "the junction tree must at least be propagted to ",
-      "the root node.",
+      "the root node (collect).",
       call. = FALSE
     )
   }
@@ -461,32 +469,16 @@ query_belief <- function(x, nodes, type = "marginal") UseMethod("query_belief")
 #' @rdname query_belief
 #' @export
 query_belief.jt <- function(x, nodes, type = "marginal") {
-  
-  if (type %ni% c("marginal", "joint")) {
-    stop("Type must be 'marginal' or 'joint'.", call. = FALSE)
-  }
-  
-  if (attr(x, "flow") == "max") {
-    stop("It does not make sense to query probablities from a junction",
-      "tree with flow = 'max'. ",
-      "Use 'mpe' to obtain the max configuration.", call. = FALSE)
-  }
 
-  if (any(nodes %in% names(attr(x, "evidence")))) {
-    stop("It is not possible to query probabilities from",
-      "evidence nodes", call. = FALSE)
-  }
-
-  has_rn <- has_root_node_jt(x)
-
-  if (has_rn) if (!all(nodes %in% get_clique_root(x))) {
-    stop(
-      "All nodes must be in the root clique",
-      "since the junction tree has only collected! ",
-      "See get_clique_root(x) to find the nodes in the root clique.",
-      call. = FALSE
-    )
-  }
+  check_query(
+    attr(x, "propagate"),
+    type,
+    has_inconsistencies(x),
+    attr(x, "flow"),
+    nodes,
+    attr(x, "evidence"),
+    get_clique_root(x)
+  )
   
   node_lst <- if (type == "joint") {
     list(nodes)
@@ -496,41 +488,62 @@ query_belief.jt <- function(x, nodes, type = "marginal") {
 
   .query <- lapply(node_lst, function(z) {
 
-    if (has_rn) {
-      marg_out <- setdiff(names(x$charge$C$C1), z)
-      return(sparta::marg(x$charge$C$C1, marg_out))
-    }
-    
-    # TODO: Also check the separators! They may be much smaller!!!
-    # - especially for type = "marginal"!
+    if (attr(x, "propagate") == "collect") {
+      root_idx    <- get_clique_root_idx(x)
+      C_idx_names <- names(x$charge$C[[root_idx]])
 
-    # TODO: Use mapply over cliques and separators?
+      z_is_unity  <- length(z) == 1L && z %ni% C_idx_names
+      if (z_is_unity) {
+        dnz  <- dim_names(x)[z]
+        ldnz <- length(dnz[[1]])
+        vals <- rep(1 / ldnz, ldnz)
+        return(structure(array(vals, dimnames = dnz), is_unity = TRUE))
+      }
+      
+      marg_out <- setdiff(C_idx_names, z)
+      return(sparta::marg(x$charge$C[[root_idx]], marg_out))
+    }
 
     in_which_cliques <- .map_lgl(x$cliques, function(clq) all(z %in% clq))
     
     if (!any(in_which_cliques) && type == "joint") {
-      stop("The function does not, at the moment, support out-of-clique ",
+      stop("The function does not, support out-of-clique ",
         "queries, i.e. nodes that belong to different cliques. ",
         "Use plot(x) or get_cliques(x) to see ",
         "the cliques of the junction tree. ",
         "Alternatively, use the `joint_vars` ",
-        "argument in the compilation process."
+        "argument in the compilation process.",
+        call. = FALSE
       )
     }
 
-    index_in_which_cliques     <- which(in_which_cliques)
-    length_of_possible_cliques <- .map_int(x$cliques[in_which_cliques], length)
-    idx    <- index_in_which_cliques[which.min(length_of_possible_cliques)]
-    pot    <- x$charge$C[[idx]]
-    rm_var <- setdiff(names(attr(pot, "dim_names")), z)
-    
-    return(sparta::marg(pot, rm_var))
+    index_in_which_cliques <- which(in_which_cliques)
+
+    # NOTE: test this!
+    statespace_of_possible_cliques <- .map_dbl(x$charge$C[in_which_cliques], ncol)
+
+    idx <- index_in_which_cliques[which.min(statespace_of_possible_cliques)]
+    C_idx_names <- names(x$charge$C[[idx]])
+
+    z_is_unity <- length(z) == 1L && z %ni% C_idx_names
+    if (z_is_unity) {
+      dnz  <- dim_names(x)[z]
+      ldnz <- length(dnz[[1]])
+      vals <- rep(1 / ldnz, ldnz)
+      return(structure(array(vals, dimnames = dnz), is_unity = TRUE))
+    }
+
+    marg_out <- setdiff(C_idx_names, z)
+    return(sparta::marg(x$charge$C[[idx]], marg_out))
   })
 
   if (type == "joint") {
     sparta::as_array(.query[[1]])
   } else {
-    return(structure(lapply(.query, function(z) sparta::as_array(z)), names = nodes))
+    out <- lapply(.query, function(z) {
+      if (!is.null(attr(z, "is_unity"))) structure(z, is_unity = NULL) else sparta::as_array(z)
+    })
+    return(structure(out, names = nodes))
   }
 }
 

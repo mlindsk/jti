@@ -82,7 +82,7 @@ triangulate.cpt_list <- function(x,
                                  alpha          = NULL                    
                                  ) {
 
-  .defense_compile(tri, pmf_evidence, alpha, names(x))
+  check_params_compile(tri, pmf_evidence, alpha, names(x), root_node)
   
   g       <- attr(x, "graph")
   parents <- attr(x, "parents")

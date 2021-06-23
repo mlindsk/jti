@@ -5,6 +5,8 @@
 \alias{get_cliques.jt}
 \alias{get_cliques.charge}
 \alias{get_cliques.pot_list}
+\alias{get_clique_root_idx}
+\alias{get_clique_root_idx.jt}
 \alias{get_clique_root}
 \alias{get_clique_root.jt}
 \title{Return the cliques of a junction tree}
@@ -16,6 +18,10 @@ get_cliques(x)
 \method{get_cliques}{charge}(x)
 
 \method{get_cliques}{pot_list}(x)
+
+get_clique_root_idx(x)
+
+\method{get_clique_root_idx}{jt}(x)
 
 get_clique_root(x)
 
