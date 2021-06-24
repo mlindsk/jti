@@ -11,7 +11,8 @@ triangulate(
   joint_vars = NULL,
   tri = "min_fill",
   pmf_evidence = NULL,
-  alpha = NULL
+  alpha = NULL,
+  perm = NULL
 )
 
 \method{triangulate}{cpt_list}(
@@ -20,7 +21,8 @@ triangulate(
   joint_vars = NULL,
   tri = "min_fill",
   pmf_evidence = NULL,
-  alpha = NULL
+  alpha = NULL,
+  perm = NULL
 )
 }
 \arguments{
@@ -55,6 +57,8 @@ in connection to \code{min_efill} and \code{min_esp} triangulations.}
 \item{alpha}{Character vector. A permutation of the nodes
 in the graph. It specifies a user-supplied eliminination ordering for
 triangulation of the moral graph.}
+
+\item{perm}{Experimental...}
 }
 \description{
 Given a list of CPTs, this function finds a triangulation
