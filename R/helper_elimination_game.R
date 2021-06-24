@@ -14,6 +14,7 @@
 # should be placed as the "last" arguments and
 # should be initialized as NULL. These variables are updated
 # in each iteration of the elimination game.
+# NOTE: It dosent matter when we use/implement the new_base_triang below
 
 # The argument
 # ------------
@@ -26,6 +27,20 @@
 # the four arguments described above. See e.g.
 # new_min_efill_triang which has further three
 # arguments: nlvls, pmf_evidence and find_simplicial.
+
+# TODO: Use this new_base_triang to reduce the code
+# new_base_triang <- function(x) {
+#   structure(
+#     list(
+#       x               = x,
+#       current_nei_mat = NULL,
+#       current_nei_idx = NULL,
+#       is_nei_complete = NULL,
+#       new_node_idx    = NULL
+#     ),
+#     class = c("list")
+#   )
+# }
 
 new_min_fill_triang <- function(x) {
   structure(
@@ -52,6 +67,8 @@ new_min_rfill_triang <- function(x) {
     class = c("min_rfill_triang", "list")
   )
 }
+
+
 
 new_min_efill_triang <- function(x, nlvls, pmf_evidence) {
   if (neq_empt_int(nlvls)) {
