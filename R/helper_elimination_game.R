@@ -204,22 +204,33 @@ new_node_to_eliminate.min_nei_triang <- function(obj) {
 
 new_node_to_eliminate.min_fill_triang <- function(obj) {
   x               <- obj$x
-  new_node_idx    <- integer(0)
-  current_nei_idx <- integer(0)
-  edges_to_add    <- Inf
+  # new_node_idx    <- integer(0)
+  # current_nei_idx <- integer(0)
+  # edges_to_add    <- Inf
 
-  for (k in 1:ncol(obj$x)) {
-    current_nei_idx_k <- which(x[, k] == 1L)
-    all_edges         <- length(current_nei_idx_k) * (length(current_nei_idx_k) - 1L) / 2
-    existing_edges    <- sum(x[current_nei_idx_k, current_nei_idx_k]) / 2L
-    edges_to_add_k    <- all_edges - existing_edges
+  # for (k in 1:ncol(obj$x)) {
+  #   current_nei_idx_k <- which(x[, k] == 1L)
+  #   all_edges         <- length(current_nei_idx_k) * (length(current_nei_idx_k) - 1L) / 2
+  #   existing_edges    <- sum(x[current_nei_idx_k, current_nei_idx_k]) / 2L
+  #   edges_to_add_k    <- all_edges - existing_edges
     
-    if (edges_to_add_k < edges_to_add) {
-      edges_to_add    <- edges_to_add_k
-      new_node_idx    <- k
-      current_nei_idx <- current_nei_idx_k
-    }
-  }
+  #   if (edges_to_add_k < edges_to_add) {
+  #     edges_to_add    <- edges_to_add_k
+  #     new_node_idx    <- k
+  #     current_nei_idx <- current_nei_idx_k
+  #   }
+  # }
+
+  min_fills <- .map_dbl(1:ncol(x), function(k) {
+    current_nei_idx_k <- which(x[, k] == 1L)
+    all_edges <- length(current_nei_idx_k) * (length(current_nei_idx_k) - 1L) / 2
+    existing_edges <- sum(x[current_nei_idx_k, current_nei_idx_k]) / 2L
+    all_edges - existing_edges
+  })
+
+  candidate_nodes_idx <- which(min_fills == min(min_fills))
+  new_node_idx        <- candidate_nodes_idx[1] # candidate_nodes_idx[length(candidate_nodes_idx)]
+  current_nei_idx     <- which(x[, new_node_idx, drop = TRUE] == 1L)
 
   current_nei_mat     <- obj$x[current_nei_idx, current_nei_idx, drop = FALSE]  
   obj$current_nei_mat <- current_nei_mat
@@ -233,14 +244,14 @@ new_node_to_eliminate.min_fill_triang <- function(obj) {
 new_node_to_eliminate.min_rfill_triang <- function(obj) {
   x                   <- obj$x
 
-  number_of_fills <- .map_dbl(1:ncol(x), function(k) {
+  min_fills <- .map_dbl(1:ncol(x), function(k) {
     current_nei_idx_k <- which(x[, k] == 1L)
     all_edges         <- length(current_nei_idx_k) * (length(current_nei_idx_k) - 1L) / 2
     existing_edges    <- sum(x[current_nei_idx_k, current_nei_idx_k]) / 2L
     all_edges - existing_edges    
   })
 
-  candidates          <- which(number_of_fills == min(number_of_fills))
+  candidates          <- which(min_fills == min(min_fills))
   new_node_idx        <- sample(candidates, 1L)
   current_nei_idx     <- which(x[, new_node_idx, drop = TRUE] == 1L)
   current_nei_mat     <- obj$x[current_nei_idx, current_nei_idx, drop = FALSE]
@@ -264,7 +275,6 @@ new_node_to_eliminate.min_efill_triang <- function(obj) {
     existing_edges <- sum(x[current_nei_idx_k, current_nei_idx_k]) / 2L
     all_edges - existing_edges
   })
-
 
   min_ <- min(min_fills)
   candidate_nodes_idx <- which(min_fills == min_)
