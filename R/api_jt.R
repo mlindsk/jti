@@ -258,7 +258,7 @@ propagate.jt <- function(x, prop = "full") {
     if (attr(m, "inconsistencies")) {
       m$charge$C <- lapply(m$charge$C, sparta::normalize)
       m$charge$S <- lapply(m$charge$S, function(s) {
-        if (is.null(s)) return(s)
+        if (is.null(s) || is_scalar(s)) return(s)
         sparta::normalize(s)
       })
     }
