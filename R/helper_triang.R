@@ -59,13 +59,15 @@ thin_triang <- function(x, fill_edges) {
 #' Given a list of CPTs, this function finds a triangulation
 #'
 #' @inheritParams compile
+#' @param perm Experimental
 #' @export
 triangulate <- function(x,
-                        root_node      = "",
-                        joint_vars     = NULL,
-                        tri            = "min_fill",
-                        pmf_evidence   = NULL,
-                        alpha          = NULL
+                        root_node    = "",
+                        joint_vars   = NULL,
+                        tri          = "min_fill",
+                        pmf_evidence = NULL,
+                        alpha        = NULL,
+                        perm         = NULL
                         ) {
   UseMethod("triangulate")
 }
@@ -74,11 +76,12 @@ triangulate <- function(x,
 #' @rdname triangulate
 #' @export
 triangulate.cpt_list <- function(x,
-                                 root_node      = "",                                 
-                                 joint_vars     = NULL,
-                                 tri            = "min_fill",
-                                 pmf_evidence   = NULL,
-                                 alpha          = NULL
+                                 root_node    = "",                                 
+                                 joint_vars   = NULL,
+                                 tri          = "min_fill",
+                                 pmf_evidence = NULL,
+                                 alpha        = NULL,
+                                 perm         = NULL
                                  ) {
 
   check_params_compile(tri, pmf_evidence, alpha, names(x), root_node)
@@ -91,6 +94,11 @@ triangulate.cpt_list <- function(x,
 
   # if sparse = TRUE, the run time explodes
   M <- igraph::as_adjacency_matrix(gm, sparse = FALSE)
+
+  if (!is.null(perm)) {
+    stopifnot(identical(sort(perm), 1:ncol(M)))
+    M <- M[perm, perm]
+  }
 
   tri_obj <- switch(tri,
     "min_fill"   = new_min_fill_triang(M),
