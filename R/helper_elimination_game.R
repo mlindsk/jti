@@ -151,8 +151,8 @@ new_node_to_eliminate.min_rfill_triang <- function(obj) {
     all_edges - existing_edges    
   })
 
-  candidates          <- which(min_fills == min(min_fills))
-  new_node_idx        <- sample(candidates, 1L)
+  candidate_nodes_idx <- which(min_fills == min(min_fills))
+  new_node_idx        <- if (length(candidate_nodes_idx) == 1L) candidate_nodes_idx else sample(candidate_nodes_idx, 1L)
   current_nei_idx     <- which(x[, new_node_idx, drop = TRUE] == 1L)
 
   current_nei_mat     <- obj$x[current_nei_idx, current_nei_idx, drop = FALSE]
