@@ -45,7 +45,6 @@ thin_triang <- function(x, fill_edges) {
 
 
 .triang <- function(obj) {
-  # browser()
   eg  <- elim_game(obj)
   if (inherits(obj, "minimal_triang")) {
     return(thin_triang(eg[["new_graph"]], eg[["fill_edges"]])[["new_graph"]])
@@ -115,18 +114,18 @@ triangulate.cpt_list <- function(x,
   )
 
   eg <- elim_game(tri_obj)
-
+  
   if (inherits(tri_obj, "minimal")) {
     thin_eg <- thin_triang(eg[["new_graph"]], eg[["fill_edges"]])
     eg[["new_graph"]]  <- thin_eg[["new_graph"]]
     eg[["fill_edges"]] <- thin_eg[["fill_edges"]]
   }
 
+  mat_tri     <- eg[["new_graph"]]
+  adj_lst_tri <- as_adj_lst(eg[["new_graph"]])
+  
   # construct cliques and statespace
-  mat_tri           <- eg[["new_graph"]]
-  adj_lst_tri       <- as_adj_lst(eg[["new_graph"]])
-
-  rip_        <- rip(adj_lst_tri, start_node = root_node, check = FALSE)
+  rip_        <- rip(adj_lst_tri, start_node = root_node, check = TRUE)
   cliques_    <- structure(rip_$C, names = paste("C", 1:length(rip_$C), sep = ""))
   statespace_ <- .map_dbl(cliques_, function(clique) {
     prod(.map_int(dim_names(x)[clique], length))

@@ -1,48 +1,18 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                TRIANGULATION CONSTRUCTORS
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# NOTE:
-
-# The four arguments
+# The arguments
 # ------------------
+# - x
 # - current_nei_mat
 # - current_nei_idx
 # - is_nei_complete
-# - new_node_idx   
+# - new_node_idx
 
-# _must_ be part of any new structure,
-# should be placed as the "last" arguments and
-# should be initialized as NULL. These variables are updated
-# in each iteration of the elimination game.
-# NOTE: It dosent matter when we use/implement the new_base_triang below
+# are updated in each iteration of the elimination game.
+# x is the adjacency matrix (moral graph)
 
-# The argument
-# ------------
-# - x
-# is the input matrix and should be placed first.
-
-# New arguments
-# -------------
-# must be inserted between x and
-# the four arguments described above. See e.g.
-# new_min_efill_triang which has further three
-# arguments: nlvls, pmf_evidence and find_simplicial.
-
-# TODO: Use this new_base_triang to reduce the code
-# new_base_triang <- function(x) {
-#   structure(
-#     list(
-#       x               = x,
-#       current_nei_mat = NULL,
-#       current_nei_idx = NULL,
-#       is_nei_complete = NULL,
-#       new_node_idx    = NULL
-#     ),
-#     class = c("list")
-#   )
-# }
-
-new_min_fill_triang <- function(x) {
+new_base_triang <- function(x, cls) {
   structure(
     list(
       x               = x,
@@ -51,135 +21,64 @@ new_min_fill_triang <- function(x) {
       is_nei_complete = NULL,
       new_node_idx    = NULL
     ),
-    class = c("min_fill_triang", "list")
+    class = c(cls, "list")
   )
+}
+
+new_min_fill_triang <- function(x) {
+  new_base_triang(x, cls = "min_fill_triang")
 }
 
 new_min_rfill_triang <- function(x) {
-  structure(
-    list(
-      x               = x,
-      current_nei_mat = NULL,
-      current_nei_idx = NULL,
-      is_nei_complete = NULL,
-      new_node_idx    = NULL
-    ),
-    class = c("min_rfill_triang", "list")
-  )
+  new_base_triang(x, cls = "min_rfill_triang")
 }
-
-
 
 new_min_efill_triang <- function(x, nlvls, pmf_evidence) {
-  if (neq_empt_int(nlvls)) {
-    # TODO: check if pmf and nlvls agree!
-  }
-  structure(
-    list(
-      x                = x,
-      nlvls            = nlvls[dimnames(x)[[1]]],
-      pmf_evidence     = pmf_evidence,
-      find_simplicials = TRUE,
-      current_nei_mat  = NULL,
-      current_nei_idx  = NULL,
-      is_nei_complete  = NULL,
-      new_node_idx     = NULL      
-    ),
-    class = c("min_efill_triang", "list")
-  )
+  obj <- new_base_triang(x, cls = "min_efill_triang")
+  obj$nlvls <- nlvls[dimnames(x)[[1]]]
+  obj$pmf_evidence <- pmf_evidence
+  obj
 }
 
-new_min_sfill_triang <- function(x, nlvls, pmf_evidence) {
-  structure(
-    list(
-      x                = x,
-      nlvls            = nlvls[dimnames(x)[[1]]],
-      find_simplicials = TRUE,
-      current_nei_mat  = NULL,
-      current_nei_idx  = NULL,
-      is_nei_complete  = NULL,
-      new_node_idx     = NULL      
-    ),
-    class = c("min_sfill_triang", "list")
-  )
+new_min_sfill_triang <- function(x, nlvls) {
+  obj <- new_base_triang(x, cls = "min_sfill_triang")
+  obj$nlvls <- nlvls[dimnames(x)[[1]]]
+  obj
 }
 
-new_min_rsfill_triang <- function(x, nlvls, pmf_evidence) {
-  structure(
-    list(
-      x                = x,
-      nlvls            = nlvls[dimnames(x)[[1]]],
-      find_simplicials = TRUE,
-      current_nei_mat  = NULL,
-      current_nei_idx  = NULL,
-      is_nei_complete  = NULL,
-      new_node_idx     = NULL      
-    ),
-    class = c("min_rsfill_triang", "list")
-  )
+new_min_rsfill_triang <- function(x, nlvls) {
+  obj <- new_base_triang(x, cls = "min_rsfill_triang")
+  obj$nlvls <- nlvls[dimnames(x)[[1]]]
+  obj
 }
 
 new_min_sp_triang <- function(x, nlvls) {
-  structure(
-    list(
-      x               = x,
-      nlvls           = nlvls[dimnames(x)[[1]]],
-      current_nei_mat = NULL,
-      current_nei_idx = NULL,
-      is_nei_complete = NULL,
-      new_node_idx    = NULL      
-    ),
-    class = c("min_sp_triang", "list")
-  )
+  obj <- new_base_triang(x, cls = "min_sp_triang")
+  obj$nlvls <- nlvls[dimnames(x)[[1]]]
+  obj
 }
 
 new_min_esp_triang <- function(x, nlvls, pmf_evidence) {
-  structure(
-    list(
-      x                = x,
-      nlvls            = nlvls[dimnames(x)[[1]]],
-      pmf_evidence     = pmf_evidence,
-      find_simplicials = TRUE,
-      current_nei_mat  = NULL,
-      current_nei_idx  = NULL,
-      is_nei_complete  = NULL,
-      new_node_idx     = NULL      
-    ),
-    class = c("min_esp_triang", "list")
-  )
+  obj <- new_base_triang(x, cls = "min_esp_triang")
+  obj$nlvls <- nlvls[dimnames(x)[[1]]]
+  obj$pmf_evidence <- pmf_evidence
+  obj
 }
 
 new_min_nei_triang <- function(x) {
-  structure(
-    list(
-      x               = x,
-      current_nei_mat = NULL,
-      current_nei_idx = NULL,
-      is_nei_complete = NULL,
-      new_node_idx    = NULL
-    ),
-    class = c("min_nei_triang", "list")
-  )
+  new_base_triang(x, cls = "min_nei_triang")
 }
 
 new_minimal_triang <- function(x) {
   obj <- new_min_fill_triang(x)
-  class(obj) <- c("minimal_triang", class(obj))
+  class(obj) <- c("minimal_triang", class(obj)) # dispatch on min_fill
   obj
 }
 
 new_alpha_triang <- function(x, alpha) {
-  structure(
-    list(
-      x               = x,
-      alpha           = alpha,
-      current_nei_mat = NULL,
-      current_nei_idx = NULL,
-      is_nei_complete = NULL,
-      new_node_idx    = NULL      
-    ),
-    class = c("alpha_triang", "list")
-  )
+  obj <- new_base_triang(x, cls = "min_sp_triang")
+  obj$alpha  <- alpha
+  obj
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -220,24 +119,8 @@ new_node_to_eliminate.min_nei_triang <- function(obj) {
 }
 
 new_node_to_eliminate.min_fill_triang <- function(obj) {
-  x               <- obj$x
-  # new_node_idx    <- integer(0)
-  # current_nei_idx <- integer(0)
-  # edges_to_add    <- Inf
-
-  # for (k in 1:ncol(obj$x)) {
-  #   current_nei_idx_k <- which(x[, k] == 1L)
-  #   all_edges         <- length(current_nei_idx_k) * (length(current_nei_idx_k) - 1L) / 2
-  #   existing_edges    <- sum(x[current_nei_idx_k, current_nei_idx_k]) / 2L
-  #   edges_to_add_k    <- all_edges - existing_edges
-    
-  #   if (edges_to_add_k < edges_to_add) {
-  #     edges_to_add    <- edges_to_add_k
-  #     new_node_idx    <- k
-  #     current_nei_idx <- current_nei_idx_k
-  #   }
-  # }
-
+  x <- obj$x
+  
   min_fills <- .map_dbl(1:ncol(x), function(k) {
     current_nei_idx_k <- which(x[, k] == 1L)
     all_edges <- length(current_nei_idx_k) * (length(current_nei_idx_k) - 1L) / 2
@@ -246,7 +129,7 @@ new_node_to_eliminate.min_fill_triang <- function(obj) {
   })
 
   candidate_nodes_idx <- which(min_fills == min(min_fills))
-  new_node_idx        <- candidate_nodes_idx[1] # candidate_nodes_idx[length(candidate_nodes_idx)]
+  new_node_idx        <- candidate_nodes_idx[1L]
   current_nei_idx     <- which(x[, new_node_idx, drop = TRUE] == 1L)
 
   current_nei_mat     <- obj$x[current_nei_idx, current_nei_idx, drop = FALSE]  
@@ -271,6 +154,7 @@ new_node_to_eliminate.min_rfill_triang <- function(obj) {
   candidates          <- which(min_fills == min(min_fills))
   new_node_idx        <- sample(candidates, 1L)
   current_nei_idx     <- which(x[, new_node_idx, drop = TRUE] == 1L)
+
   current_nei_mat     <- obj$x[current_nei_idx, current_nei_idx, drop = FALSE]
   obj$current_nei_idx <- current_nei_idx
   obj$current_nei_mat <- current_nei_mat
@@ -300,6 +184,7 @@ new_node_to_eliminate.min_efill_triang <- function(obj) {
     new_node_idx    <- candidate_nodes_idx[1]
     current_nei_idx <- which(x[, new_node_idx, drop = TRUE] == 1L)
   } else {
+
     pmf <- obj$pmf_evidence
     evidence_nodes <- names(pmf)
     nodes <- colnames(x)

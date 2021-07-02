@@ -1,3 +1,21 @@
+# allocate_child_to_potential <- function(potC, x, cliques, child, parents) {
+#   # potC: environment with clique potentials
+#   cpt <- x[[child]] # extract_or_make_cpt(x, child, parents)
+#   for (k in seq_along(cliques)) {
+#     family_in_Ck <- all(c(child, parents) %in% cliques[[k]])
+#     if (family_in_Ck) {
+#       if (is.null(potC$C[[k]])) {
+#         # unity <- sparta::sparta_unity_struct(attr(x, "dim_names")[cliques[[k]]])
+#         potC$C[[k]] <- cpt # sparta::mult(cpt, unity)
+#       } else {
+#         potC$C[[k]] <- sparta::mult(potC$C[[k]], cpt)
+#       }
+#       break # Must only live in one clique
+#     }
+#   }
+#   NULL
+# }
+
 allocate_child_to_potential <- function(potC, x, cliques, child, parents) {
   # potC: environment with clique potentials
   cpt <- x[[child]] # extract_or_make_cpt(x, child, parents)
@@ -15,6 +33,7 @@ allocate_child_to_potential <- function(potC, x, cliques, child, parents) {
   }
   NULL
 }
+
 
 ## broadcast_clique_potentials <- function(potC, x, cliques) {
 ##   for (k in seq_along(cliques)) {

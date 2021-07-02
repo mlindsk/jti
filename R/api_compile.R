@@ -163,6 +163,7 @@ pot_list.data.frame <- function(x, g) {
   y <- lapply(seq_along(cliques), function(i) {
     clique <- cliques[[i]]
     spar   <- sparta::as_sparta(x[, clique, drop = FALSE])
+    spar   <- sparta::normalize(spar)
     # This ensures, that the potentials and dim_names have the same ordering of the lvls!
     dns   <<- push(dns, sparta::dim_names(spar))
     spar
