@@ -58,7 +58,7 @@ in connection to \code{min_efill} and \code{min_esp} triangulations.}
 in the graph. It specifies a user-supplied eliminination ordering for
 triangulation of the moral graph.}
 
-\item{perm}{Experimental...}
+\item{perm}{Experimental}
 }
 \description{
 Given a list of CPTs, this function finds a triangulation
