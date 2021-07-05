@@ -118,7 +118,6 @@ jt1
 #>  ------------------------- 
 #>   Propagated: full 
 #>   Flow: sum 
-#>   Edges: 5 / 15 
 #>   Cliques: 6 
 #>    - max: 3 
 #>    - min: 2 
@@ -148,19 +147,19 @@ query_belief(jt1, c("E", "L", "T"))
 #>      n      y 
 #> 0.9912 0.0088
 query_belief(jt1, c("B", "D", "E"), type = "joint")
-#> , , B = n
-#> 
-#>    E
-#> D            n           y
-#>   n 0.41821906 0.007101117
-#>   y 0.04637955 0.018500278
-#> 
 #> , , B = y
 #> 
 #>    E
 #> D            n           y
-#>   n 0.09856873 0.007094444
 #>   y 0.36261346 0.041523361
+#>   n 0.09856873 0.007094444
+#> 
+#> , , B = n
+#> 
+#>    E
+#> D            n           y
+#>   y 0.04637955 0.018500278
+#>   n 0.41821906 0.007101117
 ```
 
 It should be noticed, that the above could also have been achieved by
@@ -178,19 +177,19 @@ That is; it is possible to postpone the actual propagation.
 e2  <- c(A = "y", X = "n")
 jt2 <- jt(cp, e2) 
 query_belief(jt2, c("B", "D", "E"), type = "joint")
-#> , , B = n
-#> 
-#>    E
-#> D            n            y
-#>   n 0.45143057 7.711638e-05
-#>   y 0.05006263 2.009085e-04
-#> 
 #> , , B = y
 #> 
 #>    E
 #> D           n            y
-#>   n 0.1063963 6.176693e-05
 #>   y 0.3914092 3.615182e-04
+#>   n 0.1063963 6.176693e-05
+#> 
+#> , , B = n
+#> 
+#>    E
+#> D            n            y
+#>   y 0.05006263 2.009085e-04
+#>   n 0.45143057 7.711638e-05
 ```
 
 Notice that, the configuration `(D,E,B) = (y,y,n)` has changed
@@ -208,7 +207,7 @@ query_evidence(jt2)
 jt3 <- jt(cp, flow = "max")
 mpe(jt3)
 #>   A   T   E   L   S   B   X   D 
-#> "n" "n" "y" "n" "y" "y" "y" "y"
+#> "n" "n" "n" "n" "n" "n" "n" "n"
 ```
 
 ### Example 4: max-flow with evidence

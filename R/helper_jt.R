@@ -315,8 +315,6 @@ send_messages <- function(jt) {
 
       if (direction == "distribute") {
 
-
-        
         if (attr(jt, "flow") == "max") {
           # Find the max cell and change the potential
           # before sending the information:
