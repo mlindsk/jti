@@ -4,6 +4,7 @@
 \alias{cpt_list}
 \alias{cpt_list.list}
 \alias{cpt_list.data.frame}
+\alias{pot_list.list}
 \title{Conditional probability list}
 \usage{
 cpt_list(x, g = NULL)
@@ -11,6 +12,8 @@ cpt_list(x, g = NULL)
 \method{cpt_list}{list}(x, g = NULL)
 
 \method{cpt_list}{data.frame}(x, g)
+
+\method{pot_list}{list}(x, g = NULL)
 }
 \arguments{
 \item{x}{Either a named list with cpts in form of array-like object(s)

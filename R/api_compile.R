@@ -149,6 +149,42 @@ cpt_list.data.frame <- function(x, g) {
 #' @export
 pot_list <- function(x, g) UseMethod("pot_list")
 
+#' @rdname cpt_list
+#' @export
+pot_list.list <- function(x, g = NULL) { 
+
+  nodes     <- unique(unlist(lapply(x, names)))
+  names(x)  <- paste("C", 1:length(x), sep = "")
+  cliques   <- structure(lapply(x, names))
+  g         <- graph_from_pot_list(x, cliques, nodes)
+
+  if (!igraph::is.chordal(g)$chordal) stop("The graph is not decomposable.")
+  
+  dns       <- list()
+  
+  y <- lapply(seq_along(x), function(i) {
+    l <- x[[i]]
+    spar <- sparta::as_sparta(l)
+    # This ensures, that the clique potentials and dim_names have the same ordering of the lvls!
+    dns <<- push(dns, sparta::dim_names(spar))
+    spar
+  })
+
+  names(y)  <- names(x)
+  dns <- unlist(dns, FALSE)
+  dns <- dns[unique(names(dns))]
+
+  structure(
+    y,
+    cliques   = cliques,
+    nodes     = nodes,
+    dim_names = dns,
+    graph     = g,
+    class     = c("pot_list", "list")
+  )
+}
+
+
 
 #' @rdname pot_list
 #' @export

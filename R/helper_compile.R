@@ -74,11 +74,28 @@ graph_from_cpt_list <- function(x) {
   g
 }
 
+graph_from_pot_list <- function(x, cliques, nodes) {
+  g <- igraph::make_empty_graph(n = length(nodes), directed = FALSE)
+  g <- igraph::set_vertex_attr(g, "label", value = nodes)
+  g <- igraph::set_vertex_attr(g, "name", value = nodes)
+  edges <- lapply(cliques, function(clique) {
+    if (length(clique) == 1L) return(NULL)
+    t(utils::combn(clique, 2, simplify = TRUE))
+  })
+  edges <- Filter(neq_null, edges)
+  edges <- unique(do.call(rbind, edges))
+  for (k in 1:nrow(edges)) {
+    g <- igraph::add_edges(g, unname(edges[k, ]))
+  }
+  g
+}
+
+
 moralize_igraph <- function(g, parents) {
   g <- igraph::as.undirected(g)
   for (p in parents) {
     if (length(p) > 1) {
-      pairs <- utils::combn(p, 2,  simplify = FALSE)
+      pairs <- utils::combn(p, 2, simplify = FALSE)
       for (ps in pairs) {
         if (!igraph::are_adjacent(g, ps[1], ps[2])) {
           g <- g + igraph::edge(ps[1], ps[2]) 
