@@ -18,7 +18,7 @@ where names must be the child node or a \code{data.frame}}
 
 \item{g}{Either a directed acyclic graph (DAG) as an igraph object or a
 decomposable graph as an igraph object. If \code{x} is a list,
-\code{g} must be \code{NULL}. The procdure then deduce the graph
+\code{g} must be \code{NULL}. The procedure then deduce the graph
 from the conditional probability tables.}
 }
 \description{

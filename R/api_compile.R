@@ -6,7 +6,7 @@
 #' where names must be the child node or a \code{data.frame}
 #' @param g Either a directed acyclic graph (DAG) as an igraph object or a
 #' decomposable graph as an igraph object. If \code{x} is a list,
-#' \code{g} must be \code{NULL}. The procdure then deduce the graph
+#' \code{g} must be \code{NULL}. The procedure then deduce the graph
 #' from the conditional probability tables.
 #' @examples
 #'
@@ -51,8 +51,7 @@ cpt_list.list <- function(x, g = NULL) {
   dim_names <- list()
   
   y <- lapply(seq_along(x), function(i) {
-    l <- x[[i]]
-    spar <- sparta::as_sparta(l)
+    spar <- sparta::as_sparta(x[[i]])
     # This ensures, that the CPTs and dim_names have the same ordering of the lvls!
     dim_names <<- push(dim_names, attr(spar, "dim_names"))
     spar
@@ -87,10 +86,6 @@ cpt_list.data.frame <- function(x, g) {
     if (!igraph::is_chordal(g)$chordal) {
       stop("undirected graphs must be be decomposable", call. = FALSE)
     }
-    message(
-      "Consider using 'pot_list' for markov random fields. ",
-      "It is faster and more idiomatic."
-    )
   }
 
   parents <- if (is_dag) {
@@ -102,7 +97,6 @@ cpt_list.data.frame <- function(x, g) {
   dns <- list()
 
   y <- lapply(seq_along(parents), function(i) {
-    # TODO: Stop making the dense cpts first. Just construct the sparta object directly
     child <- names(parents)[i]
     pars  <- parents[[i]]
     spar  <- sparta::as_sparta(x[, c(child, pars), drop = FALSE])
@@ -149,31 +143,55 @@ cpt_list.data.frame <- function(x, g) {
 #' @export
 pot_list <- function(x, g) UseMethod("pot_list")
 
-
 #' @rdname pot_list
 #' @export
 pot_list.data.frame <- function(x, g) {
 
   if (!igraph::is.igraph(g)) stop("g must be an igraph object", call. = FALSE)
   adj_lst <- as_adj_lst(igraph::as_adjacency_matrix(g, sparse = FALSE))
-  cliques <- rip(adj_lst, check = TRUE)$C
+
+  rip_ <- rip(adj_lst, check = TRUE)
+  cliques <- rip_$C
+  separators <- rip_$S
+  N <- nrow(x)
+
   names(cliques) <- paste("C", 1:length(cliques), sep = "")
+  names(separators) <-paste("S", 1:length(separators), sep = "")
   dns <- list()
 
-  y <- lapply(seq_along(cliques), function(i) {
+  clique_tabs <- lapply(seq_along(cliques), function(i) {
     clique <- cliques[[i]]
-    spar   <- sparta::as_sparta(x[, clique, drop = FALSE])
-    spar   <- sparta::normalize(spar)
-    # This ensures, that the potentials and dim_names have the same ordering of the lvls!
-    dns   <<- push(dns, sparta::dim_names(spar))
+    spar <- sparta::as_sparta(x[, clique, drop = FALSE])
+    spar <- sparta::div(spar, N)
+    dns <<- push(dns, sparta::dim_names(spar))
     spar
   })
+
+  separator_tabs <- lapply(seq_along(separators), function(i) {
+    separator <- separators[[i]]
+    if (is.null(separator)) return(NULL)
+    spar <- sparta::as_sparta(x[, separator, drop = FALSE])
+    # NOTE: # Can be unstable for small values in spar?
+    # Maybe just deprecate this function all together and resort to cpt_list
+    spar <- sparta::div(spar, N)
+    sparta::div(1, spar)
+  })
+
+  clique_tabs[[1]] <- sparta::div(clique_tabs[[1]], N)
+
+  # Assign each sep to a clique
+  for (sep in separator_tabs) {
+    if (is.null(sep)) next
+    idx <- .map_lgl(clique_tabs, function(ct) all(names(sep) %in% names(ct)))
+    cl_idx <- which(idx)[1L]
+    clique_tabs[[cl_idx]] <- sparta::mult(clique_tabs[[cl_idx]], sep)
+  }
 
   dns <- unlist(dns, FALSE)
   dns <- dns[unique(names(dns))]
   
   structure(
-    structure(y, names = names(cliques)),
+    structure(clique_tabs, names = names(cliques)),
     nodes     = colnames(x),
     cliques   = cliques,
     dim_names = dns,

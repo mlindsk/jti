@@ -1,27 +1,10 @@
-# allocate_child_to_potential <- function(potC, x, cliques, child, parents) {
-#   # potC: environment with clique potentials
-#   cpt <- x[[child]] # extract_or_make_cpt(x, child, parents)
-#   for (k in seq_along(cliques)) {
-#     family_in_Ck <- all(c(child, parents) %in% cliques[[k]])
-#     if (family_in_Ck) {
-#       if (is.null(potC$C[[k]])) {
-#         # unity <- sparta::sparta_unity_struct(attr(x, "dim_names")[cliques[[k]]])
-#         potC$C[[k]] <- cpt # sparta::mult(cpt, unity)
-#       } else {
-#         potC$C[[k]] <- sparta::mult(potC$C[[k]], cpt)
-#       }
-#       break # Must only live in one clique
-#     }
-#   }
-#   NULL
-# }
-
 allocate_child_to_potential <- function(potC, x, cliques, child, parents) {
   # potC: environment with clique potentials
   cpt <- x[[child]] # extract_or_make_cpt(x, child, parents)
   for (k in seq_along(cliques)) {
     family_in_Ck <- all(c(child, parents) %in% cliques[[k]])
     if (family_in_Ck) {
+      # if (inherits(potC$C[[k]], "sparta_unity")) break
       if (is.null(potC$C[[k]])) {
         # unity <- sparta::sparta_unity_struct(attr(x, "dim_names")[cliques[[k]]])
         potC$C[[k]] <- cpt # sparta::mult(cpt, unity)
@@ -33,20 +16,6 @@ allocate_child_to_potential <- function(potC, x, cliques, child, parents) {
   }
   NULL
 }
-
-
-## broadcast_clique_potentials <- function(potC, x, cliques) {
-##   for (k in seq_along(cliques)) {
-##     pot_k <- potC[["C"]][[k]]
-##     dim_k <- sparta::dim_names(pot_k)
-##     Ck    <- cliques[[k]]
-##     full  <- setequal(names(dim_k), Ck)
-##     if (!full) {
-##       unity <- sparta::sparta_unity_struct(attr(x, "dim_names")[Ck])      
-##       potC$C[[k]] <- sparta::mult(pot_k, unity)
-##     }
-##   }
-## }
 
 new_charge_cpt <- function(x, cliques, parents) {
   potC <- new.env()
@@ -69,8 +38,6 @@ new_charge_cpt <- function(x, cliques, parents) {
     }
   }
 
-  # broadcast_clique_potentials(potC, x, cliques)
-  
   names_potS <- paste("S", 1:length(cliques), sep = "")
   potS <- structure(vector("list", length(cliques)), names = names_potS)
   names(potC$C) <- names(cliques)
@@ -86,3 +53,68 @@ new_charge_pot <- function(x) {
   pots <- list(C = x, S = potS)
   return(pots)
 }
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Experimental
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# allocate_to_minimal_clique_cover <- function(potC, x, minimal_cover) {
+#   # potC: environment with clique potentials
+#   for (k in seq_along(minimal_cover)) {
+#     clique_name <- names(minimal_cover[k])
+#     min_cov_k   <- minimal_cover[[k]]
+#     potC$C[[clique_name]]  <- if (length(min_cov_k) > 1) {
+#       Reduce(sparta::mult, x[min_cov_k])
+#     } else {
+#       x[[min_cov_k]]
+#     }
+#   }
+# }
+
+
+# new_charge_cpt2 <- function(x, cliques, parents) {
+#   potC          <- new.env()
+#   potC[["C"]]   <- vector("list", length(cliques))
+#   names(potC$C) <- names(cliques)
+
+#   W <- lapply(x, names)
+  
+#   covered <- vector(length = length(W))
+  
+#   clique_cover <- lapply(cliques, function(clique) {
+#     unname(which(.map_lgl(W, function(w) {
+#       all(w %in% clique)
+#     })))
+#   })
+
+#   minimal_cover <- vector("list")
+
+#   while (!all(covered)) {
+#     lens          <- .map_int(clique_cover, length)
+#     max_lens      <- which.max(lens)
+#     idx           <- clique_cover[[max_lens]]
+#     covered[idx]  <- TRUE
+#     max_clique    <- clique_cover[max_lens]
+#     minimal_cover <- push(minimal_cover, max_clique[[1]], names(max_clique))
+#     clique_cover[max_lens] <- NULL 
+#   }
+    
+#   allocate_to_minimal_clique_cover(potC, x, minimal_cover)
+
+#   # Some clique potentials may be empty due to triangulation
+#   # We set these as the identity = 1 for all configurations
+#   is_null <- .map_lgl(potC[["C"]], is.null)
+  
+#   if (any(is_null)) {
+#     which_is_null <- which(is_null)
+#     for (k in which_is_null) {
+#       pck <- sparta::sparta_unity_struct(attr(x, "dim_names")[cliques[[k]]])
+#       potC$C[[k]] <- pck
+#     }
+#   }
+
+#   names_potS <- paste("S", 1:length(cliques), sep = "")
+#   potS <- structure(vector("list", length(cliques)), names = names_potS)
+#   pots <- list(C = potC$C, S = potS)
+#   return(pots)
+# }

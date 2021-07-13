@@ -1,44 +1,3 @@
-check_query <- function(prop, type, inconsistent, flow, nodes, evidence, clique_root) {
-  if (prop == "no") {
-    stop("It is not possible to query from a junction tree that ",
-      "hasn't been propagated.", call. = FALSE
-    )
-  }
-  
-  if (type %ni% c("marginal", "joint")) {
-    stop("Type must be 'marginal' or 'joint'.", call. = FALSE)
-  }
-
-  if (type == "joint" && inconsistent) {
-    stop(
-      "It is not possible to make joint queries when ",
-      "there is inconsistent evidence", call. = FALSE
-    )
-  }
-  
-  if (flow == "max") {
-    stop(
-      "It does not make sense to query probablities from a junction",
-      "tree with flow = 'max'. ",
-      "Use 'mpe' to obtain the max configuration.", call. = FALSE
-    )
-  }
-
-  if (any(nodes %in% evidence)) {
-    stop("It is not possible to query probabilities from",
-      "evidence nodes", call. = FALSE)
-  }
-  
-  if (prop == "collect") if (!all(nodes %in% clique_root)) {
-    stop(
-      "All nodes must be in the root clique",
-      "since the junction tree has only collected! ",
-      "See get_clique_root(x) to find the nodes in the root clique.",
-      call. = FALSE
-    )
-  }    
-}
-
 # note: Rows only have a single 1 in collect
 #       this indicates the parent. A column with all
 #       zeroes indicates a leave node.
@@ -57,16 +16,6 @@ parents_jt <- function(x, lvs) {
     par[[i]] <- pari
   }
   return(par)
-}
-
-valid_evidence <- function(dim_names, e) {
-  nemvc <- neq_empt_vector_chr(e)
-  e_conforms_with_dim_names <- !anyNA(mapply(match, e, dim_names[names(e)]))
-  if (e_conforms_with_dim_names && nemvc) {
-    return(TRUE)
-  } else {
-    return(FALSE)
-  }
 }
 
 has_root_node_jt <- function(x) attr(x, "root_node") != ""
