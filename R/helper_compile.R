@@ -1,35 +1,3 @@
-.tri_options <- function(tri) {
-  c("min_fill", "min_rfill", "min_efill", "min_sfill", "min_rsfill", "min_esp", "min_sp", "min_nei", "minimal", "alpha")
-}
-
-check_params_compile <- function(tri, pmf_evidence, alpha, nodes, root_node) {
-
-  if (root_node != "") {
-    if (root_node %ni% nodes) {
-      stop("Invalid root_node", call. = FALSE)      
-    }
-  }
-  
-  if (!(tri %in% .tri_options())) {
-    stop("tri must be one of ", paste(.tri_options(), collapse = ", "), call. = FALSE)
-  }
-
-  if (tri %in% c("min_efill", "min_esp") && is.null(pmf_evidence)) {
-    stop(
-      "tri = " , tri,
-      "requires that pmf_evidence is specified",
-      call. = FALSE)
-  }
-
-  if (tri == "alpha")  {
-    if (is.null(alpha)) {
-      stop("tri = 'alpha' requires that the alpha parameter is specified", call. = FALSE)
-    }
-    if (!identical(sort(alpha), sort(nodes))) stop("The alpha parameter was not specified correctly")
-  }
-  invisible(NULL)
-}
-
 as_undirected_igraph <- function(g) igraph::as.undirected(g)
 
 parents_igraph <- function(g) {
