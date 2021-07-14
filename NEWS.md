@@ -1,6 +1,6 @@
 ## jti 0.8.0.9999 (xxxx-yy-zz)
 
- * `pot_list` now works on a list of clique potentials 
+ * `pot_list` fixed. Produced wrong results due to wrong initialization.
 
 ## jti 0.8.0 (2021-07-05)
 
