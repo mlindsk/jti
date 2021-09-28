@@ -176,6 +176,10 @@ jt <- function(x, evidence = NULL, flow = "sum", propagate = "full") UseMethod("
 #' @export
 jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = "full") {
 
+  if (!attr(x$charge, "initialized")) {
+    stop("The CPTs are not yet initialized. Use either 'set_evidence' or 'initialize'.")
+  }
+  
   if (!is.null(evidence)) {
     if (!valid_evidence(attr(x, "dim_names"), evidence)) {
       stop("evidence is not on correct form", call. = FALSE)
@@ -374,15 +378,17 @@ query_evidence.jt <- function(x) {
 #' @param x A junction tree object, \code{jt}.
 #' @param evidence A named vector. The names are the variabes and the elements
 #' are the evidence.
+#' @param initialize \code{TRUE} if the CPTs should be initialized and then
+#' create the clique potentials. Only relevant on Objects returned from \code{compile}.
 #' @examples
 #' # See the 'jt' function
 #' @seealso \code{\link{jt}}, \code{\link{mpe}}
 #' @export
-set_evidence <- function(x, evidence) UseMethod("set_evidence")
+set_evidence <- function(x, evidence, initialize = FALSE) UseMethod("set_evidence")
 
 #' @rdname set_evidence
 #' @export
-set_evidence.jt <- function(x, evidence) {
+set_evidence.jt <- function(x, evidence, initialize = FALSE) {
   if (attr(x, "propagated") != "no") {
     stop(
       "Evidence can only be entered into a junction tree, ",
@@ -402,6 +408,47 @@ set_evidence.jt <- function(x, evidence) {
   attr(x, "inconsistencies") <- inc$inc
   return(x)
 }
+
+#' @rdname set_evidence
+#' @export
+set_evidence.charge <- function(x, evidence, initialize = TRUE) {
+
+  if (!valid_evidence(attr(x, "dim_names"), evidence)) {
+    stop("Evidence is not on correct form", call. = FALSE)
+  }
+
+  inc <- new.env()
+  inc$inc <- FALSE
+  x$charge$cpts <- set_evidence_(x$charge$cpts, evidence, inc)
+  attr(x, "evidence") <- c(attr(x, "evidence"), evidence)
+  attr(x, "inconsistencies") <- inc$inc
+
+  if (initialize) {
+    x$charge <-structure(new_charge_cpt(x$charge$cpts, x$cliques, x$charge$parents), initialized = initialize)
+    x
+  } else {
+    x
+  }
+}
+
+#' Initialize
+#'
+#' Initialization of CPTs
+#'
+#' @param x A compiled object.
+#' @details Multiply the CPTs and allocate them to clique potentials.
+#' @export
+initialize <- function(x) UseMethod("initialize")
+
+initialize.charge <- function(x) {
+  x$charge <-structure(new_charge_cpt(x$charge$cpts, x$cliques, x$charge$parents), initialized = TRUE)
+  x
+}
+
+
+# cptl <- cpt_list(asia2)
+# cp <- compile(cptl, initialize_cpts = FALSE)
+# cp2 <- set_evidence(cp, evidence = c(bronc = "yes"))
 
 #' Query Parents or Leaves in a Junction Tree
 #'

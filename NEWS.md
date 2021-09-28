@@ -1,6 +1,8 @@
-## jti 0.8.0.9999 (xxxx-yy-zz)
+## jti 0.8.1 (2021-09-28)
 
- * `pot_list` fixed. Produced wrong results due to wrong initialization.
+ * `compile` gets a new argumen `initialize_cpts` in order to speed up computations when insertion of evidence at CPT level are of interest.
+ * New function `initialize` to initialize an object from `compile` if `initialize_cpts` was set to `FALSE`
+ * `pot_list` deprecated. Use `cpt_list` for both BNs and MRFs
 
 ## jti 0.8.0 (2021-07-05)
 

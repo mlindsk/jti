@@ -3,7 +3,6 @@
 \name{compile}
 \alias{compile}
 \alias{compile.cpt_list}
-\alias{compile.pot_list}
 \title{Compile information}
 \usage{
 compile(
@@ -13,7 +12,8 @@ compile(
   joint_vars = NULL,
   tri = "min_fill",
   pmf_evidence = NULL,
-  alpha = NULL
+  alpha = NULL,
+  initialize_cpts = TRUE
 )
 
 \method{compile}{cpt_list}(
@@ -23,17 +23,8 @@ compile(
   joint_vars = NULL,
   tri = "min_fill",
   pmf_evidence = NULL,
-  alpha = NULL
-)
-
-\method{compile}{pot_list}(
-  x,
-  evidence = NULL,
-  root_node = "",
-  joint_vars = NULL,
-  tri = "min_fill",
-  pmf_evidence = NULL,
-  alpha = NULL
+  alpha = NULL,
+  initialize_cpts = TRUE
 )
 }
 \arguments{
@@ -71,6 +62,13 @@ in connection to \code{min_efill} and \code{min_esp} triangulations.}
 \item{alpha}{Character vector. A permutation of the nodes
 in the graph. It specifies a user-supplied eliminination ordering for
 triangulation of the moral graph.}
+
+\item{initialize_cpts}{\code{TRUE} if the CPTs should be initialized,
+i.e. multiplied together to form the clique potentials. If FALSE,
+the \code{compile}d object will save the triangulation and other
+information that needs only bee computed once. Herafter, it is
+possible to enter evidence into the CPTs, using \code{set_evidence},
+saving a lot of computations.}
 }
 \description{
 Compiled objects are used as building blocks for junction tree inference
