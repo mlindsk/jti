@@ -478,6 +478,7 @@ leaves.jt <- function(jt) {
   return(true_lvs_indicies)
 }
 
+
 #' @rdname par_lvs
 #' @export
 parents <- function(jt) UseMethod("parents")
@@ -575,5 +576,19 @@ plot.jt <- function(x, ...) {
   .names <- unlist(lapply(y$cliques, function(z) paste(z, collapse = "\n")))
   dimnames(y$tree) <- list(.names, .names)
   g <- igraph::graph_from_adjacency_matrix(y$tree, y$type)
+  graphics::plot(g, ...)
+}
+
+
+#' A plot method for junction trees
+#'
+#' @param x A compile object
+#' @param ... For S3 compatability. Not used.
+#' @seealso \code{\link{compile}}
+#' @export
+plot.charge <- function(x, ...) {
+  .names <- unlist(lapply(x$cliques, function(z) paste(z, collapse = "\n")))
+  dimnames(x$schedule$clique_graph) <- list(.names, .names)
+  g <- igraph::graph_from_adjacency_matrix(x$schedule$clique_graph, "undirected")
   graphics::plot(g, ...)
 }

@@ -152,7 +152,7 @@ new_jt <- function(x, evidence = NULL, flow = "sum") {
   inc$inc <- attr(x, "inconsistencies")
   if (!is.null(evidence)) charge$C <- set_evidence_(charge$C, evidence, inc)
 
-  schedule  <- new_schedule(cliques, attr(x, "cliques_int"), attr(x, "root_node"), attr(x, "joint_vars"))
+  schedule  <- x$schedule # new_schedule(cliques, attr(x, "cliques_int"), attr(x, "root_node"), attr(x, "joint_vars"))
 
   jt <- list(
     schedule = schedule[1:2], # collect and distribute

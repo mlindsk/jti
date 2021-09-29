@@ -354,16 +354,18 @@ compile.cpt_list <- function(x,
   } else {
     structure(list(cpts = x, parents = parents), initialized = FALSE)
   }
+
+  schedule <- new_schedule(cliques, cliques_int, root_node, joint_vars)
   
   structure(
-    list(charge     = charge, cliques = cliques),
+    list(charge     = charge, cliques = cliques, schedule = schedule),
     root_node       = root_node,
     joint_vars      = joint_vars,
     dim_names       = attr(x, "dim_names"),
     evidence        = evidence,
-    graph           = g,
     cliques_int     = cliques_int,
     inconsistencies = inc$inc,
+    graph           = g,
     triang_graph    = gmt,
     class           = c("charge", "list")
   )
