@@ -6,11 +6,11 @@
 \alias{set_evidence.charge}
 \title{Enter Evidence}
 \usage{
-set_evidence(x, evidence, initialize = FALSE)
+set_evidence(x, evidence, initialize_cpts = TRUE)
 
-\method{set_evidence}{jt}(x, evidence, initialize = FALSE)
+\method{set_evidence}{jt}(x, evidence, initialize_cpts = FALSE)
 
-\method{set_evidence}{charge}(x, evidence, initialize = TRUE)
+\method{set_evidence}{charge}(x, evidence, initialize_cpts = TRUE)
 }
 \arguments{
 \item{x}{A junction tree object, \code{jt}.}
@@ -18,8 +18,8 @@ set_evidence(x, evidence, initialize = FALSE)
 \item{evidence}{A named vector. The names are the variabes and the elements
 are the evidence.}
 
-\item{initialize}{\code{TRUE} if the CPTs should be initialized and then
-create the clique potentials. Only relevant on Objects returned from \code{compile}.}
+\item{initialize_cpts}{\code{TRUE} if the CPTs should be initialized and then
+create the clique potentials. Only relevant on objects returned from \code{compile}.}
 }
 \description{
 Enter evidence into a the junction tree object that has not been propagated

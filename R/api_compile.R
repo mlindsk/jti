@@ -350,9 +350,9 @@ compile.cpt_list <- function(x,
   }
 
   charge  <- if (initialize_cpts) {
-      structure(new_charge_cpt(x, cliques, parents), initialized = TRUE)
+    new_charge_cpt(x, cliques, parents)
   } else {
-    structure(list(cpts = x, parents = parents), initialized = FALSE)
+    list(cpts = x, parents = parents)
   }
 
   schedule <- new_schedule(cliques, cliques_int, root_node, joint_vars)
@@ -367,6 +367,7 @@ compile.cpt_list <- function(x,
     inconsistencies = inc$inc,
     graph           = g,
     triang_graph    = gmt,
+    cpts_initialized= initialize_cpts,
     class           = c("charge", "list")
   )
 }
@@ -581,7 +582,7 @@ print.charge <- function(x, ...) {
   min_C <- min(clique_sizes)
   avg_C <- mean(clique_sizes)
 
-  init  <- attr(x$charge, "initialized")
+  init  <- attr(x, "cpts_initialized")
   init_msg <- ifelse(init, " (cpts initialized)", " (cpts not initialized)")
   dashes   <- paste0("\n ------------------------------------", ifelse(init, "", "----"))
   

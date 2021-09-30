@@ -176,7 +176,7 @@ jt <- function(x, evidence = NULL, flow = "sum", propagate = "full") UseMethod("
 #' @export
 jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = "full") {
 
-  if (!attr(x$charge, "initialized")) {
+  if (!attr(x, "cpts_initialized")) {
     stop("The CPTs are not yet initialized. Use either 'set_evidence' or 'initialize'.")
   }
   
@@ -378,17 +378,17 @@ query_evidence.jt <- function(x) {
 #' @param x A junction tree object, \code{jt}.
 #' @param evidence A named vector. The names are the variabes and the elements
 #' are the evidence.
-#' @param initialize \code{TRUE} if the CPTs should be initialized and then
-#' create the clique potentials. Only relevant on Objects returned from \code{compile}.
+#' @param initialize_cpts \code{TRUE} if the CPTs should be initialized and then
+#' create the clique potentials. Only relevant on objects returned from \code{compile}.
 #' @examples
 #' # See the 'jt' function
 #' @seealso \code{\link{jt}}, \code{\link{mpe}}
 #' @export
-set_evidence <- function(x, evidence, initialize = FALSE) UseMethod("set_evidence")
+set_evidence <- function(x, evidence, initialize_cpts = TRUE) UseMethod("set_evidence")
 
 #' @rdname set_evidence
 #' @export
-set_evidence.jt <- function(x, evidence, initialize = FALSE) {
+set_evidence.jt <- function(x, evidence, initialize_cpts = FALSE) {
   if (attr(x, "propagated") != "no") {
     stop(
       "Evidence can only be entered into a junction tree, ",
@@ -411,7 +411,7 @@ set_evidence.jt <- function(x, evidence, initialize = FALSE) {
 
 #' @rdname set_evidence
 #' @export
-set_evidence.charge <- function(x, evidence, initialize = TRUE) {
+set_evidence.charge <- function(x, evidence, initialize_cpts = TRUE) {
 
   if (!valid_evidence(attr(x, "dim_names"), evidence)) {
     stop("Evidence is not on correct form", call. = FALSE)
@@ -419,12 +419,19 @@ set_evidence.charge <- function(x, evidence, initialize = TRUE) {
 
   inc <- new.env()
   inc$inc <- FALSE
-  x$charge$cpts <- set_evidence_(x$charge$cpts, evidence, inc)
+
+  if (attr(x, "cpts_initialized")) {
+    x$charge$C <- set_evidence_(x$charge$C, evidence, inc)
+  } else {
+    x$charge$cpts <- set_evidence_(x$charge$cpts, evidence, inc)  
+  }
+  
   attr(x, "evidence") <- c(attr(x, "evidence"), evidence)
   attr(x, "inconsistencies") <- inc$inc
 
-  if (initialize) {
-    x$charge <-structure(new_charge_cpt(x$charge$cpts, x$cliques, x$charge$parents), initialized = initialize)
+  if (initialize_cpts) {
+    x$charge <- new_charge_cpt(x$charge$cpts, x$cliques, x$charge$parents)
+    attr(x, "cpts_initialized") <- TRUE
     x
   } else {
     x

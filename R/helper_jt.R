@@ -64,7 +64,7 @@ new_schedule <- function(cliques_chr, cliques_int, root_node, joint_vars = NULL)
 }
 
 prune_jt <- function(jt) {
-
+  
   direction <- attr(jt, "direction")
   x <- if (direction == "collect") jt$schedule$collect else jt$schedule$distribute
 
@@ -117,7 +117,9 @@ set_evidence_ <- function(x, evidence, inc) {
   # x: list of (sparse) tables
   for (k in seq_along(x)) {
     pot_k <- names(x[[k]])
+
     if (inherits(x[[k]], "sparta_unity")) next
+
     es_in_ck <- which(names(evidence) %in% pot_k)
 
     if (neq_empt_int(es_in_ck)) {
@@ -130,8 +132,9 @@ set_evidence_ <- function(x, evidence, inc) {
       }
 
       if (inherits(m, "try-error")) {
+        # TODO: If it is a CPT, the rank should be changed
         # Now the best guess is a uniform prior
-        m <- sparta::sparta_unity_struct(sparta::dim_names(x[[k]]))
+        m <- sparta::sparta_unity_struct(dn)
         inc$inc <- TRUE
       }
       x[[k]] <- m      
@@ -224,10 +227,10 @@ send_messages <- function(jt) {
       # because of of inconsistent evidence wich are transformed to unities.
       # This means, that we just put a uniform prior on the respective potential.
       par_eq_unity <- inherits(jt$charge$C[[C_par_k_name]], "sparta_unity")
-      lvs_eq_unity <- inherits(jt$charge$C[[C_lvs_k_name]], "sparta_unity")
+      lvs_eq_unity <- inherits(jt$charge$C[[C_lvs_k_name]], "sparta_unity")      
       
       if (direction == "collect") {
-
+        
         message_k <- sparta::marg(jt$charge$C[[C_lvs_k_name]], message_k_names, attr(jt, "flow"))
 
         # Update parent potential
@@ -241,27 +244,22 @@ send_messages <- function(jt) {
             dn <- sparta::dim_names(jt$charge$C[[C_par_k_name]])
             jt$charge$C[[C_par_k_name]] <- sparta::sparta_unity_struct(dn, rank = 1)
           }
-          
         } else if (!lvs_eq_unity && par_eq_unity) {
           # Note here, that the new potential is possibly not defined over all variables in the clique
           # We must take this into account wheen we query variables that are no longer in the potential
           if (is_scalar(message_k)) {
-            # Can be a scalar because of evidence reduction.
+            # Can be a scalar because of evidence reduction. So just update the rank
             jt$charge$C[[C_par_k_name]] <- sparta::mult(jt$charge$C[[C_par_k_name]], message_k)
           } else {
             jt$charge$C[[C_par_k_name]] <- message_k
           }
-          # in the last cases, just leave the parent potential as is since we
-          # only multiply with ones. This will result in "wrong" factors; but it
-          # can only occur if there is inconsistent evidence, and here we have
-          # already taken this into account by saying that prob(evidence) is no longer valid.
         }
 
-        # Update leave potential
+        # Update child potential
         jt$charge$C[[C_lvs_k_name]] <- sparta::div(jt$charge$C[[C_lvs_k_name]], message_k)
         
       }
-
+      
       if (direction == "distribute") {
 
         if (attr(jt, "flow") == "max") {
@@ -309,7 +307,9 @@ send_messages <- function(jt) {
           } else {
             jt$charge$C[[C_par_k_name]] <- message_k  
           }
-        }         
+        }
+
+        # Update the separator
         jt$charge$S[[paste("S", pk, sep = "")]] <- message_k
         
         if (attr(jt, "flow") == "max") {
@@ -320,5 +320,6 @@ send_messages <- function(jt) {
       }
     }
   }
+
   prune_jt(jt)
 }
