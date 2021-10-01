@@ -7,6 +7,20 @@
 
 using namespace Rcpp;
 
+// nbinary_ops_int_
+int nbinary_ops_int_(RL& cliques_int, arma::Mat<int>& collect_tree, VI sp, int root_idx);
+RcppExport SEXP _jti_nbinary_ops_int_(SEXP cliques_intSEXP, SEXP collect_treeSEXP, SEXP spSEXP, SEXP root_idxSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< RL& >::type cliques_int(cliques_intSEXP);
+    Rcpp::traits::input_parameter< arma::Mat<int>& >::type collect_tree(collect_treeSEXP);
+    Rcpp::traits::input_parameter< VI >::type sp(spSEXP);
+    Rcpp::traits::input_parameter< int >::type root_idx(root_idxSEXP);
+    rcpp_result_gen = Rcpp::wrap(nbinary_ops_int_(cliques_int, collect_tree, sp, root_idx));
+    return rcpp_result_gen;
+END_RCPP
+}
 // mcs
 Rcpp::List mcs(Rcpp::List& adj, std::string start_node, bool check);
 RcppExport SEXP _jti_mcs(SEXP adjSEXP, SEXP start_nodeSEXP, SEXP checkSEXP) {
@@ -188,6 +202,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_jti_nbinary_ops_int_", (DL_FUNC) &_jti_nbinary_ops_int_, 4},
     {"_jti_mcs", (DL_FUNC) &_jti_mcs, 3},
     {"_jti_perfect_cliques", (DL_FUNC) &_jti_perfect_cliques, 1},
     {"_jti_perfect_separators", (DL_FUNC) &_jti_perfect_separators, 1},

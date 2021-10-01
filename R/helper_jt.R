@@ -134,7 +134,7 @@ set_evidence_ <- function(x, evidence, inc) {
       if (inherits(m, "try-error")) {
         # TODO: If it is a CPT, the rank should be changed
         # Now the best guess is a uniform prior
-        m <- sparta::sparta_unity_struct(dn)
+        m <- sparta::sparta_unity_struct(dim_names(x[[k]]))
         inc$inc <- TRUE
       }
       x[[k]] <- m      

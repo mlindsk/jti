@@ -1,3 +1,7 @@
+## jti 0.8.1.9999 (xxxx-yy-zz)
+
+ * `jt_binary_ops` breaking api slightly. The algorithm is now much faster though.
+
 ## jti 0.8.1 (2021-09-28)
 
  * `compile` gets a new argumen `initialize_cpts` in order to speed up computations when insertion of evidence at CPT level are of interest.
