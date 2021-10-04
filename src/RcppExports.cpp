@@ -8,7 +8,7 @@
 using namespace Rcpp;
 
 // nbinary_ops_int_
-int nbinary_ops_int_(RL& cliques_int, arma::Mat<int>& collect_tree, VI sp, int root_idx);
+std::size_t nbinary_ops_int_(RL& cliques_int, arma::Mat<int>& collect_tree, VI sp, int root_idx);
 RcppExport SEXP _jti_nbinary_ops_int_(SEXP cliques_intSEXP, SEXP collect_treeSEXP, SEXP spSEXP, SEXP root_idxSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
