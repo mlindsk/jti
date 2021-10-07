@@ -17,7 +17,8 @@ set_evidence_ <- function(x, evidence, inc) {
       }
 
       if (inherits(m, "try-error")) {
-        m <- sparta::sparta_unity_struct(dim_names(x[[k]])[es_in_ck])
+        new_names <- setdiff(names(x[[k]]), e)
+        m <- sparta::sparta_unity_struct(sparta::dim_names(x[[k]])[new_names])
         inc$inc <- TRUE
       }
       x[[k]] <- m      
