@@ -13,7 +13,8 @@ compile(
   tri = "min_fill",
   pmf_evidence = NULL,
   alpha = NULL,
-  initialize_cpts = TRUE
+  initialize_cpts = TRUE,
+  eps_smooth = 0.1
 )
 
 \method{compile}{cpt_list}(
@@ -24,7 +25,8 @@ compile(
   tri = "min_fill",
   pmf_evidence = NULL,
   alpha = NULL,
-  initialize_cpts = TRUE
+  initialize_cpts = TRUE,
+  eps_smooth = 0.1
 )
 }
 \arguments{
@@ -69,6 +71,9 @@ the \code{compile}d object will save the triangulation and other
 information that needs only bee computed once. Herafter, it is
 possible to enter evidence into the CPTs, using \code{set_evidence},
 saving a lot of computations.}
+
+\item{eps_smooth}{A small number that specifies the belief of seing
+an observation that leads to inconsistent evidence.}
 }
 \description{
 Compiled objects are used as building blocks for junction tree inference

@@ -113,36 +113,6 @@ prune_jt <- function(jt) {
   return(jt)
 }
 
-set_evidence_ <- function(x, evidence, inc) {
-  # x: list of (sparse) tables
-  for (k in seq_along(x)) {
-    pot_k <- names(x[[k]])
-
-    if (inherits(x[[k]], "sparta_unity")) next
-
-    es_in_ck <- which(names(evidence) %in% pot_k)
-
-    if (neq_empt_int(es_in_ck)) {
-      e        <- evidence[es_in_ck]
-      conform  <- length(pot_k) > length(e)
-      m <- if (conform) {
-        try(sparta::slice(x[[k]], e, drop = TRUE), silent = TRUE)  # possibly a sparta_unity
-      } else {
-        try(sparta::slice(x[[k]], e, drop = FALSE), silent = TRUE)
-      }
-
-      if (inherits(m, "try-error")) {
-        # TODO: If it is a CPT, the rank should be changed
-        # Now the best guess is a uniform prior
-        m <- sparta::sparta_unity_struct(dim_names(x[[k]]))
-        inc$inc <- TRUE
-      }
-      x[[k]] <- m      
-    }
-  }
-  return(x)
-}
-
 
 new_jt <- function(x, evidence = NULL, flow = "sum") {
   # x: a charge object returned from compile

@@ -1,6 +1,7 @@
 ## jti 0.8.1.9999 (xxxx-yy-zz)
 
  * `jt_binary_ops` breaking api slightly. The algorithm is now much faster though.
+ * New argument `eps_smooth` in `compile`
 
 ## jti 0.8.1 (2021-09-28)
 
