@@ -17,7 +17,7 @@ set_evidence_ <- function(x, evidence, inc) {
       }
 
       if (inherits(m, "try-error")) {
-        new_names <- setdiff(names(x[[k]]), e)
+        new_names <- setdiff(names(x[[k]]), names(e))
         m <- sparta::sparta_unity_struct(sparta::dim_names(x[[k]])[new_names])
         inc$inc <- TRUE
       }
@@ -83,4 +83,86 @@ set_evidence_cpt <- function(x, evidence, inc, eps_smooth = 0.1) {
   } # end for loop
   
   return(x)
+}
+
+
+#' Enter Evidence 
+#'
+#' Enter evidence into a the junction tree object that has not been propagated
+#'
+#' @param x A junction tree object, \code{jt}.
+#' @param evidence A named vector. The names are the variabes and the elements
+#' are the evidence.
+#' @param initialize_cpts \code{TRUE} if the CPTs should be initialized and then
+#' create the clique potentials. Only relevant on objects returned from \code{compile}.
+#' @examples
+#' # See the 'jt' function
+#' @seealso \code{\link{jt}}, \code{\link{mpe}}
+#' @export
+set_evidence <- function(x, evidence, initialize_cpts = TRUE) UseMethod("set_evidence")
+
+#' @rdname set_evidence
+#' @export
+set_evidence.jt <- function(x, evidence, initialize_cpts = FALSE) {
+  if (attr(x, "propagated") != "no") {
+    stop(
+      "Evidence can only be entered into a junction tree, ",
+      "that has not begun propagation.",
+      call. = FALSE
+    )
+  }
+  
+  if (!valid_evidence(attr(x, "dim_names"), evidence)) {
+    stop("Evidence is not on correct form", call. = FALSE)
+  }
+
+  inc <- new.env()
+  inc$inc <- FALSE
+  x$charge$C <- set_evidence_(x$charge$C, evidence, inc)
+  attr(x, "evidence") <- c(attr(x, "evidence"), evidence)
+  attr(x, "inconsistencies") <- inc$inc
+  return(x)
+}
+
+#' @rdname set_evidence
+#' @export
+set_evidence.charge <- function(x, evidence, initialize_cpts = TRUE) {
+
+  if (!valid_evidence(attr(x, "dim_names"), evidence)) {
+    stop("Evidence is not on correct form", call. = FALSE)
+  }
+
+  inc <- new.env()
+  inc$inc <- FALSE
+
+  if (attr(x, "cpts_initialized")) {
+    x$charge$C <- set_evidence_(x$charge$C, evidence, inc)
+  } else {
+    x$charge$cpts <- set_evidence_cpt(x$charge$cpts, evidence, inc)  
+  }
+  
+  attr(x, "evidence") <- c(attr(x, "evidence"), evidence)
+  attr(x, "inconsistencies") <- inc$inc
+
+  if (initialize_cpts) {
+    x$charge <- new_charge_cpt(x$charge$cpts, x$cliques, x$charge$parents)
+    attr(x, "cpts_initialized") <- TRUE
+    x
+  } else {
+    x
+  }
+}
+
+#' Initialize
+#'
+#' Initialization of CPTs
+#'
+#' @param x A compiled object.
+#' @details Multiply the CPTs and allocate them to clique potentials.
+#' @export
+initialize <- function(x) UseMethod("initialize")
+
+initialize.charge <- function(x) {
+  x$charge <-structure(new_charge_cpt(x$charge$cpts, x$cliques, x$charge$parents), initialized = TRUE)
+  x
 }
