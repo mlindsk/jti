@@ -99,7 +99,7 @@ set_evidence_cpt <- function(x, evidence, inc, eps_smooth = 0.1) {
 #' # See the 'jt' function
 #' @seealso \code{\link{jt}}, \code{\link{mpe}}
 #' @export
-set_evidence <- function(x, evidence, initialize_cpts = TRUE) UseMethod("set_evidence")
+set_evidence <- function(x, evidence, initialize_cpts = FALSE) UseMethod("set_evidence")
 
 #' @rdname set_evidence
 #' @export
@@ -132,10 +132,11 @@ set_evidence.charge <- function(x, evidence, initialize_cpts = TRUE) {
     stop("Evidence is not on correct form", call. = FALSE)
   }
 
-  inc <- new.env()
+  inc     <- new.env()
   inc$inc <- FALSE
+  init    <- attr(x, "cpts_initialized")
 
-  if (attr(x, "cpts_initialized")) {
+  if (init) {
     x$charge$C <- set_evidence_(x$charge$C, evidence, inc)
   } else {
     x$charge$cpts <- set_evidence_cpt(x$charge$cpts, evidence, inc)  
@@ -144,7 +145,7 @@ set_evidence.charge <- function(x, evidence, initialize_cpts = TRUE) {
   attr(x, "evidence") <- c(attr(x, "evidence"), evidence)
   attr(x, "inconsistencies") <- inc$inc
 
-  if (initialize_cpts) {
+  if (initialize_cpts && !init) {
     x$charge <- new_charge_cpt(x$charge$cpts, x$cliques, x$charge$parents)
     attr(x, "cpts_initialized") <- TRUE
     x
