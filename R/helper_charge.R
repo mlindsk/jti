@@ -5,12 +5,16 @@ allocate_child_to_potential <- function(potC, x, cliques, child, parents) {
     family_in_Ck <- all(c(child, parents) %in% cliques[[k]])
     if (family_in_Ck) {
       if (is.null(potC$C[[k]])) {
-        potC$C[[k]] <- cpt # sparta::mult(cpt, unity)
+        potC$C[[k]] <- cpt
       } else {
-        # See test_evidence.R
-        # stop("FIX!")
-        # browser()
-        potC$C[[k]] <- sparta::mult(potC$C[[k]], cpt)
+        # Must take into account that CPTs may have turned into unities by eps-smoothing
+        if (inherits(cpt, "sparta_unity")) {
+          potC$C[[k]] <- sparta::mult(potC$C[[k]], sparta::sparta_rank(cpt))
+        } else if (inherits(potC$C[[k]], "sparta_unity")) {
+          potC$C[[k]] <- sparta::mult(cpt, sparta::sparta_rank(potC$C[[k]]))
+        } else {
+          potC$C[[k]] <- sparta::mult(potC$C[[k]], cpt)          
+        }
       }
       break # Must only live in one clique
     }
