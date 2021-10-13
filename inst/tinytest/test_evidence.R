@@ -15,6 +15,14 @@ expect_equal(sparta::get_val(cpt_e1, e1), 0)
 
 # Test that the reduced cpt is the uniform prior
 cpe1 <- set_evidence(cp, e1, initialize_cpts = FALSE)
+
+# unities_idx <- sapply(cpe1$charge$cpts, function(x) inherits(x, "sparta_unity"))
+# cp$charge$cpts |> length()
+# cp_unities <- cp$charge$cpts[unities_idx]
+# cp_unities$c3
+# cpe1$charge$cpts$c3
+# sparta::dim_names(cp_unities$c3)
+
 cpt1 <- cpe1$charge$cpts$h20
 expect_true(inherits(cpt1, "sparta_unity")) # uniform unity
 

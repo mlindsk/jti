@@ -38,11 +38,11 @@ set_evidence_cpt <- function(x, evidence, inc, eps_smooth = 0.1) {
 
     if (inherits(x[[k]], "sparta_unity")) next
 
-    es_in_child   <- which(names(evidence) %in% child)
-    es_in_parents <- which(names(evidence) %in% parents)
+    e             <- evidence[which(names(evidence) %in% family)]
+    es_in_child   <- which(names(e) %in% child)
+    es_in_parents <- which(names(e) %in% parents)
     es_in_family  <- c(es_in_child, es_in_parents) 
-    e             <- evidence[es_in_family]
-    
+
     if (neq_empt_int(es_in_family)) {
       
       # parent evidence
