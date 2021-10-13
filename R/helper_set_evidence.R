@@ -3,6 +3,7 @@ set_evidence_ <- function(x, evidence, inc) {
   for (k in seq_along(x)) {
     pot_k <- names(x[[k]])
 
+    # TODO: Don't just next. Remove evidence from the unity
     if (inherits(x[[k]], "sparta_unity")) next
 
     es_in_ck <- which(names(evidence) %in% pot_k)
@@ -49,10 +50,9 @@ set_evidence_cpt <- function(x, evidence, inc, eps_smooth = 0.1) {
         m <- try(sparta::slice(x[[k]], e[es_in_parents], drop = TRUE), silent = TRUE)  # possibly a sparta_unity
         if (inherits(m, "try-error")) {
           inc$inc <- TRUE
-          x[[k]] <- sparta::sparta_unity_struct(
-            sparta::dim_names(x[[k]])[setdiff(names(x[[k]]), names(e[es_in_parents]))],
-            rank = 1/length(sparta::dim_names(x[[k]])[[child]])
-          )
+          new_dim_names <- sparta::dim_names(x[[k]])[setdiff(names(x[[k]]), names(e[es_in_parents]))]
+          sp_child <- length(sparta::dim_names(x[[k]])[[child]])
+          x[[k]] <- sparta::sparta_unity_struct(new_dim_names, rank = 1/sp_child)
           next
         }
         x[[k]] <- m
@@ -69,11 +69,8 @@ set_evidence_cpt <- function(x, evidence, inc, eps_smooth = 0.1) {
         # epsilon-smoothing
         if (inherits(m, "try-error")) {
           inc$inc <- TRUE
-          new_names <- setdiff(names(x[[k]]), names(e[es_in_child]))
-          x[[k]] <- sparta::sparta_unity_struct(
-            sparta::dim_names(x[[k]])[new_names],
-            eps_smooth
-          )
+          new_dim_names <- sparta::dim_names(x[[k]])[setdiff(names(x[[k]]), names(e[es_in_child]))]
+          x[[k]] <- sparta::sparta_unity_struct(new_dim_names, eps_smooth)
           next
         }
         x[[k]] <- m
@@ -163,6 +160,8 @@ set_evidence.charge <- function(x, evidence, initialize_cpts = TRUE) {
 #' @export
 initialize <- function(x) UseMethod("initialize")
 
+#' @rdname initialize
+#' @export
 initialize.charge <- function(x) {
   x$charge <-structure(new_charge_cpt(x$charge$cpts, x$cliques, x$charge$parents), initialized = TRUE)
   x
