@@ -2,9 +2,12 @@
 % Please edit documentation in R/helper_set_evidence.R
 \name{initialize}
 \alias{initialize}
+\alias{initialize.charge}
 \title{Initialize}
 \usage{
 initialize(x)
+
+\method{initialize}{charge}(x)
 }
 \arguments{
 \item{x}{A compiled object.}

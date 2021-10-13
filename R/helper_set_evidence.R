@@ -163,6 +163,7 @@ initialize <- function(x) UseMethod("initialize")
 #' @rdname initialize
 #' @export
 initialize.charge <- function(x) {
+  attr(x, "cpts_initialized") <- TRUE
   x$charge <-structure(new_charge_cpt(x$charge$cpts, x$cliques, x$charge$parents), initialized = TRUE)
   x
 }
