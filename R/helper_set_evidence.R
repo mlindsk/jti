@@ -28,7 +28,7 @@ set_evidence_ <- function(x, evidence, inc) {
   return(x)
 }
 
-set_evidence_cpt <- function(x, evidence, inc, eps_smooth = 0.1) {
+set_evidence_cpt <- function(x, evidence, inc, eps) {
   # x: a cpt_list object
   for (k in seq_along(x)) {
 
@@ -70,7 +70,7 @@ set_evidence_cpt <- function(x, evidence, inc, eps_smooth = 0.1) {
         if (inherits(m, "try-error")) {
           inc$inc <- TRUE
           new_dim_names <- sparta::dim_names(x[[k]])[setdiff(names(x[[k]]), names(e[es_in_child]))]
-          x[[k]] <- sparta::sparta_unity_struct(new_dim_names, eps_smooth)
+          x[[k]] <- sparta::sparta_unity_struct(new_dim_names, eps[child])
           next
         }
         x[[k]] <- m

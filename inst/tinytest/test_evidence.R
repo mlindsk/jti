@@ -1,5 +1,5 @@
 cl  <- readRDS("../extdata/derma_cpt_list.rds")
-# cl  <- readRDS("../inst/extdata/derma_cpt_list.rds") # locally testing
+cl  <- readRDS("../inst/extdata/derma_cpt_list.rds") # locally testing
 cp  <- compile(cl, initialize_cpts = FALSE)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -8,6 +8,14 @@ cp  <- compile(cl, initialize_cpts = FALSE)
 
 # Evidence - a parent configuration that is never seen in h20
 e1 <- c(c2 = "0", c4 = "1")
+
+x <- sparta::slice(
+  cl$h20,
+  c(c2 = "0", ES = "chronic dermatitis", age = "2", c4 = "2"),
+  drop = TRUE
+)
+
+sparta::sparsity(x)
 
 # Test that e1 is never seen:
 cpt_e1 <- sparta::marg(cl$h20, setdiff(names(cl$h20), names(e1)))

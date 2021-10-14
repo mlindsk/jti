@@ -70,7 +70,7 @@ cpt_list.list <- function(x, g = NULL) {
     dim_names = dim_names,
     parents   = parents_cpt_list(y), # NOTE: Needed?
     graph     = g,
-    class     = c("cpt_list", "list")
+    class     = c("bn", "cpt_list", "list")
   )
 }
 
@@ -95,19 +95,25 @@ cpt_list.data.frame <- function(x, g) {
   }
   
   dns <- list()
+  eps <- list()
 
   y <- lapply(seq_along(parents), function(i) {
     child <- names(parents)[i]
     pars  <- parents[[i]]
-    spar  <- sparta::as_sparta(x[, c(child, pars), drop = FALSE])
-    spar  <- sparta::as_cpt(spar, pars)
+    spar <- sparta::as_sparta(x[, c(child, pars), drop = FALSE])
+    robbins_est <- length(which(sparta::vals(spar) == 1)) / (sum(spar)+1)
+    nzeroes <- sparta::table_size(spar) - ncol(spar)
+    eps_est <- if (nzeroes) robbins_est / nzeroes + 1e-16 else 1e-16 # MAGIC NUMBER
+    spar <- sparta::as_cpt(spar, pars)
     # This ensures, that the CPTs and dim_names have the same ordering of the lvls!
-    dns   <<- push(dns, sparta::dim_names(spar))
+    dns <<- push(dns, sparta::dim_names(spar))
+    eps <<- push(eps, structure(eps_est, names = child))
     spar
   })
 
   dns <- unlist(dns, FALSE)
   dns <- dns[unique(names(dns))]
+  eps <- unlist(eps)
   
   structure(
     structure(y, names = names(parents)),
@@ -115,7 +121,8 @@ cpt_list.data.frame <- function(x, g) {
     dim_names = dns,
     parents   = parents,
     graph     = g,
-    class     = c("cpt_list", "list")
+    eps       = eps,
+    class     = c(ifelse(is_dag, "bn", "mrf"), "cpt_list", "list")
   )
 }
 
@@ -268,7 +275,7 @@ compile.cpt_list <- function(x,
     }
     # x looses its attributes in set_evidence
     att_ <- attributes(x)
-    x    <- set_evidence_cpt(x, evidence, inc, eps_smooth)
+    x    <- set_evidence_cpt(x, evidence, inc, attr(x, "eps"))
     attributes(x) <- att_
   }
 
