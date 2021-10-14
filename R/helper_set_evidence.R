@@ -136,7 +136,7 @@ set_evidence.charge <- function(x, evidence, initialize_cpts = TRUE) {
   if (init) {
     x$charge$C <- set_evidence_(x$charge$C, evidence, inc)
   } else {
-    x$charge$cpts <- set_evidence_cpt(x$charge$cpts, evidence, inc)  
+    x$charge$cpts <- set_evidence_cpt(x$charge$cpts, evidence, inc, attr(x, "eps"))  
   }
   
   attr(x, "evidence") <- c(attr(x, "evidence"), evidence)

@@ -1,6 +1,14 @@
-cl  <- readRDS("../extdata/derma_cpt_list.rds")
-cl  <- readRDS("../inst/extdata/derma_cpt_list.rds") # locally testing
-cp  <- compile(cl, initialize_cpts = FALSE)
+# library(ess)
+# derma_igraph <- as_igraph(fit_graph(derma, q = 0, sparse_qic = TRUE))
+# saveRDS(derma_igraph, "../extdata/derma_igraph.rds")
+# saveRDS(derma, "../extdata/derma.rds")
+
+automatic_test <- TRUE
+derma <- if (automatic_test) readRDS("../extdata/derma.rds") else readRDS("../inst/extdata/derma.rds")
+derma_igraph <- if (automatic_test) readRDS("../extdata/derma_igraph.rds") else readRDS("../inst/extdata/derma_igraph.rds")
+
+cl <- cpt_list(derma, derma_igraph)
+cp <- compile(cl, initialize_cpts = FALSE)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Inconsistent evidece where p(parents) = 0
@@ -9,27 +17,12 @@ cp  <- compile(cl, initialize_cpts = FALSE)
 # Evidence - a parent configuration that is never seen in h20
 e1 <- c(c2 = "0", c4 = "1")
 
-x <- sparta::slice(
-  cl$h20,
-  c(c2 = "0", ES = "chronic dermatitis", age = "2", c4 = "2"),
-  drop = TRUE
-)
-
-sparta::sparsity(x)
-
 # Test that e1 is never seen:
 cpt_e1 <- sparta::marg(cl$h20, setdiff(names(cl$h20), names(e1)))
 expect_equal(sparta::get_val(cpt_e1, e1), 0)
 
 # Test that the reduced cpt is the uniform prior
 cpe1 <- set_evidence(cp, e1, initialize_cpts = FALSE)
-
-# unities_idx <- sapply(cpe1$charge$cpts, function(x) inherits(x, "sparta_unity"))
-# cp$charge$cpts |> length()
-# cp_unities <- cp$charge$cpts[unities_idx]
-# cp_unities$c3
-# cpe1$charge$cpts$c3
-# sparta::dim_names(cp_unities$c3)
 
 cpt1 <- cpe1$charge$cpts$h20
 expect_true(inherits(cpt1, "sparta_unity")) # uniform unity
@@ -54,5 +47,6 @@ cpe2 <- set_evidence(cp, e2, initialize_cpts = FALSE)
 cpt2 <- cpe2$charge$cpts$h20 # epsilon smooting
 
 # Test that the rank is indeed eps_smooth = 0.1 (default)
-r2 <- sparta::sparta_rank(cpt2)
-expect_equal(r2, formals(compile)[["eps_smooth"]])
+eps <- attr(cpe2, "eps")["h20"]
+r2  <- sparta::sparta_rank(cpt2)
+expect_equal(eps, r2)

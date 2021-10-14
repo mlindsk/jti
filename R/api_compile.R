@@ -298,6 +298,7 @@ compile.cpt_list <- function(x,
     graph           = g,
     triang_graph    = gmt,
     cpts_initialized= initialize_cpts,
+    eps             = attr(x, "eps"),
     class           = c("charge", "list")
   )
 }
