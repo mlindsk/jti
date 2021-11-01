@@ -49,9 +49,16 @@ cpt_list.list <- function(x, g = NULL) {
   if (!is.null(g)) stop("g must be 'NULL'")
 
   dim_names <- list()
+  eps <- list()
   
   y <- lapply(seq_along(x), function(i) {
+    # TODO: Well, we can't really do this in expert networks?
     spar <- sparta::as_sparta(x[[i]])
+    # robbins_est <- length(which(sparta::vals(spar) == 1)) / (sum(spar)+1)
+    #nzeroes <- sparta::table_size(spar) - ncol(spar)
+    eps_est <- 1e-12 # if (nzeroes) robbins_est / nzeroes + 1e-12 else 1e-12 # MAGIC NUMBER
+    eps <<- push(eps, structure(eps_est, names = child))
+    
     # This ensures, that the CPTs and dim_names have the same ordering of the lvls!
     dim_names <<- push(dim_names, attr(spar, "dim_names"))
     spar
@@ -60,6 +67,7 @@ cpt_list.list <- function(x, g = NULL) {
   names(y)  <- names(x)
   dim_names <- unlist(dim_names, FALSE)
   dim_names <- dim_names[unique(names(dim_names))]
+  eps <- unlist(eps)
 
   g <- graph_from_cpt_list(y)
   if (!igraph::is_dag(g)) stop("The cpts does not induce an acyclic graph.")
@@ -68,8 +76,9 @@ cpt_list.list <- function(x, g = NULL) {
     y,
     nodes     = names(x),
     dim_names = dim_names,
-    parents   = parents_cpt_list(y), # NOTE: Needed?
+    parents   = parents_cpt_list(y),
     graph     = g,
+    eps       = eps,
     class     = c("bn", "cpt_list", "list")
   )
 }
@@ -93,17 +102,32 @@ cpt_list.data.frame <- function(x, g) {
   } else {
     rip(as_adj_lst(igraph::as_adjacency_matrix(g, sparse = FALSE)), check = FALSE)$P 
   }
-  
-  dns <- list()
-  eps <- list()
 
+  dns  <- list()
+  eps  <- list()
+
+  # TESTING:
+  # ------------------
+  robbins_est <- TRUE
+  eps         <- 0.001
+  # ------------------
+  
   y <- lapply(seq_along(parents), function(i) {
     child <- names(parents)[i]
     pars  <- parents[[i]]
-    spar <- sparta::as_sparta(x[, c(child, pars), drop = FALSE])
-    robbins_est <- length(which(sparta::vals(spar) == 1)) / (sum(spar)+1)
-    nzeroes <- sparta::table_size(spar) - ncol(spar)
-    eps_est <- if (nzeroes) robbins_est / nzeroes + 1e-16 else 1e-16 # MAGIC NUMBER
+
+    spar <- sparta::as_sparta(x[, c(child, pars), drop = FALSE])    
+    
+    eps_est <- if (robbins_est) {
+      robbins_est   <- length(which(sparta::vals(spar) == 1)) / (sum(spar)+1)
+      nzeroes       <- sparta::table_size(spar) - ncol(spar)
+      eps_est_joint <- if (nzeroes) robbins_est / nzeroes + 1e-12 else 1e-12 # MAGIC NUMBER
+      sp_parents    <- prod(.map_int(sparta::dim_names(spar)[pars], length))
+      eps_est_joint / sp_parents
+    } else {
+      eps
+    }
+      
     spar <- sparta::as_cpt(spar, pars)
     # This ensures, that the CPTs and dim_names have the same ordering of the lvls!
     dns <<- push(dns, sparta::dim_names(spar))
@@ -163,7 +187,9 @@ cpt_list.data.frame <- function(x, g) {
 #' possible to enter evidence into the CPTs, using \code{set_evidence},
 #' saving a lot of computations. 
 #' @param eps_smooth A small number that specifies the belief of seing
-#' an observation that leads to inconsistent evidence.
+#' an observation that leads to inconsistent evidence. If \code{NULL},
+#' the belief is estimatet using Robbins estimate: 'Estimating the Total
+#' Probability of the Unobserved Outcomes of an Experiment'.
 #'
 #' @md
 #' 
@@ -211,7 +237,7 @@ compile <- function(x,
                     pmf_evidence    = NULL,
                     alpha           = NULL,
                     initialize_cpts = TRUE,
-                    eps_smooth      = 0.1
+                    eps_smooth      = NULL
                     ) {
   UseMethod("compile")
 }
@@ -226,10 +252,13 @@ compile.cpt_list <- function(x,
                              pmf_evidence    = NULL,
                              alpha           = NULL,
                              initialize_cpts = TRUE,
-                             eps_smooth      = 0.1
+                             eps_smooth      = NULL
                              ) {
-
+  
   check_params_compile(tri, pmf_evidence, alpha, names(x), root_node)
+
+  # TODO: ???
+  if (!is.null(eps_smooth)) attr(x, "eps")[] <- eps_smooth
   
   g       <- attr(x, "graph")
   parents <- attr(x, "parents")
@@ -263,12 +292,9 @@ compile.cpt_list <- function(x,
   # root_node_int <- ifelse(root_node != "", as.character(match(root_node, names(adj_lst))), "")
   cliques_int   <- lapply(rip(adj_lst_int)$C, as.integer)
 
-  # TODO: REMOVE THE EVIDENCE VARIABLES IN g, IN ADVANCE
-  # AND EXPLOIT THE NEW DAG STRUCTURE! Removing "a" in p(a|b) should result in a
-  # new cpt with no parents but a child var of "a". Then things are consistent again.
-  
   inc <- new.env()
   inc$inc <- FALSE
+
   if (!is.null(evidence)) {
     if (!valid_evidence(attr(x, "dim_names"), evidence)) {
       stop("Evidence is not on correct form", call. = FALSE)
@@ -278,28 +304,28 @@ compile.cpt_list <- function(x,
     x    <- set_evidence_cpt(x, evidence, inc, attr(x, "eps"))
     attributes(x) <- att_
   }
-
+  
   charge  <- if (initialize_cpts) {
-    new_charge_cpt(x, cliques, parents)
+    new_charge(x, cliques, parents)
   } else {
     list(cpts = x, parents = parents)
   }
-
+  
   schedule <- new_schedule(cliques, cliques_int, root_node, joint_vars)
   
   structure(
-    list(charge     = charge, cliques = cliques, schedule = schedule),
-    root_node       = root_node,
-    joint_vars      = joint_vars,
-    dim_names       = attr(x, "dim_names"),
-    evidence        = evidence,
-    cliques_int     = cliques_int,
-    inconsistencies = inc$inc,
-    graph           = g,
-    triang_graph    = gmt,
-    cpts_initialized= initialize_cpts,
-    eps             = attr(x, "eps"),
-    class           = c("charge", "list")
+    list(charge = charge, cliques = cliques, schedule = schedule),
+    root_node        = root_node,
+    joint_vars       = joint_vars,
+    dim_names        = attr(x, "dim_names"),
+    evidence         = evidence,
+    cliques_int      = cliques_int,
+    inconsistencies  = inc$inc,
+    graph            = g,
+    triang_graph     = gmt,
+    cpts_initialized = initialize_cpts,
+    eps              = attr(x, "eps"),
+    class            = c(ifelse(inherits(x, "bn"), "bn", "mrf"), "charge", "list")
   )
 }
 
@@ -489,7 +515,9 @@ print.charge <- function(x, ...) {
 }
 
 
-
+# --------------------------------------
+# OBSOLETE CODE FOR MARKOV RANDOM FIELDS
+# --------------------------------------
 
 # #' A check and extraction of clique potentials from a Markov random field
 # #' to be used in the junction tree algorithm

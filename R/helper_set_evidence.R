@@ -1,15 +1,20 @@
-set_evidence_ <- function(x, evidence, inc) {
+set_evidence_pot <- function(x, evidence, inc) {
   # x: list of (sparse) tables
   for (k in seq_along(x)) {
+
     pot_k <- names(x[[k]])
-
-    # TODO: Don't just next. Remove evidence from the unity
-    if (inherits(x[[k]], "sparta_unity")) next
-
     es_in_ck <- which(names(evidence) %in% pot_k)
 
     if (neq_empt_int(es_in_ck)) {
-      e        <- evidence[es_in_ck]
+
+      e <- evidence[es_in_ck]
+
+      if (inherits(x[[k]], "sparta_unity")) {
+        new_names <- setdiff(names(x[[k]]), names(e))
+        x[[k]] <- sparta::sparta_unity_struct(sparta::dim_names(x[[k]])[new_names])
+        next
+      }
+      
       conform  <- length(pot_k) > length(e)
       m <- if (conform) {
         try(sparta::slice(x[[k]], e, drop = TRUE), silent = TRUE)  # possibly a sparta_unity
@@ -22,7 +27,7 @@ set_evidence_ <- function(x, evidence, inc) {
         m <- sparta::sparta_unity_struct(sparta::dim_names(x[[k]])[new_names])
         inc$inc <- TRUE
       }
-      x[[k]] <- m      
+      x[[k]] <- m
     }
   }
   return(x)
@@ -96,7 +101,7 @@ set_evidence_cpt <- function(x, evidence, inc, eps) {
 #' # See the 'jt' function
 #' @seealso \code{\link{jt}}, \code{\link{mpe}}
 #' @export
-set_evidence <- function(x, evidence, initialize_cpts = FALSE) UseMethod("set_evidence")
+set_evidence <- function(x, evidence, initialize_cpts = TRUE) UseMethod("set_evidence")
 
 #' @rdname set_evidence
 #' @export
@@ -113,9 +118,15 @@ set_evidence.jt <- function(x, evidence, initialize_cpts = FALSE) {
     stop("Evidence is not on correct form", call. = FALSE)
   }
 
+
+  # TODO: WE ONLY NEED TO FLAG THIS NOW, THE CODE WORKS NOW!
+  # i.e.; we can't trust evidence inserted on pot level!
+
+  
   inc <- new.env()
-  inc$inc <- FALSE
-  x$charge$C <- set_evidence_(x$charge$C, evidence, inc)
+  inc$inc <- FALSE # TODO: shouldnt it be attr(x, "inc")?
+  # TODO: If inc here, the evidence cannot be trusted. Flag this.
+  x$charge$C <- set_evidence_pot(x$charge$C, evidence, inc)
   attr(x, "evidence") <- c(attr(x, "evidence"), evidence)
   attr(x, "inconsistencies") <- inc$inc
   return(x)
@@ -130,12 +141,14 @@ set_evidence.charge <- function(x, evidence, initialize_cpts = TRUE) {
   }
 
   inc     <- new.env()
-  inc$inc <- FALSE
+  inc$inc <- FALSE # TODO: shouldnt it be attr(x, "inc")?
   init    <- attr(x, "cpts_initialized")
 
   if (init) {
-    x$charge$C <- set_evidence_(x$charge$C, evidence, inc)
+    # TODO: If inc here, the evidence cannot be trusted. Flag this.
+    x$charge$C <- set_evidence_pot(x$charge$C, evidence, inc)
   } else {
+    # TODO: If init here, we approximate the evidence
     x$charge$cpts <- set_evidence_cpt(x$charge$cpts, evidence, inc, attr(x, "eps"))  
   }
   

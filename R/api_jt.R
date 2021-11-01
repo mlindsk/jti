@@ -189,6 +189,7 @@ jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = "full") {
 
   j <- new_jt(x, evidence, flow)
   attr(j, "propagated") <- "no"
+  attr(j, "type") <- ifelse(inherits(x, "bn"), "bn", "mrf")
 
   # A junction tree with a single node with flow = max
   if (length(j$charge$C) == 1L && attr(j, "flow") == "max") {

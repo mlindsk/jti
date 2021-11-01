@@ -32,7 +32,6 @@ as_adj_lst <- function(A, indices = FALSE) {
 
 
 as_adj_mat <- function(adj) {
-  # TODO: Convert to c++ function using arma::Mat
   stopifnot(length(names(adj)) == length(adj))
   names_ <- names(adj)
   N      <- length(names_)

@@ -34,7 +34,7 @@ query_belief.jt <- function(x, nodes, type = "marginal") {
 
   .query <- lapply(node_lst, function(z) {
 
-    # TODO: Split this into two functions:
+    # TODO: Split this into two functions?:
     # .query_collect(x, z) and .query_full(x, z)
     
     if (attr(x, "propagate") == "collect") {

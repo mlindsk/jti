@@ -6,7 +6,7 @@
 \alias{set_evidence.charge}
 \title{Enter Evidence}
 \usage{
-set_evidence(x, evidence, initialize_cpts = FALSE)
+set_evidence(x, evidence, initialize_cpts = TRUE)
 
 \method{set_evidence}{jt}(x, evidence, initialize_cpts = FALSE)
 

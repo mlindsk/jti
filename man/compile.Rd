@@ -14,7 +14,7 @@ compile(
   pmf_evidence = NULL,
   alpha = NULL,
   initialize_cpts = TRUE,
-  eps_smooth = 0.1
+  eps_smooth = NULL
 )
 
 \method{compile}{cpt_list}(
@@ -26,7 +26,7 @@ compile(
   pmf_evidence = NULL,
   alpha = NULL,
   initialize_cpts = TRUE,
-  eps_smooth = 0.1
+  eps_smooth = NULL
 )
 }
 \arguments{
@@ -73,7 +73,9 @@ possible to enter evidence into the CPTs, using \code{set_evidence},
 saving a lot of computations.}
 
 \item{eps_smooth}{A small number that specifies the belief of seing
-an observation that leads to inconsistent evidence.}
+an observation that leads to inconsistent evidence. If \code{NULL},
+the belief is estimatet using Robbins estimate: 'Estimating the Total
+Probability of the Unobserved Outcomes of an Experiment'.}
 }
 \description{
 Compiled objects are used as building blocks for junction tree inference

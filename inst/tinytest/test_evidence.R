@@ -3,6 +3,8 @@
 # saveRDS(derma_igraph, "../extdata/derma_igraph.rds")
 # saveRDS(derma, "../extdata/derma.rds")
 
+# derma is a markov random field
+
 automatic_test <- TRUE
 derma <- if (automatic_test) readRDS("../extdata/derma.rds") else readRDS("../inst/extdata/derma.rds")
 derma_igraph <- if (automatic_test) readRDS("../extdata/derma_igraph.rds") else readRDS("../inst/extdata/derma_igraph.rds")
@@ -27,7 +29,7 @@ cpe1 <- set_evidence(cp, e1, initialize_cpts = FALSE)
 cpt1 <- cpe1$charge$cpts$h20
 expect_true(inherits(cpt1, "sparta_unity")) # uniform unity
 
-# Test that the rank is indeed uniform: 1/|I_h20|
+# Test that the rank is indeed uniform for MRFs: 1/|I_h20|
 r1 <- sparta::sparta_rank(cpt1)
 expect_equal(r1, 1/length(sparta::dim_names(cpt1)[["h20"]]))
 
@@ -50,3 +52,12 @@ cpt2 <- cpe2$charge$cpts$h20 # epsilon smooting
 eps <- attr(cpe2, "eps")["h20"]
 r2  <- sparta::sparta_rank(cpt2)
 expect_equal(eps, r2)
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Evidence in potentials
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# cp2 <- compile(cl, initialize_cpts = TRUE)
+# set_evidence(cp2, e2, TRUE)
+
+# TODO: Finish
