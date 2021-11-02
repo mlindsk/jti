@@ -54,9 +54,8 @@ cpt_list.list <- function(x, g = NULL) {
   y <- lapply(seq_along(x), function(i) {
     # TODO: Well, we can't really do this in expert networks?
     spar <- sparta::as_sparta(x[[i]])
-    # robbins_est <- length(which(sparta::vals(spar) == 1)) / (sum(spar)+1)
-    #nzeroes <- sparta::table_size(spar) - ncol(spar)
-    eps_est <- 1e-12 # if (nzeroes) robbins_est / nzeroes + 1e-12 else 1e-12 # MAGIC NUMBER
+    child <- names(parents)[i]
+    eps_est <- 1e-12
     eps <<- push(eps, structure(eps_est, names = child))
     
     # This ensures, that the CPTs and dim_names have the same ordering of the lvls!
