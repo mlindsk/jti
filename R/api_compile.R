@@ -49,15 +49,10 @@ cpt_list.list <- function(x, g = NULL) {
   if (!is.null(g)) stop("g must be 'NULL'")
 
   dim_names <- list()
-  eps <- list()
   
   y <- lapply(seq_along(x), function(i) {
-    # TODO: Well, we can't really do this in expert networks?
     spar <- sparta::as_sparta(x[[i]])
     child <- names(parents)[i]
-    eps_est <- 1e-12
-    eps <<- push(eps, structure(eps_est, names = child))
-    
     # This ensures, that the CPTs and dim_names have the same ordering of the lvls!
     dim_names <<- push(dim_names, attr(spar, "dim_names"))
     spar
@@ -66,7 +61,6 @@ cpt_list.list <- function(x, g = NULL) {
   names(y)  <- names(x)
   dim_names <- unlist(dim_names, FALSE)
   dim_names <- dim_names[unique(names(dim_names))]
-  eps <- unlist(eps)
 
   g <- graph_from_cpt_list(y)
   if (!igraph::is_dag(g)) stop("The cpts does not induce an acyclic graph.")
@@ -77,7 +71,6 @@ cpt_list.list <- function(x, g = NULL) {
     dim_names = dim_names,
     parents   = parents_cpt_list(y),
     graph     = g,
-    eps       = eps,
     class     = c("bn", "cpt_list", "list")
   )
 }
@@ -103,40 +96,20 @@ cpt_list.data.frame <- function(x, g) {
   }
 
   dns  <- list()
-  eps  <- list()
 
-  # TESTING:
-  # ------------------
-  robbins_est <- TRUE
-  eps         <- 0.001
-  # ------------------
   
   y <- lapply(seq_along(parents), function(i) {
     child <- names(parents)[i]
     pars  <- parents[[i]]
-
     spar <- sparta::as_sparta(x[, c(child, pars), drop = FALSE])    
-    
-    eps_est <- if (robbins_est) {
-      robbins_est   <- length(which(sparta::vals(spar) == 1)) / (sum(spar)+1)
-      nzeroes       <- sparta::table_size(spar) - ncol(spar)
-      eps_est_joint <- if (nzeroes) robbins_est / nzeroes + 1e-12 else 1e-12 # MAGIC NUMBER
-      sp_parents    <- prod(.map_int(sparta::dim_names(spar)[pars], length))
-      eps_est_joint / sp_parents
-    } else {
-      eps
-    }
-      
     spar <- sparta::as_cpt(spar, pars)
     # This ensures, that the CPTs and dim_names have the same ordering of the lvls!
     dns <<- push(dns, sparta::dim_names(spar))
-    eps <<- push(eps, structure(eps_est, names = child))
     spar
   })
 
   dns <- unlist(dns, FALSE)
   dns <- dns[unique(names(dns))]
-  eps <- unlist(eps)
   
   structure(
     structure(y, names = names(parents)),
@@ -144,7 +117,6 @@ cpt_list.data.frame <- function(x, g) {
     dim_names = dns,
     parents   = parents,
     graph     = g,
-    eps       = eps,
     class     = c(ifelse(is_dag, "bn", "mrf"), "cpt_list", "list")
   )
 }
@@ -185,10 +157,6 @@ cpt_list.data.frame <- function(x, g) {
 #' information that needs only bee computed once. Herafter, it is
 #' possible to enter evidence into the CPTs, using \code{set_evidence},
 #' saving a lot of computations. 
-#' @param eps_smooth A small number that specifies the belief of seing
-#' an observation that leads to inconsistent evidence. If \code{NULL},
-#' the belief is estimatet using Robbins estimate: 'Estimating the Total
-#' Probability of the Unobserved Outcomes of an Experiment'.
 #'
 #' @md
 #' 
@@ -235,8 +203,7 @@ compile <- function(x,
                     tri             = "min_fill",
                     pmf_evidence    = NULL,
                     alpha           = NULL,
-                    initialize_cpts = TRUE,
-                    eps_smooth      = NULL
+                    initialize_cpts = TRUE
                     ) {
   UseMethod("compile")
 }
@@ -250,15 +217,11 @@ compile.cpt_list <- function(x,
                              tri             = "min_fill",
                              pmf_evidence    = NULL,
                              alpha           = NULL,
-                             initialize_cpts = TRUE,
-                             eps_smooth      = NULL
+                             initialize_cpts = TRUE
                              ) {
   
   check_params_compile(tri, pmf_evidence, alpha, names(x), root_node)
 
-  # TODO: ???
-  if (!is.null(eps_smooth)) attr(x, "eps")[] <- eps_smooth
-  
   g       <- attr(x, "graph")
   parents <- attr(x, "parents")
 
@@ -300,7 +263,7 @@ compile.cpt_list <- function(x,
     }
     # x looses its attributes in set_evidence
     att_ <- attributes(x)
-    x    <- set_evidence_cpt(x, evidence, inc, attr(x, "eps"))
+    x    <- set_evidence_(x, evidence, inc)
     attributes(x) <- att_
   }
   
@@ -323,7 +286,6 @@ compile.cpt_list <- function(x,
     graph            = g,
     triang_graph     = gmt,
     cpts_initialized = initialize_cpts,
-    eps              = attr(x, "eps"),
     class            = c(ifelse(inherits(x, "bn"), "bn", "mrf"), "charge", "list")
   )
 }

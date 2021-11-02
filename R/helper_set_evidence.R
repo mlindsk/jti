@@ -1,4 +1,4 @@
-set_evidence_pot <- function(x, evidence, inc) {
+set_evidence_ <- function(x, evidence, inc) {
   # x: list of (sparse) tables
   for (k in seq_along(x)) {
 
@@ -33,59 +33,59 @@ set_evidence_pot <- function(x, evidence, inc) {
   return(x)
 }
 
-set_evidence_cpt <- function(x, evidence, inc, eps) {
-  # x: a cpt_list object
-  for (k in seq_along(x)) {
+# set_evidence_cpt <- function(x, evidence, inc, eps) {
+#   # x: a cpt_list object
+#   for (k in seq_along(x)) {
 
-    child   <- names(x)[k]
-    parents <- attr(x, "parents")[[child]]
-    family  <- c(child, parents)
+#     child   <- names(x)[k]
+#     parents <- attr(x, "parents")[[child]]
+#     family  <- c(child, parents)
 
-    if (inherits(x[[k]], "sparta_unity")) next
+#     if (inherits(x[[k]], "sparta_unity")) next
 
-    e             <- evidence[which(names(evidence) %in% family)]
-    es_in_child   <- which(names(e) %in% child)
-    es_in_parents <- which(names(e) %in% parents)
-    es_in_family  <- c(es_in_child, es_in_parents) 
+#     e             <- evidence[which(names(evidence) %in% family)]
+#     es_in_child   <- which(names(e) %in% child)
+#     es_in_parents <- which(names(e) %in% parents)
+#     es_in_family  <- c(es_in_child, es_in_parents) 
 
-    if (neq_empt_int(es_in_family)) {
+#     if (neq_empt_int(es_in_family)) {
       
-      # parent evidence
-      if (neq_empt_int(es_in_parents)) {
-        m <- try(sparta::slice(x[[k]], e[es_in_parents], drop = TRUE), silent = TRUE)  # possibly a sparta_unity
-        if (inherits(m, "try-error")) {
-          inc$inc <- TRUE
-          new_dim_names <- sparta::dim_names(x[[k]])[setdiff(names(x[[k]]), names(e[es_in_parents]))]
-          sp_child <- length(sparta::dim_names(x[[k]])[[child]])
-          x[[k]] <- sparta::sparta_unity_struct(new_dim_names, rank = 1/sp_child)
-          next
-        }
-        x[[k]] <- m
-      }
+#       # parent evidence
+#       if (neq_empt_int(es_in_parents)) {
+#         m <- try(sparta::slice(x[[k]], e[es_in_parents], drop = TRUE), silent = TRUE)  # possibly a sparta_unity
+#         if (inherits(m, "try-error")) {
+#           inc$inc <- TRUE
+#           new_dim_names <- sparta::dim_names(x[[k]])[setdiff(names(x[[k]]), names(e[es_in_parents]))]
+#           sp_child <- length(sparta::dim_names(x[[k]])[[child]])
+#           x[[k]] <- sparta::sparta_unity_struct(new_dim_names, rank = 1/sp_child)
+#           next
+#         }
+#         x[[k]] <- m
+#       }
 
-      # child evidence
-      if (neq_empt_int(es_in_child)) {
-        m <- if (length(names(x[[k]])) > 1) {
-          try(sparta::slice(x[[k]], e[es_in_child], drop = TRUE), silent = TRUE)
-        } else {
-          try(sparta::slice(x[[k]], e[es_in_child], drop = FALSE), silent = TRUE)
-        }
+#       # child evidence
+#       if (neq_empt_int(es_in_child)) {
+#         m <- if (length(names(x[[k]])) > 1) {
+#           try(sparta::slice(x[[k]], e[es_in_child], drop = TRUE), silent = TRUE)
+#         } else {
+#           try(sparta::slice(x[[k]], e[es_in_child], drop = FALSE), silent = TRUE)
+#         }
 
-        # epsilon-smoothing
-        if (inherits(m, "try-error")) {
-          inc$inc <- TRUE
-          new_dim_names <- sparta::dim_names(x[[k]])[setdiff(names(x[[k]]), names(e[es_in_child]))]
-          x[[k]] <- sparta::sparta_unity_struct(new_dim_names, eps[child])
-          next
-        }
-        x[[k]] <- m
-      }
+#         # epsilon-smoothing
+#         if (inherits(m, "try-error")) {
+#           inc$inc <- TRUE
+#           new_dim_names <- sparta::dim_names(x[[k]])[setdiff(names(x[[k]]), names(e[es_in_child]))]
+#           x[[k]] <- sparta::sparta_unity_struct(new_dim_names, eps[child])
+#           next
+#         }
+#         x[[k]] <- m
+#       }
       
-    } # end es_in_family
-  } # end for loop
+#     } # end es_in_family
+#   } # end for loop
   
-  return(x)
-}
+#   return(x)
+# }
 
 
 #' Enter Evidence 
@@ -118,15 +118,9 @@ set_evidence.jt <- function(x, evidence, initialize_cpts = FALSE) {
     stop("Evidence is not on correct form", call. = FALSE)
   }
 
-
-  # TODO: WE ONLY NEED TO FLAG THIS NOW, THE CODE WORKS NOW!
-  # i.e.; we can't trust evidence inserted on pot level!
-
-  
-  inc <- new.env()
-  inc$inc <- FALSE # TODO: shouldnt it be attr(x, "inc")?
-  # TODO: If inc here, the evidence cannot be trusted. Flag this.
-  x$charge$C <- set_evidence_pot(x$charge$C, evidence, inc)
+  inc        <- new.env()
+  inc$inc    <- attr(x, "inconsistencies")
+  x$charge$C <- set_evidence_(x$charge$C, evidence, inc)
   attr(x, "evidence") <- c(attr(x, "evidence"), evidence)
   attr(x, "inconsistencies") <- inc$inc
   return(x)
@@ -141,15 +135,13 @@ set_evidence.charge <- function(x, evidence, initialize_cpts = TRUE) {
   }
 
   inc     <- new.env()
-  inc$inc <- FALSE # TODO: shouldnt it be attr(x, "inc")?
+  inc$inc <- attr(x, "inconsistencies")
   init    <- attr(x, "cpts_initialized")
 
   if (init) {
-    # TODO: If inc here, the evidence cannot be trusted. Flag this.
-    x$charge$C <- set_evidence_pot(x$charge$C, evidence, inc)
+    x$charge$C <- set_evidence_(x$charge$C, evidence, inc)
   } else {
-    # TODO: If init here, we approximate the evidence
-    x$charge$cpts <- set_evidence_cpt(x$charge$cpts, evidence, inc, attr(x, "eps"))  
+    x$charge$cpts <- set_evidence_(x$charge$cpts, evidence, inc)
   }
   
   attr(x, "evidence") <- c(attr(x, "evidence"), evidence)

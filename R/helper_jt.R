@@ -123,7 +123,7 @@ new_jt <- function(x, evidence = NULL, flow = "sum") {
 
   inc <- new.env()
   inc$inc <- attr(x, "inconsistencies")
-  if (!is.null(evidence)) charge$C <- set_evidence_pot(charge$C, evidence, inc)
+  if (!is.null(evidence)) charge$C <- set_evidence_(charge$C, evidence, inc)
 
   schedule  <- x$schedule # new_schedule(cliques, attr(x, "cliques_int"), attr(x, "root_node"), attr(x, "joint_vars"))
 
