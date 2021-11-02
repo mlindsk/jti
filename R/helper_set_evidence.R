@@ -156,7 +156,7 @@ set_evidence.charge <- function(x, evidence, initialize_cpts = TRUE) {
   attr(x, "inconsistencies") <- inc$inc
 
   if (initialize_cpts && !init) {
-    x$charge <- new_charge_cpt(x$charge$cpts, x$cliques, x$charge$parents)
+    x$charge <- new_charge(x$charge$cpts, x$cliques, x$charge$parents)
     attr(x, "cpts_initialized") <- TRUE
     x
   } else {
@@ -177,6 +177,6 @@ initialize <- function(x) UseMethod("initialize")
 #' @export
 initialize.charge <- function(x) {
   attr(x, "cpts_initialized") <- TRUE
-  x$charge <-structure(new_charge_cpt(x$charge$cpts, x$cliques, x$charge$parents), initialized = TRUE)
+  x$charge <-structure(new_charge(x$charge$cpts, x$cliques, x$charge$parents), initialized = TRUE)
   x
 }
