@@ -209,7 +209,7 @@ send_messages <- function(jt) {
           # If the parent becomes the null-potential we make it a unity afterall
           # This can happen when there is inconsistent evidence or just if data
           # is very sparse
-          if (ncol(jt$charge$C[[C_par_k_name]]) < 1) {
+          if (!is_scalar(jt$charge$C[[C_par_k_name]]) && ncol(jt$charge$C[[C_par_k_name]]) < 1) {
             attr(jt, "inconsistencies") <- TRUE
             dn <- sparta::dim_names(jt$charge$C[[C_par_k_name]])
             jt$charge$C[[C_par_k_name]] <- sparta::sparta_unity_struct(dn, rank = 1)
@@ -266,7 +266,7 @@ send_messages <- function(jt) {
         # Update parent potential
         if (!lvs_eq_unity && !par_eq_unity) {
           jt$charge$C[[C_par_k_name]] <- sparta::mult(jt$charge$C[[C_par_k_name]], message_k)
-          if (ncol(jt$charge$C[[C_par_k_name]]) < 1) {
+          if (!is_scalar(jt$charge$C[[C_par_k_name]]) && ncol(jt$charge$C[[C_par_k_name]]) < 1) {
             attr(jt, "inconsistencies") <- TRUE
             dn <- sparta::dim_names(jt$charge$C[[C_par_k_name]])
             jt$charge$C[[C_par_k_name]] <- sparta::sparta_unity_struct(dn, rank = 1)
