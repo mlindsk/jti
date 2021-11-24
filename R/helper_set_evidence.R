@@ -29,7 +29,7 @@ set_evidence_ <- function(x, evidence, inc) {
       if (inherits(m, "try-error")) {
         new_names <- setdiff(names(x[[k]]), names(e))
         m <- if (neq_empt_chr(new_names)) {
-          sparta::sparta_unity_struct(sparta::dim_names(x[[k]])[new_names])          
+          sparta::sparta_unity_struct(sparta::dim_names(x[[k]])[new_names], 0.01)      
         } else {
           0.01 # magic epsilon number
         }
