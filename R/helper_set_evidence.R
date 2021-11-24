@@ -11,7 +11,11 @@ set_evidence_ <- function(x, evidence, inc) {
 
       if (inherits(x[[k]], "sparta_unity")) {
         new_names <- setdiff(names(x[[k]]), names(e))
-        x[[k]] <- sparta::sparta_unity_struct(sparta::dim_names(x[[k]])[new_names])
+        if (neq_empt_chr(new_names)) {
+          x[[k]] <- sparta::sparta_unity_struct(sparta::dim_names(x[[k]])[new_names])  
+        } else {
+          x[[k]] <- sparta::vals(x[[k]])[1]
+        }
         next
       }
       
