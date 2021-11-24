@@ -11,10 +11,10 @@ set_evidence_ <- function(x, evidence, inc) {
 
       if (inherits(x[[k]], "sparta_unity")) {
         new_names <- setdiff(names(x[[k]]), names(e))
-        if (neq_empt_chr(new_names)) {
-          x[[k]] <- sparta::sparta_unity_struct(sparta::dim_names(x[[k]])[new_names])  
+        x[[k]] <- if (neq_empt_chr(new_names)) {
+          sparta::sparta_unity_struct(sparta::dim_names(x[[k]])[new_names])  
         } else {
-          x[[k]] <- sparta::vals(x[[k]])[1]
+          sparta::vals(x[[k]])[1]
         }
         next
       }
@@ -28,7 +28,11 @@ set_evidence_ <- function(x, evidence, inc) {
 
       if (inherits(m, "try-error")) {
         new_names <- setdiff(names(x[[k]]), names(e))
-        m <- sparta::sparta_unity_struct(sparta::dim_names(x[[k]])[new_names])
+        m <- if (neq_empt_chr(new_names)) {
+          sparta::sparta_unity_struct(sparta::dim_names(x[[k]])[new_names])          
+        } else {
+          0.01 # magic epsilon number
+        }
         inc$inc <- TRUE
       }
       x[[k]] <- m
