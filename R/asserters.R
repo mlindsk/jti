@@ -97,7 +97,7 @@ neq_null     <- function(x) !is.null(x)
 
 # Used in connection to marginalization of numbers
 is_scalar <- function(x) {
-  is.atomic(x) && length(x) == 1L && (class(x) == "numeric" || class(x) == "integer")
+  is.atomic(x) && length(x) == 1L && (inherits(x, "numeric") || inherits(x, "integer"))
 }
 
 
