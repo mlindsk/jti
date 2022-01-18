@@ -81,6 +81,14 @@ new_alpha_triang <- function(x, alpha) {
   obj
 }
 
+# TODO: 
+# -----
+new_expected_triang <- function(x, data) {
+  obj <- new_base_triang(x, cls = "min_expected_triang")
+  obj$data <- data
+  obj
+}
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                UPDATING FUNCTIONS
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
