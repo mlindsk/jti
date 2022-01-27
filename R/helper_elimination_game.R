@@ -40,6 +40,14 @@ new_min_efill_triang <- function(x, nlvls, pmf_evidence) {
   obj
 }
 
+new_min_elfill_triang <- function(x, nlvls, pmf_evidence) {
+  obj <- new_base_triang(x, cls = "min_elfill_triang")
+  obj$nlvls <- nlvls[dimnames(x)[[1]]]
+  obj$pmf_evidence <- pmf_evidence
+  obj
+}
+
+
 new_min_sfill_triang <- function(x, nlvls) {
   obj <- new_base_triang(x, cls = "min_sfill_triang")
   obj$nlvls <- nlvls[dimnames(x)[[1]]]
@@ -218,6 +226,79 @@ new_node_to_eliminate.min_efill_triang <- function(obj) {
         }))
 
         expected_statespace_k <- expected_sum_k * prod_sp_remaining_k
+        if (expected_statespace_k < expected_statespace) {
+          expected_statespace <- expected_statespace_k
+          current_nei_idx <- current_nei_idx_k
+          new_node_idx    <- k
+        }
+      } else {
+        if (prod_sp_remaining_k < expected_statespace) {
+          expected_statespace <- prod_sp_remaining_k
+          current_nei_idx <- current_nei_idx_k
+          new_node_idx    <- k
+        }
+      }
+    }
+  }
+  
+  current_nei_mat     <- obj$x[current_nei_idx, current_nei_idx, drop = FALSE]
+  obj$current_nei_mat <- current_nei_mat
+  obj$current_nei_idx <- current_nei_idx
+  obj$is_nei_complete <- sum(current_nei_mat) == length(current_nei_idx) * (length(current_nei_idx) - 1)
+  obj$new_node_idx    <- new_node_idx
+  obj$nlvls           <- nlvls[-new_node_idx]
+
+  return(obj)
+}
+
+new_node_to_eliminate.min_elfill_triang <- function(obj) {
+  x               <- obj$x
+  new_node_idx    <- integer(0)
+  current_nei_idx <- integer(0)
+  nlvls           <- obj$nlvls
+
+  min_fills <- .map_dbl(1:ncol(x), function(k) {
+    current_nei_idx_k <- which(x[, k] == 1L)
+    all_edges <- length(current_nei_idx_k) * (length(current_nei_idx_k) - 1L) / 2
+    existing_edges <- sum(x[current_nei_idx_k, current_nei_idx_k]) / 2L
+    all_edges - existing_edges
+  })
+
+  min_ <- min(min_fills)
+  candidate_nodes_idx <- which(min_fills == min_)
+  
+  if (min_ == 0) {
+    new_node_idx    <- candidate_nodes_idx[1]
+    current_nei_idx <- which(x[, new_node_idx, drop = TRUE] == 1L)
+  } else {
+
+    pmf <- obj$pmf_evidence
+    evidence_nodes <- names(pmf)
+    nodes <- colnames(x)
+    expected_statespace <- Inf
+
+    for (k in candidate_nodes_idx) {
+      current_nei_idx_k   <- which(x[, k] == 1L)
+      # Family now equals the neibors (the new separator)!
+      family_k            <- nodes[current_nei_idx_k]
+      evidence_nodes_k    <- intersect(evidence_nodes, family_k)
+      remaining_nodes_k   <- setdiff(family_k, evidence_nodes)
+      sp_remaining_k      <- nlvls[remaining_nodes_k]
+      prod_sp_remaining_k <- prod(sp_remaining_k)
+      
+      if (neq_empt_chr(evidence_nodes_k)) {
+        sp_evidence_k <- nlvls[evidence_nodes_k]
+        pmf_k         <- pmf[evidence_nodes_k]
+        pmf_k_lst     <- lapply(pmf_k, function(p) c(p, 1-p)) # pres/absc (0/1) = 1/2 here
+        
+        # Calculate expected statespace
+        # evidence_state_space <- expand.grid(replicate(length(pmf_k), c(1, 2), FALSE), stringsAsFactors = FALSE)
+        # expected_sum_k <- sum(apply(evidence_state_space, 1L, function(state) {
+        #   state_prob <- .map_dbl(seq_along(pmf_k_lst), function(k) pmf_k_lst[[k]][state[k]])
+        #   prod(sp_evidence_k^c(state-1)) * prod(state_prob)
+        # }))
+
+        expected_statespace_k <- sum(log(sp_evidence_k) * (1 - pmf_k)) + sum(log(sp_remaining_k))
         if (expected_statespace_k < expected_statespace) {
           expected_statespace <- expected_statespace_k
           current_nei_idx <- current_nei_idx_k

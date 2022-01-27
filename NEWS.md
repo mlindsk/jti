@@ -1,7 +1,7 @@
 ## jti 0.8.1.9999 (xxxx-yy-zz)
 
+ * Unity smoothing and unity propagation is now implemented.
  * `jt_binary_ops` breaking api slightly. The algorithm is now much faster though.
- * Robbins estimate for inconsistent evidence
 
 ## jti 0.8.1 (2021-09-28)
 

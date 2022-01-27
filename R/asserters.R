@@ -53,7 +53,19 @@ valid_evidence <- function(dim_names, e) {
 
 
 .tri_options <- function(tri) {
-  c("min_fill", "min_rfill", "min_efill", "min_sfill", "min_rsfill", "min_esp", "min_sp", "min_nei", "minimal", "alpha")
+  c(
+    "min_fill",
+    "min_rfill",
+    "min_elfill",
+    "min_efill",
+    "min_sfill",
+    "min_rsfill",
+    "min_esp",
+    "min_sp",
+    "min_nei",
+    "minimal",
+    "alpha"
+  )
 }
 
 check_params_compile <- function(tri, pmf_evidence, alpha, nodes, root_node) {
