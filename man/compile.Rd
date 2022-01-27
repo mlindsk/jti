@@ -46,6 +46,7 @@ from a Baeysian network. One of
 \itemize{
 \item 'min_fill'
 \item 'min_rfill'
+\item 'min_elfill'
 \item 'min_efill'
 \item 'min_sfill'
 \item 'min_sp'

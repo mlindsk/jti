@@ -138,6 +138,7 @@ cpt_list.data.frame <- function(x, g) {
 #' from a Baeysian network. One of
 #'  * 'min_fill'
 #'  * 'min_rfill'
+#'  * 'min_elfill'
 #'  * 'min_efill'
 #'  * 'min_sfill'
 #'  * 'min_sp'
@@ -235,7 +236,7 @@ compile.cpt_list <- function(x,
     "min_fill"   = new_min_fill_triang(M),
     "min_rfill"  = new_min_rfill_triang(M),
     "min_efill"  = new_min_efill_triang(M, .map_int(dim_names(x), length), pmf_evidence),
-    "min_elfill" = new_min_efill_triang(M, .map_int(dim_names(x), length), pmf_evidence),
+    "min_elfill" = new_min_elfill_triang(M, .map_int(dim_names(x), length), pmf_evidence),
     "min_sfill"  = new_min_sfill_triang(M, .map_int(dim_names(x), length)),
     "min_rsfill" = new_min_rsfill_triang(M, .map_int(dim_names(x), length)),
     "min_sp"     = new_min_sp_triang(M, .map_int(dim_names(x), length)),

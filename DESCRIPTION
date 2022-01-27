@@ -1,7 +1,7 @@
 Package: jti
 Title: Junction Tree Inference
-Version: 0.8.1.9999
-Date: 2021-09-28
+Version: 0.8.2
+Date: 2022-01-27
 Authors@R: 
     person(given = "Mads",
            family = "Lindskou",
