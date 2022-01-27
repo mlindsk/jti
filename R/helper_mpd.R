@@ -89,7 +89,6 @@ new_mpd <- function(graph) {
   # Vector of flags that indicate if a prime is flawed or not
   flawed <- rep(FALSE, n_cliques)
 
-  # TODO: Make a rip_int to put directly in here
   rjt_minimal <- rooted_junction_tree(cliques_int)
   jt_minimal  <- rjt_minimal[[1]] + rjt_minimal[[2]]
   jt_inwards  <- rjt_minimal[[1]]

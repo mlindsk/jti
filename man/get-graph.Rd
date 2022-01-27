@@ -22,5 +22,5 @@ get_graph(x)
 A graph as an \code{igraph} object
 }
 \description{
-Retrieve the graph from
+Retrieve the graph
 }

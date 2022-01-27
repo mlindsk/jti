@@ -1,6 +1,13 @@
-## jti 0.8.0.9999 (xxxx-yy-zz)
+## jti 0.8.2 (2022-01-27)
 
- * `pot_list` now works on a list of clique potentials 
+ * Unity smoothing and unity propagation is now implemented.
+ * `jt_binary_ops` breaking api slightly. The algorithm is now much faster though.
+
+## jti 0.8.1 (2021-09-28)
+
+ * `compile` gets a new argumen `initialize_cpts` in order to speed up computations when insertion of evidence at CPT level are of interest.
+ * New function `initialize` to initialize an object from `compile` if `initialize_cpts` was set to `FALSE`
+ * `pot_list` deprecated. Use `cpt_list` for both BNs and MRFs
 
 ## jti 0.8.0 (2021-07-05)
 

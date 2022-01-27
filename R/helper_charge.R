@@ -4,12 +4,17 @@ allocate_child_to_potential <- function(potC, x, cliques, child, parents) {
   for (k in seq_along(cliques)) {
     family_in_Ck <- all(c(child, parents) %in% cliques[[k]])
     if (family_in_Ck) {
-      # if (inherits(potC$C[[k]], "sparta_unity")) break
       if (is.null(potC$C[[k]])) {
-        # unity <- sparta::sparta_unity_struct(attr(x, "dim_names")[cliques[[k]]])
-        potC$C[[k]] <- cpt # sparta::mult(cpt, unity)
+        potC$C[[k]] <- cpt
       } else {
-        potC$C[[k]] <- sparta::mult(potC$C[[k]], cpt)
+        # Must take into account that CPTs may have turned into unities by eps-smoothing
+        if (inherits(cpt, "sparta_unity")) {
+          potC$C[[k]] <- sparta::mult(potC$C[[k]], sparta::sparta_rank(cpt))
+        } else if (inherits(potC$C[[k]], "sparta_unity")) {
+          potC$C[[k]] <- sparta::mult(cpt, sparta::sparta_rank(potC$C[[k]]))
+        } else {
+          potC$C[[k]] <- sparta::mult(potC$C[[k]], cpt)          
+        }
       }
       break # Must only live in one clique
     }
@@ -17,7 +22,7 @@ allocate_child_to_potential <- function(potC, x, cliques, child, parents) {
   NULL
 }
 
-new_charge_cpt <- function(x, cliques, parents) {
+new_charge <- function(x, cliques, parents) {
   potC <- new.env()
   potC[["C"]] <- vector("list", length(cliques))
 
@@ -45,14 +50,14 @@ new_charge_cpt <- function(x, cliques, parents) {
   return(pots)
 }
 
-new_charge_pot <- function(x) {
-  attributes(x) <- NULL
-  names(x) <- paste("C", 1:length(x), sep = "")
-  names_potS <- paste("S", 1:length(x), sep = "")
-  potS <- structure(vector("list", length(x)), names = names_potS)
-  pots <- list(C = x, S = potS)
-  return(pots)
-}
+# new_charge_pot <- function(x) {
+#   attributes(x) <- NULL
+#   names(x) <- paste("C", 1:length(x), sep = "")
+#   names_potS <- paste("S", 1:length(x), sep = "")
+#   potS <- structure(vector("list", length(x)), names = names_potS)
+#   pots <- list(C = x, S = potS)
+#   return(pots)
+# }
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -52,6 +52,7 @@ cpt_list.list <- function(x, g = NULL) {
   
   y <- lapply(seq_along(x), function(i) {
     spar <- sparta::as_sparta(x[[i]])
+    child <- names(parents)[i]
     # This ensures, that the CPTs and dim_names have the same ordering of the lvls!
     dim_names <<- push(dim_names, attr(spar, "dim_names"))
     spar
@@ -68,9 +69,9 @@ cpt_list.list <- function(x, g = NULL) {
     y,
     nodes     = names(x),
     dim_names = dim_names,
-    parents   = parents_cpt_list(y), # NOTE: Needed?
+    parents   = parents_cpt_list(y),
     graph     = g,
-    class     = c("cpt_list", "list")
+    class     = c("bn", "cpt_list", "list")
   )
 }
 
@@ -93,16 +94,17 @@ cpt_list.data.frame <- function(x, g) {
   } else {
     rip(as_adj_lst(igraph::as_adjacency_matrix(g, sparse = FALSE)), check = FALSE)$P 
   }
-  
-  dns <- list()
 
+  dns  <- list()
+
+  
   y <- lapply(seq_along(parents), function(i) {
     child <- names(parents)[i]
     pars  <- parents[[i]]
-    spar  <- sparta::as_sparta(x[, c(child, pars), drop = FALSE])
-    spar  <- sparta::as_cpt(spar, pars)
+    spar <- sparta::as_sparta(x[, c(child, pars), drop = FALSE])    
+    spar <- sparta::as_cpt(spar, pars)
     # This ensures, that the CPTs and dim_names have the same ordering of the lvls!
-    dns   <<- push(dns, sparta::dim_names(spar))
+    dns <<- push(dns, sparta::dim_names(spar))
     spar
   })
 
@@ -115,88 +117,7 @@ cpt_list.data.frame <- function(x, g) {
     dim_names = dns,
     parents   = parents,
     graph     = g,
-    class     = c("cpt_list", "list")
-  )
-}
-
-
-#' A check and extraction of clique potentials from a Markov random field
-#' to be used in the junction tree algorithm
-#'
-#' @param x Character \code{data.frame}
-#' @param g A decomposable Markov random field as an igraph object.
-#' @examples
-#'
-#' # Typically one would use the ess package:
-#' # library(ess)
-#' # g  <- ess::fit_graph(derma)
-#' # pl <- pot_list(derma, ess::as_igraph(g))
-#' # pl
-#'
-#' # Another example
-#' g <- igraph::sample_gnm(ncol(asia), 12)
-#' while(!igraph::is.chordal(g)$chordal) g <- igraph::sample_gnm(ncol(asia), 12, FALSE)
-#' igraph::V(g)$name <- colnames(asia)
-#' plot(g)
-#' pot_list(asia, g)
-#' 
-#' @export
-pot_list <- function(x, g) UseMethod("pot_list")
-
-#' @rdname pot_list
-#' @export
-pot_list.data.frame <- function(x, g) {
-
-  if (!igraph::is.igraph(g)) stop("g must be an igraph object", call. = FALSE)
-  adj_lst <- as_adj_lst(igraph::as_adjacency_matrix(g, sparse = FALSE))
-
-  rip_ <- rip(adj_lst, check = TRUE)
-  cliques <- rip_$C
-  separators <- rip_$S
-  N <- nrow(x)
-
-  names(cliques) <- paste("C", 1:length(cliques), sep = "")
-  names(separators) <-paste("S", 1:length(separators), sep = "")
-  dns <- list()
-
-  clique_tabs <- lapply(seq_along(cliques), function(i) {
-    clique <- cliques[[i]]
-    spar <- sparta::as_sparta(x[, clique, drop = FALSE])
-    spar <- sparta::div(spar, N)
-    dns <<- push(dns, sparta::dim_names(spar))
-    spar
-  })
-
-  separator_tabs <- lapply(seq_along(separators), function(i) {
-    separator <- separators[[i]]
-    if (is.null(separator)) return(NULL)
-    spar <- sparta::as_sparta(x[, separator, drop = FALSE])
-    # NOTE: # Can be unstable for small values in spar?
-    # Maybe just deprecate this function all together and resort to cpt_list
-    spar <- sparta::div(spar, N)
-    sparta::div(1, spar)
-  })
-
-  clique_tabs[[1]] <- sparta::div(clique_tabs[[1]], N)
-
-  # Assign each sep to a clique
-  for (sep in separator_tabs) {
-    if (is.null(sep)) next
-    idx <- .map_lgl(clique_tabs, function(ct) all(names(sep) %in% names(ct)))
-    cl_idx <- which(idx)[1L]
-    clique_tabs[[cl_idx]] <- sparta::mult(clique_tabs[[cl_idx]], sep)
-  }
-
-  dns <- unlist(dns, FALSE)
-  dns <- dns[unique(names(dns))]
-  
-  structure(
-    structure(clique_tabs, names = names(cliques)),
-    nodes     = colnames(x),
-    cliques   = cliques,
-    dim_names = dns,
-    graph     = g,
-    class     = c("pot_list", "list")
+    class     = c(ifelse(is_dag, "bn", "mrf"), "cpt_list", "list")
   )
 }
 
@@ -217,6 +138,7 @@ pot_list.data.frame <- function(x, g) {
 #' from a Baeysian network. One of
 #'  * 'min_fill'
 #'  * 'min_rfill'
+#'  * 'min_elfill'
 #'  * 'min_efill'
 #'  * 'min_sfill'
 #'  * 'min_sp'
@@ -224,13 +146,20 @@ pot_list.data.frame <- function(x, g) {
 #'  * 'min_nei'
 #'  * 'minimal'
 #'  * 'alpha'
-#' @md
 #' @param pmf_evidence A named vector of frequencies. The names should
 #' correspond to the evidence that is expected to see over time. Relevant
 #' in connection to \code{min_efill} and \code{min_esp} triangulations.
 #' @param alpha Character vector. A permutation of the nodes
 #' in the graph. It specifies a user-supplied eliminination ordering for
 #' triangulation of the moral graph.
+#' @param initialize_cpts \code{TRUE} if the CPTs should be initialized,
+#' i.e. multiplied together to form the clique potentials. If FALSE,
+#' the \code{compile}d object will save the triangulation and other
+#' information that needs only bee computed once. Herafter, it is
+#' possible to enter evidence into the CPTs, using \code{set_evidence},
+#' saving a lot of computations. 
+#'
+#' @md
 #' 
 #' @details The Junction Tree Algorithm performs both a forward and inward
 #' message pass (collect and distribute). However, when the forward
@@ -269,12 +198,13 @@ pot_list.data.frame <- function(x, g) {
 #' plot(get_graph(cp1))
 #' @export
 compile <- function(x,
-                    evidence       = NULL,
-                    root_node      = "",
-                    joint_vars     = NULL,
-                    tri            = "min_fill",
-                    pmf_evidence   = NULL,
-                    alpha          = NULL
+                    evidence        = NULL,
+                    root_node       = "",
+                    joint_vars      = NULL,
+                    tri             = "min_fill",
+                    pmf_evidence    = NULL,
+                    alpha           = NULL,
+                    initialize_cpts = TRUE
                     ) {
   UseMethod("compile")
 }
@@ -282,16 +212,17 @@ compile <- function(x,
 #' @rdname compile
 #' @export
 compile.cpt_list <- function(x,
-                             evidence       = NULL,
-                             root_node      = "",
-                             joint_vars     = NULL,
-                             tri            = "min_fill",
-                             pmf_evidence   = NULL,
-                             alpha          = NULL                             
+                             evidence        = NULL,
+                             root_node       = "",
+                             joint_vars      = NULL,
+                             tri             = "min_fill",
+                             pmf_evidence    = NULL,
+                             alpha           = NULL,
+                             initialize_cpts = TRUE
                              ) {
-
-  check_params_compile(tri, pmf_evidence, alpha, names(x), root_node)
   
+  check_params_compile(tri, pmf_evidence, alpha, names(x), root_node)
+
   g       <- attr(x, "graph")
   parents <- attr(x, "parents")
 
@@ -305,6 +236,7 @@ compile.cpt_list <- function(x,
     "min_fill"   = new_min_fill_triang(M),
     "min_rfill"  = new_min_rfill_triang(M),
     "min_efill"  = new_min_efill_triang(M, .map_int(dim_names(x), length), pmf_evidence),
+    "min_elfill" = new_min_elfill_triang(M, .map_int(dim_names(x), length), pmf_evidence),
     "min_sfill"  = new_min_sfill_triang(M, .map_int(dim_names(x), length)),
     "min_rsfill" = new_min_rsfill_triang(M, .map_int(dim_names(x), length)),
     "min_sp"     = new_min_sp_triang(M, .map_int(dim_names(x), length)),
@@ -324,12 +256,9 @@ compile.cpt_list <- function(x,
   # root_node_int <- ifelse(root_node != "", as.character(match(root_node, names(adj_lst))), "")
   cliques_int   <- lapply(rip(adj_lst_int)$C, as.integer)
 
-  # TODO: REMOVE THE EVIDENCE VARIABLES IN g, IN ADVANCE
-  # AND EXPLOIT THE NEW DAG STRUCTURE! Removing "a" in p(a|b) should result in a
-  # new cpt with no parents but a child var of "a". Then things are consistent again.
-  
   inc <- new.env()
   inc$inc <- FALSE
+
   if (!is.null(evidence)) {
     if (!valid_evidence(attr(x, "dim_names"), evidence)) {
       stop("Evidence is not on correct form", call. = FALSE)
@@ -339,74 +268,29 @@ compile.cpt_list <- function(x,
     x    <- set_evidence_(x, evidence, inc)
     attributes(x) <- att_
   }
-
-  charge  <- new_charge_cpt(x, cliques, parents)
-
-  structure(
-    list(charge   = charge, cliques = cliques),
-    root_node     = root_node,
-    joint_vars    = joint_vars,
-    dim_names     = attr(x, "dim_names"),
-    evidence      = evidence,
-    graph         = g,
-    cliques_int   = cliques_int,
-    inconsistencies = inc$inc,
-    class         = c("charge", "list")
-  )
-}
-
-
-#' @rdname compile
-#' @export
-compile.pot_list <- function(x,
-                             evidence       = NULL,
-                             root_node      = "",
-                             joint_vars     = NULL,
-                             tri            = "min_fill",
-                             pmf_evidence   = NULL,
-                             alpha          = NULL                             
-                             ) {
-
-  check_params_compile(tri, pmf_evidence, alpha, names(x), root_node)
   
-  g       <- attr(x, "graph")
-  gmat    <- igraph::as_adjacency_matrix(g, sparse = FALSE)
-  adj_lst <- as_adj_lst(gmat)
-  cliques <- attr(x, "cliques")
-
-  # cliques_int is needed to construct the junction tree in new_jt -> new_schedule
-  dimnames(gmat) <- lapply(dimnames(gmat), function(x) 1:nrow(gmat))
-  adj_lst_int   <- as_adj_lst(gmat)
-  # root_node_int <- ifelse(root_node != "", as.character(match(root_node, names(adj_lst))), "")
-  cliques_int   <- lapply(rip(adj_lst_int)$C, as.integer)
-
-  inc <- new.env()
-  inc$inc <- FALSE
-  if (!is.null(evidence)) {
-    if (!valid_evidence(attr(x, "dim_names"), evidence)) {
-      stop("Evidence is not on correct form", call. = FALSE)
-    }
-    # x looses its attributes in set_evidence
-    att_ <- attributes(x)
-    x    <- set_evidence_(x, evidence, inc)
-    attributes(x) <- att_
+  charge  <- if (initialize_cpts) {
+    new_charge(x, cliques, parents)
+  } else {
+    list(cpts = x, parents = parents)
   }
-
-  charge  <- new_charge_pot(x)
+  
+  schedule <- new_schedule(cliques, cliques_int, root_node, joint_vars)
+  
   structure(
-    list(charge   = charge, cliques = cliques),
-    root_node     = root_node,
-    joint_vars    = joint_vars,
-    dim_names     = attr(x, "dim_names"),
-    evidence      = evidence,
-    graph         = g,
-    cliques_int   = cliques_int,
-    inconsistencies = inc$inc,
-    class         = c("charge", "list")
+    list(charge = charge, cliques = cliques, schedule = schedule),
+    root_node        = root_node,
+    joint_vars       = joint_vars,
+    dim_names        = attr(x, "dim_names"),
+    evidence         = evidence,
+    cliques_int      = cliques_int,
+    inconsistencies  = inc$inc,
+    graph            = g,
+    triang_graph     = gmt,
+    cpts_initialized = initialize_cpts,
+    class            = c(ifelse(inherits(x, "bn"), "bn", "mrf"), "charge", "list")
   )
 }
-
-
 
 #' Various getters
 #'
@@ -463,9 +347,11 @@ names.jt <- function(x) names(attr(x, "dim_names"))
 #' @export
 has_inconsistencies.jt <- function(x) attr(x, "inconsistencies")
 
+
+
 #' Get graph
 #'
-#' Retrieve the graph from
+#' Retrieve the graph
 #'
 #' @param x \code{cpt_list} or a compiled object
 #' @return A graph as an \code{igraph} object
@@ -485,6 +371,20 @@ get_graph.cpt_list <- function(x) attr(x, "graph")
 #' @rdname get-graph
 #' @export
 get_graph.pot_list <- function(x) attr(x, "graph")
+
+
+#' Get triangulated graph
+#'
+#' Retrieve the triangulated graph from
+#'
+#' @param x A compiled object
+#' @return A triangulated graph as a neibor matrix
+
+#' @rdname get-triang-graph
+#' @export
+get_triang_graph <- function(x) UseMethod("get_triang_graph")
+
+get_triang_graph.charge <- function(x) x$triang_graph
 
 #' A print method for cpt lists
 #'
@@ -542,14 +442,20 @@ print.pot_list <- function(x, ...) {
 #' @seealso \code{\link{jt}}
 #' @export
 print.charge <- function(x, ...) {
+
   cls <- paste0("<", paste0(class(x), collapse = ", "), ">")
   nn  <- length(names(x))
   clique_sizes <- .map_int(x$cliques, length)
   max_C <- max(clique_sizes)
   min_C <- min(clique_sizes)
   avg_C <- mean(clique_sizes)
-  cat(" Compiled network",
-    "\n -------------------------",
+
+  init  <- attr(x, "cpts_initialized")
+  init_msg <- ifelse(init, " (cpts initialized)", " (cpts not initialized)")
+  dashes   <- paste0("\n ------------------------------------", ifelse(init, "", "----"))
+  
+  cat(" Compiled network", init_msg,
+    dashes,
     "\n  Nodes:", nn,
     "\n  Cliques:", length(x$cliques),
     "\n   - max:", max_C,
@@ -568,7 +474,142 @@ print.charge <- function(x, ...) {
     }
   }
 
-  cat(paste0("\n  ", cls),
-    "\n -------------------------\n"
-  ) 
+  cat(paste0("\n  ", cls), dashes, "\n") 
 }
+
+
+# --------------------------------------
+# OBSOLETE CODE FOR MARKOV RANDOM FIELDS
+# --------------------------------------
+
+# #' A check and extraction of clique potentials from a Markov random field
+# #' to be used in the junction tree algorithm
+# #'
+# #' @param x Character \code{data.frame}
+# #' @param g A decomposable Markov random field as an igraph object.
+# #' @examples
+# #'
+# #' # Typically one would use the ess package:
+# #' # library(ess)
+# #' # g  <- ess::fit_graph(derma)
+# #' # pl <- pot_list(derma, ess::as_igraph(g))
+# #' # pl
+# #'
+# #' # Another example
+# #' g <- igraph::sample_gnm(ncol(asia), 12)
+# #' while(!igraph::is.chordal(g)$chordal) g <- igraph::sample_gnm(ncol(asia), 12, FALSE)
+# #' igraph::V(g)$name <- colnames(asia)
+# #' plot(g)
+# #' pot_list(asia, g)
+# #' 
+# #' @export
+# pot_list <- function(x, g) UseMethod("pot_list")
+
+# #' @rdname pot_list
+# #' @export
+# pot_list.data.frame <- function(x, g) {
+
+#   if (!igraph::is.igraph(g)) stop("g must be an igraph object", call. = FALSE)
+#   adj_lst <- as_adj_lst(igraph::as_adjacency_matrix(g, sparse = FALSE))
+
+#   rip_ <- rip(adj_lst, check = TRUE)
+#   cliques <- rip_$C
+#   separators <- rip_$S
+#   N <- nrow(x)
+
+#   names(cliques) <- paste("C", 1:length(cliques), sep = "")
+#   names(separators) <-paste("S", 1:length(separators), sep = "")
+#   dns <- list()
+
+#   clique_tabs <- lapply(seq_along(cliques), function(i) {
+#     clique <- cliques[[i]]
+#     spar <- sparta::as_sparta(x[, clique, drop = FALSE])
+#     spar <- sparta::div(spar, N)
+#     dns <<- push(dns, sparta::dim_names(spar))
+#     spar
+#   })
+
+#   separator_tabs <- lapply(seq_along(separators), function(i) {
+#     separator <- separators[[i]]
+#     if (is.null(separator)) return(NULL)
+#     spar <- sparta::as_sparta(x[, separator, drop = FALSE])
+#     # NOTE: # Can be unstable for small values in spar?
+#     # Maybe just deprecate this function all together and resort to cpt_list
+#     spar <- sparta::div(spar, N)
+#     sparta::div(1, spar)
+#   })
+
+#   clique_tabs[[1]] <- sparta::div(clique_tabs[[1]], N)
+
+#   # Assign each sep to a clique
+#   for (sep in separator_tabs) {
+#     if (is.null(sep)) next
+#     idx <- .map_lgl(clique_tabs, function(ct) all(names(sep) %in% names(ct)))
+#     cl_idx <- which(idx)[1L]
+#     clique_tabs[[cl_idx]] <- sparta::mult(clique_tabs[[cl_idx]], sep)
+#   }
+
+#   dns <- unlist(dns, FALSE)
+#   dns <- dns[unique(names(dns))]
+  
+#   structure(
+#     structure(clique_tabs, names = names(cliques)),
+#     nodes     = colnames(x),
+#     cliques   = cliques,
+#     dim_names = dns,
+#     graph     = g,
+#     class     = c("pot_list", "list")
+#   )
+# }
+
+
+# #' @rdname compile
+# #' @export
+# compile.pot_list <- function(x,
+#                              evidence       = NULL,
+#                              root_node      = "",
+#                              joint_vars     = NULL,
+#                              tri            = "min_fill",
+#                              pmf_evidence   = NULL,
+#                              alpha          = NULL
+#                              ) {
+
+#   check_params_compile(tri, pmf_evidence, alpha, names(x), root_node)
+  
+#   g       <- attr(x, "graph")
+#   gmat    <- igraph::as_adjacency_matrix(g, sparse = FALSE)
+#   adj_lst <- as_adj_lst(gmat)
+#   cliques <- attr(x, "cliques")
+
+#   # cliques_int is needed to construct the junction tree in new_jt -> new_schedule
+#   dimnames(gmat) <- lapply(dimnames(gmat), function(x) 1:nrow(gmat))
+#   adj_lst_int   <- as_adj_lst(gmat)
+#   # root_node_int <- ifelse(root_node != "", as.character(match(root_node, names(adj_lst))), "")
+#   cliques_int   <- lapply(rip(adj_lst_int)$C, as.integer)
+
+#   inc <- new.env()
+#   inc$inc <- FALSE
+#   if (!is.null(evidence)) {
+#     if (!valid_evidence(attr(x, "dim_names"), evidence)) {
+#       stop("Evidence is not on correct form", call. = FALSE)
+#     }
+#     # x looses its attributes in set_evidence
+#     att_ <- attributes(x)
+#     x    <- set_evidence_(x, evidence, inc)
+#     attributes(x) <- att_
+#   }
+
+#   charge  <- new_charge_pot(x)
+#   structure(
+#     list(charge   = charge, cliques = cliques),
+#     root_node     = root_node,
+#     joint_vars    = joint_vars,
+#     dim_names     = attr(x, "dim_names"),
+#     evidence      = evidence,
+#     graph         = g,
+#     cliques_int   = cliques_int,
+#     inconsistencies = inc$inc,
+#     class         = c("charge", "list")
+#   )
+# }
+
