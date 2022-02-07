@@ -59,7 +59,9 @@ thin_triang <- function(x, fill_edges) {
 #' Given a list of CPTs, this function finds a triangulation
 #'
 #' @inheritParams compile
-#' @param perm Experimental
+#' @param perm Logical. If \code{TRUE} the moral graph is permuted
+#' @param mpd_based Logical. True if the triangulation should be performed on a maximal
+#' peime decomposition
 #' @export
 triangulate <- function(x,
                         root_node    = "",
@@ -67,11 +69,11 @@ triangulate <- function(x,
                         tri          = "min_fill",
                         pmf_evidence = NULL,
                         alpha        = NULL,
-                        perm         = NULL
+                        perm         = FALSE,
+                        mpd_based    = FALSE
                         ) {
   UseMethod("triangulate")
 }
-
 
 #' @rdname triangulate
 #' @export
@@ -81,7 +83,8 @@ triangulate.cpt_list <- function(x,
                                  tri          = "min_fill",
                                  pmf_evidence = NULL,
                                  alpha        = NULL,
-                                 perm         = NULL
+                                 perm         = FALSE,
+                                 mpd_based    = FALSE
                                  ) {
 
   check_params_compile(tri, pmf_evidence, alpha, names(x), root_node)
@@ -95,35 +98,61 @@ triangulate.cpt_list <- function(x,
   # if sparse = TRUE, the run time explodes
   M <- igraph::as_adjacency_matrix(gm, sparse = FALSE)
 
-  if (!is.null(perm)) {
-    stopifnot(identical(sort(perm), 1:ncol(M)))
-    M <- M[perm, perm]
+  if (perm) {
+    perm_ <- sample(1:ncol(M), ncol(M))
+    M <- M[perm_, perm_]
   }
 
-  tri_obj <- switch(tri,
-    "min_fill"   = new_min_fill_triang(M),
-    "min_rfill"  = new_min_rfill_triang(M),
-    "min_efill"  = new_min_efill_triang(M, .map_int(dim_names(x), length), pmf_evidence),
-    "min_elfill" = new_min_elfill_triang(M, .map_int(dim_names(x), length), pmf_evidence),
-    "min_sfill"  = new_min_sfill_triang(M, .map_int(dim_names(x), length)),
-    "min_rsfill" = new_min_rsfill_triang(M, .map_int(dim_names(x), length)),    
-    "min_sp"     = new_min_sp_triang(M, .map_int(dim_names(x), length)),
-    "min_esp"    = new_min_esp_triang(M, .map_int(dim_names(x), length), pmf_evidence),
-    "min_nei"    = new_min_nei_triang(M),
-    "minimal"    = new_minimal_triang(M),
-    "alpha"      = new_alpha_triang(M, alpha)
-  )
+  if (mpd_based) {
 
-  eg <- elim_game(tri_obj)
+    mpdx <- mpd(x)
+    flawed_primes_int <- mpdx$primes_in[mpdx$flawed]
+
+    fill_edges <- unlist(lapply(flawed_primes_int, function(fp_int) {
+      Mfp <- mpdx$graph[fp_int, fp_int]
+      if (perm) {
+        perm_ <- sample(1:ncol(Mfp), ncol(Mfp))
+        mpdx$graph[perm_, perm_]
+      }
+      tri_obj <- new_triang(tri, Mfp, .map_int(dim_names(x), length), pmf_evidence, alpha)
+      eg <- elim_game(tri_obj)
+      if (inherits(tri_obj, "minimal")) {
+        thin_eg <- thin_triang(eg[["new_graph"]], eg[["fill_edges"]])
+        eg[["new_graph"]]  <- thin_eg[["new_graph"]]
+        eg[["fill_edges"]] <- thin_eg[["fill_edges"]]
+      }
+
+      lapply(eg[["fill_edges"]], function(edge) {
+        colnames(eg[["new_graph"]])[edge]
+      })
+      
+    }), recursive = F)
+
+    alpha <- names(x)
+    mat_tri <- M
+    
+    for (fill in fill_edges) {
+      mat_tri[fill[1], fill[2]] <- 1L
+      mat_tri[fill[2], fill[1]] <- 1L
+    }
+    
+  } else {
+
+    tri_obj <- new_triang(tri, M, .map_int(dim_names(x), length), pmf_evidence, alpha)
+    eg <- elim_game(tri_obj)
+
+    if (inherits(tri_obj, "minimal")) {
+      thin_eg <- thin_triang(eg[["new_graph"]], eg[["fill_edges"]])
+      eg[["new_graph"]]  <- thin_eg[["new_graph"]]
+      eg[["fill_edges"]] <- thin_eg[["fill_edges"]]
+    }
+    
+    fill_edges  <- lapply(eg[["fill_edges"]], function(e) names(x)[e])
+    alpha       <- names(x)[eg[["alpha"]]]
+    mat_tri     <- eg[["new_graph"]]
+  }
   
-  if (inherits(tri_obj, "minimal")) {
-    thin_eg <- thin_triang(eg[["new_graph"]], eg[["fill_edges"]])
-    eg[["new_graph"]]  <- thin_eg[["new_graph"]]
-    eg[["fill_edges"]] <- thin_eg[["fill_edges"]]
-  }
-
-  mat_tri     <- eg[["new_graph"]]
-  adj_lst_tri <- as_adj_lst(eg[["new_graph"]])
+  adj_lst_tri <- as_adj_lst(mat_tri)
   
   # construct cliques and statespace
   rip_        <- rip(adj_lst_tri, start_node = root_node, check = TRUE)
@@ -141,9 +170,9 @@ triangulate.cpt_list <- function(x,
 
   structure(
     list(
-      new_graph             = eg[["new_graph"]],
-      fill_edges            = lapply(eg[["fill_edges"]], function(e) names(x)[e]),
-      alpha                 = names(x)[eg[["alpha"]]],
+      new_graph             = mat_tri,
+      fill_edges            = fill_edges,
+      alpha                 = alpha,
       cliques               = cliques_,
       statespace            = statespace_,
       dim_names             = dim_names(x),

@@ -52,21 +52,21 @@ valid_evidence <- function(dim_names, e) {
 }
 
 
-.tri_options <- function(tri) {
-  c(
-    "min_fill",
-    "min_rfill",
-    "min_elfill",
-    "min_efill",
-    "min_sfill",
-    "min_rsfill",
-    "min_esp",
-    "min_sp",
-    "min_nei",
-    "minimal",
-    "alpha"
-  )
-}
+# .tri_options <- function(tri) {
+#   c(
+#     "min_fill",
+#     "min_rfill",
+#     "min_elfill",
+#     "min_efill",
+#     "min_sfill",
+#     "min_elsp",
+#     "min_esp",
+#     "min_sp",
+#     "min_nei",
+#     "minimal",
+#     "alpha"
+#   )
+# }
 
 check_params_compile <- function(tri, pmf_evidence, alpha, nodes, root_node) {
 
@@ -76,9 +76,9 @@ check_params_compile <- function(tri, pmf_evidence, alpha, nodes, root_node) {
     }
   }
   
-  if (!(tri %in% .tri_options())) {
-    stop("tri must be one of ", paste(.tri_options(), collapse = ", "), call. = FALSE)
-  }
+  # if (!(tri %in% .tri_options())) {
+  #   stop("tri must be one of ", paste(.tri_options(), collapse = ", "), call. = FALSE)
+  # }
 
   if (tri %in% c("min_efill", "min_esp") && is.null(pmf_evidence)) {
     stop(
