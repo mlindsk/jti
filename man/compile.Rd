@@ -46,19 +46,23 @@ from a Baeysian network. One of
 \itemize{
 \item 'min_fill'
 \item 'min_rfill'
-\item 'min_elfill'
-\item 'min_efill'
-\item 'min_sfill'
 \item 'min_sp'
-\item 'min_esp'
+\item 'min_ssp'
+\item 'min_lsp'
+\item 'min_lssp'
+\item 'min_elsp'
+\item 'min_elssp'
 \item 'min_nei'
 \item 'minimal'
 \item 'alpha'
 }}
 
-\item{pmf_evidence}{A named vector of frequencies. The names should
-correspond to the evidence that is expected to see over time. Relevant
-in connection to \code{min_efill} and \code{min_esp} triangulations.}
+\item{pmf_evidence}{A named vector of frequencies of the expected
+missingness of a variable. Variables with frequencies of 1 can be
+neglected; these are inferrred. A value of 0.25 means, that the
+given variable is expected to be missing (it is not a evidence node)
+in one fourth of the future cases. Relevant for \code{tri} methods
+'min_elsp' and 'min_elssp'.}
 
 \item{alpha}{Character vector. A permutation of the nodes
 in the graph. It specifies a user-supplied eliminination ordering for
@@ -100,8 +104,9 @@ refers to entering evidence in the 'jt' function.
 Finally, one can either use a Bayesian network or a decomposable
 Markov random field (use the \code{ess} package to fit these). Bayesian
 networks must be constructed with \code{cpt_list} and decomposable MRFs
-should be constructed with \code{pot_list}, but can also be constructed
-using \code{cpt_list}.
+can be constructed with both \code{pot_list} and \code{cpt_list}. However,
+\code{pot_list} is just an alias for \code{cpt_list} which handles both
+cases internally.
 }
 \examples{
 cptl <- cpt_list(asia2)

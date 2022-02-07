@@ -4,7 +4,6 @@
 \alias{get_graph}
 \alias{get_graph.charge}
 \alias{get_graph.cpt_list}
-\alias{get_graph.pot_list}
 \title{Get graph}
 \usage{
 get_graph(x)
@@ -12,8 +11,6 @@ get_graph(x)
 \method{get_graph}{charge}(x)
 
 \method{get_graph}{cpt_list}(x)
-
-\method{get_graph}{pot_list}(x)
 }
 \arguments{
 \item{x}{\code{cpt_list} or a compiled object}

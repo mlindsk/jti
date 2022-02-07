@@ -1,3 +1,7 @@
+## jti 0.8.3 (xxxx-yy-zz)
+
+ * A bug fix in `jt_nbinary_ops` and new triangulation methods.
+
 ## jti 0.8.2 (2022-01-27)
 
  * Unity smoothing and unity propagation is now implemented.

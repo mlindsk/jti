@@ -5,8 +5,6 @@
 \alias{has_inconsistencies}
 \alias{dim_names.cpt_list}
 \alias{names.cpt_list}
-\alias{dim_names.pot_list}
-\alias{names.pot_list}
 \alias{dim_names.charge}
 \alias{names.charge}
 \alias{has_inconsistencies.charge}
@@ -22,10 +20,6 @@ has_inconsistencies(x)
 \method{dim_names}{cpt_list}(x)
 
 \method{names}{cpt_list}(x)
-
-\method{dim_names}{pot_list}(x)
-
-\method{names}{pot_list}(x)
 
 \method{dim_names}{charge}(x)
 
