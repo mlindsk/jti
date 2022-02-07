@@ -17,24 +17,24 @@ jt_nbinary_ops <- function(x, evidence = list(), root = NULL, nc = 1) {
 #' @export
 jt_nbinary_ops.triangulation <- function(x, evidence = list(), root = NULL, nc = 1) {
   sp       <- .map_int(x$dim_names, length)
+  names_sp <- names(sp) 
   root_idx <- if (is.null(root)) x$clique_root else root
   tree     <- x$junction_tree_collect
   tree     <- if (is.null(root)) tree else root_clique_tree(tree + t(tree), root)
 
-  dn <- dimnames(x$new_graph)
-  sp_int <- .map_int(x$dim_names[dn[[1]]], length)
-  names_ <- names(sp_int)
-  dimnames(x$new_graph) <- lapply(dn, function(x) 1:length(x))
+  dn_int <- dimnames(x$new_graph)
+  sp_int <- structure(sp, names = dn_int[[1]])
+  dimnames(x$new_graph) <- lapply(dn_int, function(x) 1:length(x))
   cliques_int <- lapply(rip(as_adj_lst(x$new_graph))$C, as.integer)
 
   if (neq_empt_lst(evidence)) {
     unlist(parallel::mclapply(mc.cores = nc, X = evidence, FUN = function(e) {
-      e_int <- match(e, names_)
+      e_int <- match(e, names_sp)
       cliques_int_e <- lapply(cliques_int, function(x) setdiff(x, e_int))    
-      nbinary_ops_int_(cliques_int_e, tree, sp, root_idx)
+      nbinary_ops_int_(cliques_int_e, tree, sp_int, root_idx)
     }))    
   } else {
-    nbinary_ops_int_(cliques_int, tree, sp, root_idx)
+    nbinary_ops_int_(cliques_int, tree, sp_int, root_idx)
   }
 }
   

@@ -12,7 +12,8 @@ triangulate(
   tri = "min_fill",
   pmf_evidence = NULL,
   alpha = NULL,
-  perm = NULL
+  perm = FALSE,
+  mpd_based = FALSE
 )
 
 \method{triangulate}{cpt_list}(
@@ -22,7 +23,8 @@ triangulate(
   tri = "min_fill",
   pmf_evidence = NULL,
   alpha = NULL,
-  perm = NULL
+  perm = FALSE,
+  mpd_based = FALSE
 )
 }
 \arguments{
@@ -41,25 +43,32 @@ from a Baeysian network. One of
 \itemize{
 \item 'min_fill'
 \item 'min_rfill'
-\item 'min_elfill'
-\item 'min_efill'
-\item 'min_sfill'
 \item 'min_sp'
-\item 'min_esp'
+\item 'min_ssp'
+\item 'min_lsp'
+\item 'min_lssp'
+\item 'min_elsp'
+\item 'min_elssp'
 \item 'min_nei'
 \item 'minimal'
 \item 'alpha'
 }}
 
-\item{pmf_evidence}{A named vector of frequencies. The names should
-correspond to the evidence that is expected to see over time. Relevant
-in connection to \code{min_efill} and \code{min_esp} triangulations.}
+\item{pmf_evidence}{A named vector of frequencies of the expected
+missingness of a variable. Variables with frequencies of 1 can be
+neglected; these are inferrred. A value of 0.25 means, that the
+given variable is expected to be missing (it is not a evidence node)
+in one fourth of the future cases. Relevant for \code{tri} methods
+'min_elsp' and 'min_elssp'.}
 
 \item{alpha}{Character vector. A permutation of the nodes
 in the graph. It specifies a user-supplied eliminination ordering for
 triangulation of the moral graph.}
 
-\item{perm}{Experimental}
+\item{perm}{Logical. If \code{TRUE} the moral graph is permuted}
+
+\item{mpd_based}{Logical. True if the triangulation should be performed on a maximal
+peime decomposition}
 }
 \description{
 Given a list of CPTs, this function finds a triangulation

@@ -121,6 +121,34 @@ cpt_list.data.frame <- function(x, g) {
   )
 }
 
+#' A check and extraction of clique potentials from a Markov random field
+#' to be used in the junction tree algorithm
+#'
+#' @param x Character \code{data.frame}
+#' @param g A decomposable Markov random field as an igraph object.
+#' @examples
+#'
+#' # Typically one would use the ess package:
+#' # library(ess)
+#' # g  <- ess::fit_graph(derma)
+#' # pl <- pot_list(derma, ess::as_igraph(g))
+#' # pl
+#'
+#' # Another example
+#' g <- igraph::sample_gnm(ncol(asia), 12)
+#' while(!igraph::is.chordal(g)$chordal) g <- igraph::sample_gnm(ncol(asia), 12, FALSE)
+#' igraph::V(g)$name <- colnames(asia)
+#' plot(g)
+#' pot_list(asia, g)
+#' 
+#' @export
+pot_list <- function(x, g) UseMethod("pot_list")
+
+#' @rdname pot_list
+#' @export
+pot_list.data.frame <- function(x, g) cpt_list(x, g)
+
+
 #' Compile information
 #'
 #' Compiled objects are used as building blocks for junction tree inference
@@ -138,17 +166,21 @@ cpt_list.data.frame <- function(x, g) {
 #' from a Baeysian network. One of
 #'  * 'min_fill'
 #'  * 'min_rfill'
-#'  * 'min_elfill'
-#'  * 'min_efill'
-#'  * 'min_sfill'
 #'  * 'min_sp'
-#'  * 'min_esp'
+#'  * 'min_ssp'
+#'  * 'min_lsp'
+#'  * 'min_lssp'
+#'  * 'min_elsp'
+#'  * 'min_elssp'
 #'  * 'min_nei'
 #'  * 'minimal'
 #'  * 'alpha'
-#' @param pmf_evidence A named vector of frequencies. The names should
-#' correspond to the evidence that is expected to see over time. Relevant
-#' in connection to \code{min_efill} and \code{min_esp} triangulations.
+#' @param pmf_evidence A named vector of frequencies of the expected
+#' missingness of a variable. Variables with frequencies of 1 can be
+#' neglected; these are inferrred. A value of 0.25 means, that the
+#' given variable is expected to be missing (it is not a evidence node)
+#' in one fourth of the future cases. Relevant for \code{tri} methods
+#' 'min_elsp' and 'min_elssp'.
 #' @param alpha Character vector. A permutation of the nodes
 #' in the graph. It specifies a user-supplied eliminination ordering for
 #' triangulation of the moral graph.
@@ -186,8 +218,9 @@ cpt_list.data.frame <- function(x, g) {
 #' Finally, one can either use a Bayesian network or a decomposable
 #' Markov random field (use the \code{ess} package to fit these). Bayesian
 #' networks must be constructed with \code{cpt_list} and decomposable MRFs
-#' should be constructed with \code{pot_list}, but can also be constructed
-#' using \code{cpt_list}.
+#' can be constructed with both \code{pot_list} and \code{cpt_list}. However,
+#' \code{pot_list} is just an alias for \code{cpt_list} which handles both
+#' cases internally.
 #' 
 #' @examples
 #' cptl <- cpt_list(asia2)
@@ -231,21 +264,8 @@ compile.cpt_list <- function(x,
 
   # Note here: if sparse = TRUE, the run time explodes! Wonder why...
   M  <- igraph::as_adjacency_matrix(gm, sparse = FALSE)
-  
-  tri_obj <- switch(tri,
-    "min_fill"   = new_min_fill_triang(M),
-    "min_rfill"  = new_min_rfill_triang(M),
-    "min_efill"  = new_min_efill_triang(M, .map_int(dim_names(x), length), pmf_evidence),
-    "min_elfill" = new_min_elfill_triang(M, .map_int(dim_names(x), length), pmf_evidence),
-    "min_sfill"  = new_min_sfill_triang(M, .map_int(dim_names(x), length)),
-    "min_rsfill" = new_min_rsfill_triang(M, .map_int(dim_names(x), length)),
-    "min_sp"     = new_min_sp_triang(M, .map_int(dim_names(x), length)),
-    "min_esp"    = new_min_esp_triang(M, .map_int(dim_names(x), length), pmf_evidence),
-    "min_nei"    = new_min_nei_triang(M),
-    "minimal"    = new_minimal_triang(M),
-    "alpha"      = new_alpha_triang(M, alpha)
-  )
-  
+
+  tri_obj <- new_triang(tri, M, .map_int(dim_names(x), length), pmf_evidence, alpha)
   gmt     <- .triang(tri_obj)
   adj_lst <- as_adj_lst(gmt)
   cliques <- construct_cliques(adj_lst)
@@ -317,14 +337,6 @@ names.cpt_list <- function(x) attr(x, "nodes")
 
 #' @rdname getters
 #' @export
-dim_names.pot_list <- function(x) attr(x, "dim_names")
-
-#' @rdname getters
-#' @export
-names.pot_list <- function(x) attr(x, "nodes")
-
-#' @rdname getters
-#' @export
 dim_names.charge <- function(x) attr(x, "dim_names")
 
 #' @rdname getters
@@ -348,7 +360,6 @@ names.jt <- function(x) names(attr(x, "dim_names"))
 has_inconsistencies.jt <- function(x) attr(x, "inconsistencies")
 
 
-
 #' Get graph
 #'
 #' Retrieve the graph
@@ -367,10 +378,6 @@ get_graph.charge <- function(x) attr(x, "graph")
 #' @rdname get-graph
 #' @export
 get_graph.cpt_list <- function(x) attr(x, "graph")
-
-#' @rdname get-graph
-#' @export
-get_graph.pot_list <- function(x) attr(x, "graph")
 
 
 #' Get triangulated graph
@@ -411,29 +418,6 @@ print.cpt_list <- function(x, ...) {
     "\n -------------------------\n"
   )
 }
-
-#' A print method for pot lists
-#'
-#' @param x A \code{pot_list} object
-#' @param ... For S3 compatability. Not used.
-#' @seealso \code{\link{compile}}
-#' @export
-print.pot_list <- function(x, ...) {
-  cls <- paste0("<", paste0(class(x), collapse = ", "), ">")
-  nn  <- length(names(x))
-  cat(" List of potentials",
-    "\n -------------------------\n")
-
-  for (k in seq_along(x)) {
-    pot_vars <- names(x[[k]])
-    cat("  pot(", paste(pot_vars, collapse = ", "), ")\n")      
-  }
-  
-  cat(paste0("\n  ", cls),
-    "\n -------------------------\n"
-  )
-}
-
 
 #' A print method for compiled objects
 #'
