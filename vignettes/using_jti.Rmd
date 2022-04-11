@@ -1,0 +1,229 @@
+---
+title: "Using jti"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{using_jti}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(jti)
+library(igraph)
+```
+
+## On Graphical Models
+The family of graphical models is vast and includes many different models. **jti** handles Bayesian networks and decomposable undirected graphical models. Undirected graphical models are also known as Markov random fields (MRFs). Decomposability is a property ensuring a closed form of the maximum likelihood parameters. Graphical models enjoy the property that conditional independencies can be read off from a graph consisting of nodes, representing the random variables. In Bayesian networks, edges are directed from a node to another and represent directed connections. In a MRF the edges are undirected and these should be regarded as associations between pairs of nodes in a broad sense. A Bayesian network is specified through a collection of conditional probability tables (CPTs) as we outline in the following and a MRF is specified through tables described by the cliques of the graph. Graphical models are used in a diverse range of applications, e.g., forensic identification problems, traffic monitoring, automated general medical diagnosis and risk analysis \cite{bandrade2009bayesian, kumar2003bayesian, zagorecki2013system, weber2012overview}. Finally, we mention that the word `posterior inference` within the realm of graphical models is synonymous with estimating conditional probabilities.
+
+Let $p$ be a discrete probability mass function of a random vector $X = (X_{v} \mid v \in V)$ where $V$ is a set of labels. The state space of $X_{v}$ is denoted $I_{v}$ and the state space of $X$ is then given by $I = \times_{v\in V} I_{v}$. A realized value $x = (x_{v})_{v\in V}$ is called a cell. Given a subset $A$ of $V$, the A-marginal cell of $x$ is the vector, $x_{A} = (x_v)_{v\in A}$, with state space $I_{A} = \times_{v\in A} I_{v}$. A Bayesian Network can be defined as a directed acyclic graph (DAG), for which each node represents a random variable together with a joint probability of the form
+
+\begin{align} p(x) = \prod_{v\in V} p(x_{v}
+  \mid x_{pa(v)}),
+\end{align}
+
+where $x_{pa(v)}$ denotes the parents of $x_v$; i.e.\ the set of nodes with an arrow pointing towards $x_v$ in the DAG. Also, $x_v$ is a child of the variables $x_{pa(v)}$. Notice, that $p(x_{v} \mid x_{pa(v)})$ has domain $I_{v} \times I_{pa(v)}$.
+
+## Setting up the network
+
+```{r}
+el <- matrix(c(
+  "A", "T",
+  "T", "E",
+  "S", "L",
+  "S", "B",
+  "L", "E",
+  "E", "X",
+  "E", "D",
+  "B", "D"),
+  nc = 2,
+  byrow = TRUE
+)
+
+g <- igraph::graph_from_edgelist(el)
+plot(g)
+```
+
+We use the asia data; see the man page `(?asia)`
+
+### Compilation
+
+Checking and conversion
+
+```{r}
+cl <- cpt_list(asia, g)
+cl
+```
+
+Compilation
+
+```{r}
+cp <- compile(cl)
+cp
+# plot(get_graph(cp)) # Should give the same as plot(g)
+```
+
+After the network has been compiled, the graph has been triangulated and moralized. Furthermore, all conditional probability tables (CPTs) has been designated to one of the cliques (in the triangulated and moralized graph).
+
+### Example 1: sum-flow without evidence
+
+```{r}
+jt1 <- jt(cp)
+jt1
+plot(jt1)
+```
+
+Query probabilities:
+
+```{r}
+query_belief(jt1, c("E", "L", "T"))
+query_belief(jt1, c("B", "D", "E"), type = "joint")
+```
+
+It should be noticed, that the above could also have been achieved by
+
+```{r, eval = FALSE}
+jt1 <- jt(cp, propagate = "no")
+jt1 <- propagate(jt1, prop = "full")
+```
+That is; it is possible to postpone the actual propagation.
+
+### Example 2: sum-flow with evidence
+
+```{r}
+e2  <- c(A = "y", X = "n")
+jt2 <- jt(cp, e2) 
+query_belief(jt2, c("B", "D", "E"), type = "joint")
+```
+
+Notice that, the configuration `(D,E,B) = (y,y,n)` has changed dramatically as a consequence of the evidence. We can get the probability of the evidence:
+
+```{r}
+query_evidence(jt2)
+```
+
+### Example 3: max-flow without evidence
+
+```{r}
+jt3 <- jt(cp, flow = "max")
+mpe(jt3)
+```
+
+###  Example 4: max-flow with evidence
+
+```{r}
+e4  <- c(T = "y", X = "y", D = "y")
+jt4 <- jt(cp, e4, flow = "max")
+mpe(jt4)
+
+```
+Notice, that `T`, `E`, `S`, `B`, `X` and `D` has changed from `"n"` to `"y"` as a consequence of the new evidence `e4`.
+
+###  Example 5: specifying a root node and only collect to save run time
+
+```{r}
+cp5 <- compile(cpt_list(asia, g) , root_node = "X")
+jt5 <- jt(cp5, propagate = "collect")
+```
+We can only query from the variables in the root clique now but we have ensured that the node of interest, "X", does indeed live in this clique. The variables are found using `get_clique_root`.
+
+```{r}
+query_belief(jt5, get_clique_root(jt5), "joint")
+```
+
+##  Example 6: Compiling from a list of conditional probabilities
+
+ * We need a list with CPTs which we extract from the asia2 object
+    - the list must be named with child nodes
+    - The elements need to be array-like objects
+
+```{r}
+cl  <- cpt_list(asia2)
+cp6 <- compile(cl)
+```
+Inspection; see if the graph correspond to the cpts
+
+```{r}
+plot(get_graph(cp6)) 
+```
+
+This time we specify that no propagation should be performed
+
+```{r}
+jt6 <- jt(cp6, propagate = "no")
+```
+
+We can now inspect the collecting junction tree and see which cliques are leaves and parents
+
+```{r}
+plot(jt6)
+get_cliques(jt6)
+get_clique_root(jt6)
+leaves(jt6)
+unlist(parents(jt6))
+```
+
+That is:
+
+  - clique 2 is parent of clique 1
+  - clique 3 is parent of clique 4 etc.
+
+Next, we send the messages from the leaves to the parents
+
+```{r}
+jt6 <- send_messages(jt6)
+```
+Inspect again
+
+```{r}
+plot(jt6)
+```
+
+Send the last message to the root and inspect
+
+```{r}
+jt6 <- send_messages(jt6)
+plot(jt6)
+```
+
+The arrows are now reversed and the outwards (distribute) phase begins
+
+```{r}
+leaves(jt6)
+parents(jt6)
+```
+
+Clique 2 (the root) is now a leave and it has 1, 3 and 6 as parents. Finishing the message passing
+
+```{r}
+jt6 <- send_messages(jt6)
+jt6 <- send_messages(jt6)
+```
+
+Queries can now be performed as normal
+
+```{r}
+query_belief(jt6, c("either", "tub"), "joint")
+```
+
+##  Example 7: Fitting a decomposable model and apply JTA
+
+We use the `ess` package (on CRAN), found at https://github.com/mlindsk/ess, to fit an undirected decomposable graph to data.
+
+```{r}
+library(ess)
+
+g7  <- ess::fit_graph(asia, trace = FALSE)
+ig7 <- ess::as_igraph(g7)
+cp7 <- compile(pot_list(asia, ig7))
+jt7 <- jt(cp7)
+
+query_belief(jt7, get_cliques(jt7)[[4]], type = "joint")
+```
+

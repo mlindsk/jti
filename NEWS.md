@@ -1,4 +1,8 @@
-## jti 0.8.3 (xxxx-yy-zz)
+## jti 0.8.4 (2022-04-11)
+
+ * A vignette is now included
+
+## jti 0.8.3 (2022-02-07)
 
  * A bug fix in `jt_nbinary_ops` and new triangulation methods.
 
