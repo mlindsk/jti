@@ -1,3 +1,4 @@
 Makefile
 R/sandbox.R
 TODO.org
+inst/doc
