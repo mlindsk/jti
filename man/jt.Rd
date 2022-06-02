@@ -155,8 +155,8 @@ plot(jt6)
 get_cliques(jt6)
 get_clique_root(jt6)
 
-leaves(jt6)
-unlist(parents(jt6))
+jt_leaves(jt6)
+unlist(jt_parents(jt6))
 
 # That is;
 # - clique 2 is parent of clique 1
@@ -173,8 +173,8 @@ jt6 <- send_messages(jt6)
 plot(jt6)
 
 # The arrows are now reversed and the outwards (distribute) phase begins
-leaves(jt6)
-parents(jt6)
+jt_leaves(jt6)
+jt_parents(jt6)
 
 # Clique 2 (the root) is now a leave and it has 1, 3 and 6 as parents.
 

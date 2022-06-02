@@ -71,7 +71,7 @@ cpt_list.list <- function(x, g = NULL) {
     dim_names = dim_names,
     parents   = parents_cpt_list(y),
     graph     = g,
-    class     = c("bn", "cpt_list", "list")
+    class     = c("bn_", "cpt_list", "list")
   )
 }
 
@@ -117,7 +117,7 @@ cpt_list.data.frame <- function(x, g) {
     dim_names = dns,
     parents   = parents,
     graph     = g,
-    class     = c(ifelse(is_dag, "bn", "mrf"), "cpt_list", "list")
+    class     = c(ifelse(is_dag, "bn_", "mrf"), "cpt_list", "list")
   )
 }
 
@@ -308,7 +308,7 @@ compile.cpt_list <- function(x,
     graph            = g,
     triang_graph     = gmt,
     cpts_initialized = initialize_cpts,
-    class            = c(ifelse(inherits(x, "bn"), "bn", "mrf"), "charge", "list")
+    class            = c(ifelse(inherits(x, "bn_"), "bn_", "mrf"), "charge", "list")
   )
 }
 

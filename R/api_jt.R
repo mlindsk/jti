@@ -139,8 +139,8 @@
 #' get_cliques(jt6)
 #' get_clique_root(jt6)
 #'
-#' leaves(jt6)
-#' unlist(parents(jt6))
+#' jt_leaves(jt6)
+#' unlist(jt_parents(jt6))
 #'
 #' # That is;
 #' # - clique 2 is parent of clique 1
@@ -157,8 +157,8 @@
 #' plot(jt6)
 #'
 #' # The arrows are now reversed and the outwards (distribute) phase begins
-#' leaves(jt6)
-#' parents(jt6)
+#' jt_leaves(jt6)
+#' jt_parents(jt6)
 #'
 #' # Clique 2 (the root) is now a leave and it has 1, 3 and 6 as parents.
 #'
@@ -189,7 +189,7 @@ jt.charge <- function(x, evidence = NULL, flow = "sum", propagate = "full") {
 
   j <- new_jt(x, evidence, flow)
   attr(j, "propagated") <- "no"
-  attr(j, "type") <- ifelse(inherits(x, "bn"), "bn", "mrf")
+  attr(j, "type") <- ifelse(inherits(x, "bn_"), "bn_", "mrf")
 
   # A junction tree with a single node with flow = max
   if (length(j$charge$C) == 1L && attr(j, "flow") == "max") {
@@ -387,11 +387,11 @@ query_evidence.jt <- function(x) {
 #' # See example 6 in the help page for the jt function
 #' @rdname par_lvs
 #' @export
-leaves <- function(jt) UseMethod("leaves")
+jt_leaves <- function(jt) UseMethod("jt_leaves")
 
 #' @rdname par_lvs
 #' @export
-leaves.jt <- function(jt) {
+jt_leaves.jt <- function(jt) {
   direction <- attr(jt, "direction")
   if (direction == "full") {
     message("The junction tree is already fully propagated. NULL is returned")
@@ -407,11 +407,11 @@ leaves.jt <- function(jt) {
 
 #' @rdname par_lvs
 #' @export
-parents <- function(jt) UseMethod("parents")
+jt_parents <- function(jt) UseMethod("jt_parents")
 
 #' @rdname par_lvs
 #' @export
-parents.jt <- function(jt) {
+jt_parents.jt <- function(jt) {
   direction <- attr(jt, "direction")
   if (direction == "full") {
     message("The junction tree is already fully propagated. NULL is returned")

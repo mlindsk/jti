@@ -83,7 +83,7 @@ cl
 #>   P( X | E )
 #>   P( D | E, B )
 #> 
-#>   <cpt_list, list> 
+#>   <bn_, cpt_list, list> 
 #>  -------------------------
 ```
 
@@ -92,15 +92,15 @@ Compilation
 ``` r
 cp <- compile(cl)
 cp
-#>  Compiled network 
-#>  ------------------------- 
+#>  Compiled network  (cpts initialized) 
+#>  ------------------------------------ 
 #>   Nodes: 8 
 #>   Cliques: 6 
 #>    - max: 3 
 #>    - min: 2 
 #>    - avg: 2.67
-#>   <charge, list> 
-#>  -------------------------
+#>   <bn_, charge, list> 
+#>  ------------------------------------
 # plot(get_graph(cp)) # Should give the same as plot(g)
 ```
 
@@ -299,9 +299,9 @@ get_cliques(jt6)
 #> [1] "either" "xray"
 get_clique_root(jt6)
 #> [1] "either" "lung"   "tub"
-leaves(jt6)
+jt_leaves(jt6)
 #> [1] 1 4 5 6
-unlist(parents(jt6))
+unlist(jt_parents(jt6))
 #> [1] 2 3 3 2
 ```
 
@@ -334,9 +334,9 @@ plot(jt6)
 The arrows are now reversed and the outwards (distribute) phase begins
 
 ``` r
-leaves(jt6)
+jt_leaves(jt6)
 #> [1] 2
-parents(jt6)
+jt_parents(jt6)
 #> [[1]]
 #> [1] 1 3 6
 ```
@@ -377,14 +377,14 @@ query_belief(jt7, get_cliques(jt7)[[4]], type = "joint")
 #> , , T = n
 #> 
 #>    L
-#> E          n            y
-#>   n 0.999967 0.000000e+00
-#>   y 0.000000 2.930828e-05
+#> E       n      y
+#>   n 0.926 0.0000
+#>   y 0.000 0.0652
 #> 
 #> , , T = y
 #> 
 #>    L
-#> E              n            y
-#>   n 0.000000e+00 0.000000e+00
-#>   y 3.657762e-06 6.286238e-09
+#> E       n     y
+#>   n 0.000 0e+00
+#>   y 0.008 8e-04
 ```

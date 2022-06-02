@@ -1,3 +1,7 @@
+## jti 0.8.4.9999 (2022-06-02)
+
+ * `parents` and `leaves` is rename to `jt_parents` and `jt_leaves` respectively no avoid nameclashes with `bnlearn`.
+
 ## jti 0.8.4 (2022-04-11)
 
  * A vignette is now included

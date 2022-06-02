@@ -17,6 +17,6 @@ in a junction tree
 # See example 6 in the help page for the jt function
 }
 \seealso{
-\code{\link{jt}}, \code{\link{get_cliques}}, \code{\link{leaves}},
-\code{\link{parents}}
+\code{\link{jt}}, \code{\link{get_cliques}}, \code{\link{jt_leaves}},
+\code{\link{jt_parents}}
 }

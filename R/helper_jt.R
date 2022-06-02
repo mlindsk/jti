@@ -162,8 +162,8 @@ new_jt <- function(x, evidence = NULL, flow = "sum") {
 #' in a junction tree
 #' 
 #' @param jt A \code{jt} object return from the \code{jt} function
-#' @seealso \code{\link{jt}}, \code{\link{get_cliques}}, \code{\link{leaves}},
-#' \code{\link{parents}}
+#' @seealso \code{\link{jt}}, \code{\link{get_cliques}}, \code{\link{jt_leaves}},
+#' \code{\link{jt_parents}}
 #' @examples
 #' # See example 6 in the help page for the jt function
 #' @export
